@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="SCOPE X">
+  <!-- Unvollständiger Scope-Ring: drei Segmente, eine bewusst große Öffnung.
+       Der Ring schließt sich nicht, weil Dokumentation nie abgeschlossen ist. -->
+  <g fill="none" stroke-width="10" stroke-linecap="round"
+     transform="rotate(-90 50 50)">
+    <circle cx="50" cy="50" r="38" stroke="#126878"
+            stroke-dasharray="68 170.76" stroke-dashoffset="0"/>
+    <circle cx="50" cy="50" r="38" stroke="#19A6B5"
+            stroke-dasharray="52 186.76" stroke-dashoffset="-96"/>
+    <circle cx="50" cy="50" r="38" stroke="#19A6B5" opacity="0.45"
+            stroke-dasharray="26 212.76" stroke-dashoffset="-172"/>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="SCOPE X">
+  <rect width="100" height="100" rx="22" fill="#102533"/>
+  <g fill="none" stroke-width="8" stroke-linecap="round"
+     transform="rotate(-90 50 50)">
+    <circle cx="50" cy="50" r="33" stroke="#126878"
+            stroke-dasharray="60 147.3" stroke-dashoffset="0"/>
+    <circle cx="50" cy="50" r="33" stroke="#19A6B5"
+            stroke-dasharray="44 163.3" stroke-dashoffset="-84"/>
+    <circle cx="50" cy="50" r="33" stroke="#19A6B5" opacity="0.45"
+            stroke-dasharray="22 185.3" stroke-dashoffset="-150"/>
+  </g>
+  <path d="M39 39 L61 61 M61 39 L39 61" stroke="#B9D936"
+        stroke-width="9" stroke-linecap="square"/>
+</svg>

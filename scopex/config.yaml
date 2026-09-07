@@ -1,0 +1,50 @@
+# Lokales Home-Assistant-Add-on.
+# Bewusst ohne "ingress" und ohne "panel_icon": SCOPE X erscheint dadurch
+# nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
+# Start, Neustart und Backup des Containers.
+name: SCOPE X
+version: "2.0.0"
+slug: scopex
+description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
+arch:
+  - amd64
+init: false
+startup: application
+boot: auto
+
+# Kein Zugriff auf Home Assistant nötig. Das Add-on kann weder Zustände
+# lesen noch Dienste aufrufen.
+hassio_api: false
+homeassistant_api: false
+host_network: false
+
+# null = der Port wird NICHT auf dem Host veröffentlicht. Nginx Proxy Manager
+# erreicht den Container über das interne Netz unter "local-scopex:8099".
+# Für direkten LAN-Zugriff stattdessen eine Portnummer eintragen.
+ports:
+  8099/tcp: null
+ports_description:
+  8099/tcp: Web-Oberfläche, normalerweise nur intern für den Reverse Proxy
+
+options:
+  log_level: info
+  base_url: ""
+  smtp_host: ""
+  smtp_port: 465
+  smtp_security: ssl
+  smtp_user: ""
+  smtp_password: ""
+  smtp_from: ""
+schema:
+  log_level: list(critical|error|warning|info|debug)
+  # Öffentliche Adresse der Anwendung, z. B. https://scopex.example.de
+  # Wird für die Links in Einladungs- und Zurücksetzungs-Mails gebraucht.
+  base_url: str?
+  smtp_host: str?
+  smtp_port: port
+  smtp_security: list(ssl|starttls|none)
+  smtp_user: str?
+  # Typ "password" wird in der Home-Assistant-Oberfläche maskiert und
+  # landet nicht im Klartext in der Add-on-Übersicht.
+  smtp_password: password?
+  smtp_from: str?
