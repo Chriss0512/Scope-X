@@ -37,7 +37,10 @@
   /* Text */
   --ink: var(--charcoal);
   --ink-strong: var(--navy);
-  --muted: var(--slate);
+  /* Slate #667680 erreicht auf Weiß nur 4,41:1 und verfehlt die Schwelle
+     für Fließtext knapp. Der Markenwert bleibt als --slate erhalten, für
+     Text wird eine abgedunkelte Variante verwendet. */
+  --muted: #5b6873;
   --line: var(--soft-grey);
   --line-strong: #c3cfd4;
 
@@ -49,13 +52,17 @@
   --on-accent: #ffffff;
   --focus: var(--cyan);
 
-  /* Status */
-  --ok: #2e8b68;
-  --fail: #c94c4c;
+  /* Status. Die Füllfarben sind so weit abgedunkelt, dass weiße Schrift
+     darauf 4,5:1 erreicht. Orange schafft das nicht, ohne seine Kennung zu
+     verlieren, und trägt deshalb dunkle Schrift. Für Orange als Textfarbe
+     auf hellem Grund gibt es eine eigene, dunklere Variante. */
+  --ok: #1f7554;
+  --fail: #bc3f3f;
   --abort: #d9862c;
+  --abort-ink: #8a5209;
   --zek: #a63d4a;
   --info: #3973b9;
-  --neutral: #7b8890;
+  --neutral: #6b7883;
 
   /* xABCDE */
   --cat-X: #a63d4a;
@@ -333,7 +340,7 @@ textarea { min-height: 78px; resize: vertical; line-height: 1.5; }
    bleiben sie neutral, damit die Auswahl nicht wie eine Ampel wirkt. */
 .chip.out-ok[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: #fff; }
 .chip.out-fail[aria-pressed="true"] { background: var(--fail); border-color: var(--fail); color: #fff; }
-.chip.out-abort[aria-pressed="true"] { background: var(--abort); border-color: var(--abort); color: #fff; }
+.chip.out-abort[aria-pressed="true"] { background: var(--abort); border-color: var(--abort); color: #17242c; }
 [data-theme="dark"] .chip.out-ok[aria-pressed="true"],
 [data-theme="dark"] .chip.out-fail[aria-pressed="true"],
 [data-theme="dark"] .chip.out-abort[aria-pressed="true"] { color: #08181f; }
@@ -352,7 +359,10 @@ table.data td > .status { margin: -.1rem 0; }
 @media (max-width: 899px) {
   html { height: 100%; }
   body {
-    height: 100vh; height: 100dvh;
+    /* --app-height wird aus visualViewport gesetzt und ist der einzige
+       Wert, der auf iOS bei geöffneter Tastatur stimmt. dvh dient als
+       Rückfallebene für Browser ohne visualViewport. */
+    height: 100vh; height: 100dvh; height: var(--app-height, 100dvh);
     display: flex; flex-direction: column;
     padding-bottom: 0; overflow: hidden;
   }
@@ -472,7 +482,8 @@ nav.tabbar .brand { display: none; }
 }
 .status.ok { background: var(--ok); }
 .status.fail { background: var(--fail); }
-.status.abort { background: var(--abort); }
+.status.abort { background: var(--abort); color: #17242c; }
+.status.abort::before { background: rgba(23, 36, 44, .75); }
 .status.zek { background: var(--zek); }
 .status.info { background: var(--info); }
 [data-theme="dark"] .status { color: #08181f; }
@@ -498,7 +509,7 @@ nav.tabbar .brand { display: none; }
 .lock-chip::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
 }
-.lock-chip.open { color: var(--abort); border-color: currentColor; }
+.lock-chip.open { color: var(--abort-ink); border-color: currentColor; }
 .lock-chip.closed { color: var(--muted); background: var(--surface-2); }
 
 /* --------------------------------------------------------- Balkenlisten */
@@ -612,7 +623,7 @@ details[open] > summary::before { content: "\2212"; }
   padding: .75rem .9rem; font-size: .855rem; color: var(--ink);
 }
 .notice.plain { border-left-color: var(--neutral); background: var(--surface-2); }
-.notice.warn { border-left-color: var(--abort); background: var(--surface-2); }
+.notice.warn { border-left-color: var(--abort-ink); background: var(--surface-2); }
 
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
@@ -725,9 +736,103 @@ body.auth nav.tabbar { display: none; }
 .legal h2:first-child { margin-top: 0; }
 .legal p { color: var(--ink); }
 .legal address { font-style: normal; line-height: 1.7; }
-.legal .missing {
-  color: var(--abort); font-weight: 500;
+.legal .missing, .missing {
+  color: var(--abort-ink); font-weight: 500;
 }
 
 /* Warnung bei langer Bearbeitungsfrist */
 .window-warning { margin-top: .6rem; }
+
+
+/* -------------------------------------------------- Sprung zum Seitenanfang */
+
+.to-top {
+  position: fixed; right: 1rem; z-index: 45;
+  bottom: calc(84px + 1rem + env(safe-area-inset-bottom));
+  min-height: 40px; padding: .35rem .8rem; font-size: .8rem;
+  border-radius: var(--radius-pill); background: var(--surface);
+  border: 1px solid var(--line-strong); box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transform: translateY(6px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+.to-top.visible { opacity: 1; pointer-events: auto; transform: none; }
+@media (min-width: 900px) { .to-top { bottom: 1.5rem; right: 1.5rem; } }
+body.auth .to-top { display: none; }
+
+/* ------------------------------------------------------------- Fußbereich */
+
+.page-foot {
+  margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: .35rem 1rem; align-items: baseline;
+}
+.page-foot a { font-size: .8rem; }
+
+
+/* ---------------------------------------------------- DIVI-Spritzenetikett
+
+   Bildet das Etikett ab, wie es auf der Spritze klebt, damit die Auswahl in
+   der App der Spritze in der Hand entspricht. Die Farbwerte sind
+   Annäherungen an die Pantone-Vorgaben und nicht normativ. */
+
+.divi-label {
+  display: inline-flex; flex-direction: column; justify-content: center;
+  min-width: 88px; max-width: 130px; padding: .28rem .45rem;
+  border-radius: 3px; border: 1px solid rgba(23, 36, 44, .28);
+  background: var(--label-bg, var(--surface-2));
+  color: var(--label-fg, var(--ink));
+  font-size: .66rem; font-weight: 700; letter-spacing: .02em;
+  line-height: 1.15; text-align: center; flex: 0 0 auto;
+  overflow: hidden; position: relative;
+}
+.divi-label .name {
+  position: relative; z-index: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.divi-label .strength {
+  position: relative; z-index: 1;
+  font-weight: 500; font-size: .6rem; opacity: .85;
+}
+/* Farbwerte je Wirkungsgruppe. Naeherungen an die Pantone-Vorgaben der
+   Norm, nicht normativ. */
+[data-divi="hypnotika-induktion"] { --label-bg: #f5d400; --label-fg: #17242c; }
+[data-divi="benzodiazepine"] { --label-bg: #f39200; --label-fg: #17242c; }
+[data-divi="benzodiazepin-antagonisten"] { --label-bg: #f39200; --label-fg: #17242c; }
+[data-divi="opioide"] { --label-bg: #0070b8; --label-fg: #ffffff; }
+[data-divi="opioid-antagonisten"] { --label-bg: #0070b8; --label-fg: #ffffff; }
+[data-divi="muskelrelaxanzien-depolarisierend"] { --label-bg: #e2001a; --label-fg: #ffffff; }
+[data-divi="muskelrelaxanzien-nichtdepolarisierend"] { --label-bg: #e2001a; --label-fg: #ffffff; }
+[data-divi="vasopressoren-kreislauf"] { --label-bg: #6e4b9e; --label-fg: #ffffff; }
+[data-divi="antihypertensiva"] { --label-bg: #6e4b9e; --label-fg: #ffffff; }
+[data-divi="lokalanaesthetika"] { --label-bg: #7c8790; --label-fg: #ffffff; }
+[data-divi="anticholinergika"] { --label-bg: #009640; --label-fg: #ffffff; }
+[data-divi="antiemetika"] { --label-bg: #f2a08a; --label-fg: #17242c; }
+[data-divi="elektrolyte"] { --label-bg: #005b34; --label-fg: #ffffff; }
+[data-divi="diverse"] { --label-bg: #ffffff; --label-fg: #17242c; }
+
+.divi-label.unset {
+  background: repeating-linear-gradient(45deg,
+    var(--surface-2), var(--surface-2) 4px, var(--surface) 4px, var(--surface) 8px);
+  color: var(--muted); border-style: dashed;
+}
+
+/* Schrägstreifen: Kennzeichen der Antagonisten. */
+.divi-label.pattern-stripes::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(-45deg,
+    transparent, transparent 5px, #ffffff 5px, #ffffff 10px);
+  opacity: .85;
+}
+
+/* Zweifarbig: untere Hälfte weiß, etwa bei nichtdepolarisierenden
+   Relaxanzien und Antihypertensiva. */
+.divi-label.pattern-split::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%;
+  background: #ffffff;
+}
+.divi-label.pattern-split .name,
+.divi-label.pattern-split .strength { position: relative; z-index: 1; }
+
+.divi-preview {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .5rem 0 .2rem;
+}

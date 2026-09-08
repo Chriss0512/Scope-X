@@ -6,11 +6,17 @@ import io
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, File
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel
 
 from .. import pdf as pdf_module
-from ..analytics import Filters, compute, detail_medications, detail_rows, resolve_period
+from ..analytics import (
+    Filters,
+    compute,
+    detail_medications,
+    detail_rows,
+    resolve_period,
+)
 from ..core import audit, current_user, edit_window_minutes, require_admin
 from ..db import conn, engine, new_id, now_iso, q, row, rows
 from ..security import verify_password, verify_totp
@@ -196,8 +202,9 @@ async def restore_backup(file: UploadFile = File(...),
         raise HTTPException(413, "Die Datei ist zu groß.")
     try:
         payload = json.loads(raw.decode("utf-8"))
-    except Exception:
-        raise HTTPException(400, "Die Datei ist keine gültige SCOPE-X-Sicherung.")
+    except Exception as exc:
+        raise HTTPException(
+            400, "Die Datei ist keine gültige SCOPE-X-Sicherung.") from exc
     if payload.get("format") != "scopex-backup":
         raise HTTPException(400, "Die Datei ist keine gültige SCOPE-X-Sicherung.")
     if payload.get("version") != BACKUP_VERSION:

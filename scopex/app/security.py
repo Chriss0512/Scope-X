@@ -156,6 +156,7 @@ def qr_svg(data: str) -> str:
     der dunklen Darstellung an, ohne dass zwei Varianten noetig waeren.
     """
     import io
+
     import segno
     buf = io.BytesIO()
     segno.make(data, error="m").save(

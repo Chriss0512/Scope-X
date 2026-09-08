@@ -409,6 +409,97 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         "INSERT INTO settings (id, user_id, skey, svalue) VALUES "
         "('set-invite', NULL, 'invite_valid_days', '7')",
     ]),
+
+    # Update 3.
+    ("0006_einsatzkontext_und_medikamentenverlauf", [
+        # Schicht und Fahrzeug gehören zum Einsatz, nicht zur Maßnahme.
+        "ALTER TABLE encounters ADD COLUMN shift_code TEXT",
+        "ALTER TABLE encounters ADD COLUMN vehicle_id TEXT",
+
+        # Medikamentengaben bekommen dieselbe Ergebnisachse wie Maßnahmen,
+        # dazu Nebenwirkung und Folgeintervention. Bestandsdaten gelten als
+        # erfolgreich, weil sie ohne Ergebnisfeld erfasst wurden und eine
+        # dokumentierte Gabe ohne Vermerk stattgefunden hat.
+        "ALTER TABLE medication_administrations ADD COLUMN outcome TEXT",
+        "ALTER TABLE medication_administrations ADD COLUMN adverse_effect TEXT",
+        "ALTER TABLE medication_administrations ADD COLUMN follow_up TEXT",
+        "UPDATE medication_administrations SET outcome = 'erfolgreich' "
+        "WHERE outcome IS NULL",
+        "CREATE INDEX ix_adm_outcome ON medication_administrations(outcome)",
+
+        # Farbgruppe der Spritzenetiketten. Reine Dokumentationsangabe,
+        # frei bearbeitbar, keine Vorgabe für die Etikettierung.
+        "ALTER TABLE medications ADD COLUMN divi_group TEXT",
+        "ALTER TABLE medications ADD COLUMN trade_names TEXT",
+
+        # ZEK, die zum Einsatz gehören und keiner einzelnen Maßnahme
+        # zuzuordnen sind, etwa Organisationsprobleme bei der Übergabe.
+        """CREATE TABLE encounter_complications (
+            id TEXT PRIMARY KEY,
+            encounter_id TEXT NOT NULL,
+            complication_id TEXT,
+            code TEXT NOT NULL,
+            label TEXT NOT NULL,
+            relation TEXT,
+            patient_harm TEXT,
+            note TEXT
+        )""",
+        "CREATE INDEX ix_ec_enc ON encounter_complications(encounter_id)",
+
+        # Punktionsort des intravenösen Zugangs als Auswahl.
+        "UPDATE measure_parameter_definitions SET ptype = 'select', "
+        "options = 'Handrücken links|Handrücken rechts|Unterarm links|"
+        "Unterarm rechts|Ellenbeuge links|Ellenbeuge rechts|Oberarm links|"
+        "Oberarm rechts|V. jugularis externa links|V. jugularis externa rechts|"
+        "Fußrücken links|Fußrücken rechts|andere' "
+        "WHERE pkey = 'ort' AND measure_id IN "
+        "(SELECT id FROM measures WHERE code = 'c_iv')",
+
+        # Geschlechtsneutrale Bezeichnungen in bestehenden Profilen.
+        "UPDATE user_profile SET qualification = 'Rettungssanitäter*in' "
+        "WHERE qualification = 'Rettungssanitäter'",
+        "UPDATE user_profile SET qualification = 'Rettungsassistent*in' "
+        "WHERE qualification = 'Rettungsassistent'",
+        "UPDATE user_profile SET qualification = 'Notfallsanitäter*in' "
+        "WHERE qualification = 'Notfallsanitäter'",
+        "UPDATE user_profile SET qualification = 'Ärztin / Arzt' "
+        "WHERE qualification = 'Arzt / Ärztin'",
+
+        # Vorbelegung der Farbgruppen. Bewusst nur dort, wo die Zuordnung
+        # eindeutig ist. Alles Übrige bleibt leer und wird bei Bedarf im
+        # Medikamentenkatalog gesetzt. Die Angabe ist Dokumentation, keine
+        # Vorgabe für die Etikettierung.
+        "UPDATE medications SET divi_group = 'Hypnotika / Induktion (gelb)' WHERE name IN ('Etomidat', 'Propofol', 'Thiopental', 'Esketamin')",
+        "UPDATE medications SET divi_group = 'Benzodiazepine (orange)' WHERE name IN ('Midazolam', 'Diazepam', 'Lorazepam', 'Clonazepam')",
+        "UPDATE medications SET divi_group = 'Opioide (blau)' WHERE name IN ('Fentanyl', 'Sufentanil', 'Morphin', 'Piritramid')",
+        "UPDATE medications SET divi_group = 'Muskelrelaxanzien (rot)' WHERE name IN ('Rocuronium', 'Vecuronium', 'Succinylcholin')",
+        "UPDATE medications SET divi_group = 'Antagonisten (gestreift)' WHERE name IN ('Naloxon', 'Flumazenil')",
+        "UPDATE medications SET divi_group = 'Vasopressoren / Kreislauf (violett)' WHERE name IN ('Adrenalin', 'Noradrenalin', 'Dobutamin', 'Cafedrin/Theodrenalin', 'Orciprenalin')",
+        "UPDATE medications SET divi_group = 'Lokalanästhetika (grau)' WHERE name IN ('Lidocain')",
+        "UPDATE medications SET divi_group = 'Anticholinergika (grün)' WHERE name IN ('Atropin')",
+        "UPDATE medications SET divi_group = 'Antiemetika (lachs)' WHERE name IN ('Ondansetron', 'Granisetron', 'Dimenhydrinat')",
+        "UPDATE medications SET divi_group = 'Elektrolyte (dunkelgrün)' WHERE name IN ('Natriumchlorid 0,9 %', 'Ringer-Acetat', 'Vollelektrolytlösung', 'Magnesiumsulfat')",
+    ]),
+
+    # Die Etikettengruppen werden feiner aufgelöst, weil die DIVI-Empfehlung
+    # zwischen depolarisierenden und nichtdepolarisierenden Relaxanzien
+    # unterscheidet und Antagonisten die Schrägstreifen ihrer Bezugsgruppe
+    # tragen.
+    ("0007_divi_etikettengruppen", [
+        "UPDATE medications SET divi_group = "
+        "'Muskelrelaxanzien, nichtdepolarisierend (rot/weiß)' "
+        "WHERE divi_group = 'Muskelrelaxanzien (rot)' "
+        "AND name IN ('Rocuronium', 'Vecuronium')",
+        "UPDATE medications SET divi_group = "
+        "'Muskelrelaxanzien, depolarisierend (rot)' "
+        "WHERE divi_group = 'Muskelrelaxanzien (rot)'",
+        "UPDATE medications SET divi_group = "
+        "'Opioid-Antagonisten (blau/weiß gestreift)' "
+        "WHERE divi_group = 'Antagonisten (gestreift)' AND name = 'Naloxon'",
+        "UPDATE medications SET divi_group = "
+        "'Benzodiazepin-Antagonisten (orange/weiß gestreift)' "
+        "WHERE divi_group = 'Antagonisten (gestreift)'",
+    ]),
 ]
 
 

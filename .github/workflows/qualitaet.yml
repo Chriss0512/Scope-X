@@ -1,0 +1,52 @@
+name: Qualitätsprüfung
+
+# Die Schleife: jeder Push und jeder Pull Request führt denselben Prüflauf
+# aus, der auch lokal läuft. Zusätzlich einmal pro Woche, damit neu
+# veröffentlichte Schwachstellen in Abhängigkeiten auffallen, ohne dass
+# jemand etwas ändert.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  pruefung:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scopex
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Abhängigkeiten installieren
+        run: |
+          pip install -r requirements.txt
+          pip install ruff coverage pip-audit pyyaml httpx playwright
+
+      - name: Browser für die Barrierefreiheitsprüfung
+        run: playwright install --with-deps chromium
+
+      - name: Qualitätsprüfung
+        run: python quality/run_quality.py
+
+      - name: Bericht sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualitaetsbericht
+          path: scopex/QUALITAETSPRUEFUNG.md
+
+      # Der Bericht wandert in die Zusammenfassung des Laufs, damit die
+      # manuell offenen Punkte bei jedem Durchlauf sichtbar bleiben und
+      # nicht in einer Artefaktdatei verschwinden.
+      - name: Bericht in die Zusammenfassung
+        if: always()
+        run: cat QUALITAETSPRUEFUNG.md >> "$GITHUB_STEP_SUMMARY"

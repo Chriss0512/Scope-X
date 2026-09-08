@@ -17,12 +17,19 @@ from pydantic import BaseModel, Field
 
 from .. import mailer
 from ..core import (
-    ROLE_LABELS, ROLES, audit, fresh_totp_required, get_setting, require_admin,
+    ROLE_LABELS,
+    ROLES,
+    audit,
+    fresh_totp_required,
+    get_setting,
+    require_admin,
     set_setting,
 )
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..security import (
-    destroy_all_sessions, forget_all_devices, token_hash,
+    destroy_all_sessions,
+    forget_all_devices,
+    token_hash,
 )
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])

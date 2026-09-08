@@ -13,25 +13,6 @@ das Backup, in der HA-Oberfläche taucht SCOPE X nicht auf.
 
 ---
 
-## 0. Installation als Add-on-Repository (empfohlen)
-
-Der bequemste Weg, weil Updates danach mit einem Klick kommen:
-
-1. Diesen Ordner (`repository.yaml` plus Unterordner `scopex`) in ein
-   Git-Repository legen.
-2. In Home Assistant: Einstellungen → Add-ons → Add-on Store → Menü oben
-   rechts → **Repositories** → URL eintragen → **Hinzufügen**.
-3. SCOPE X erscheint im Store. Installieren, konfigurieren, starten.
-
-Bei jeder Versionserhöhung in `scopex/config.yaml` zeigt Home Assistant
-einen **Update**-Knopf mit dem Text aus `CHANGELOG.md`. HACS braucht es
-dafür nicht und kann Add-ons auch gar nicht verwalten, dafür ist der
-Supervisor zuständig.
-
-Wer kein Git-Repository möchte, kopiert den Ordner `scopex` wie bisher nach
-`/addons/scopex`. Updates laufen dann über **Neu erstellen** statt über
-**Update**.
-
 ## 1. Dateien auf den Server bringen
 
 Der Ordner `scopex` gehört nach `/addons/scopex` auf dem HA-Server. Du hast
@@ -64,32 +45,6 @@ Danach muss die Struktur so aussehen:
     ├── routers/
     └── static/   index.html  app.css  app.js
 ```
-
-## 1b. SMTP einrichten
-
-In der Add-on-Konfiguration:
-
-| Feld | Wert für Netcup |
-|---|---|
-| `base_url` | `https://scopex.deine-domain.de` |
-| `smtp_host` | `mx2e87.netcup.net` |
-| `smtp_port` | `465` |
-| `smtp_security` | `ssl` |
-| `smtp_user` | die Absenderadresse |
-| `smtp_password` | das Postfachpasswort |
-| `smtp_from` | die Absenderadresse |
-
-`base_url` wird für die Links in Einladungs- und Zurücksetzungs-Mails
-gebraucht. Ohne diese Angabe verschickt SCOPE X nur relative Pfade, die im
-Mailprogramm nicht anklickbar sind.
-
-Das Passwortfeld ist als Typ `password` deklariert und wird in der
-Home-Assistant-Oberfläche maskiert. Es steht ausschließlich in
-`/data/options.json` des Add-ons, nie im Quelltext und nie in der
-Datenbank.
-
-Ohne SMTP bleibt alles nutzbar: Einladungscodes und Zurücksetzungs-Links
-werden dann im Administrationsbereich angezeigt und von Hand weitergegeben.
 
 ## 2. Add-on installieren
 
@@ -366,56 +321,65 @@ Kartenrand hinaus. Ursache war eine Kombination aus dem auto-Randmaß des
 Inhaltsbereichs, das in der neuen Flex-Spalte das Strecken aufhob, und
 Tabellen ohne feste Layoutbreite.
 
-## 13. Rollen und Zugänge
+## 14. Qualität und Normen
 
-**Rollen.** Gast liest nur. Mitarbeiter dokumentiert eigene Einsätze und
-verwaltet das eigene Profil. Administrator kommt zusätzlich an Konten,
-Einladungen, Stammdaten, Bearbeitungsfrist, rechtliche Angaben und die
-Wiederherstellung heran.
+Der Qualitätsbericht `QUALITAET-ISO-25010.md` bildet SCOPE X auf das
+Produktqualitätsmodell **ISO/IEC 25010:2023** ab, mit Belegen und offenen
+Punkten je Charakteristik.
 
-Jede schreibende Route prüft die Rolle serverseitig. Dass die Oberfläche
-eine Schaltfläche ausblendet, ist Bequemlichkeit und niemals der Schutz.
-Getestet wird das explizit: ein Mitarbeiterkonto bekommt auf
-Verwaltungsrouten 403, nicht etwa eine leere Antwort.
+Wichtig zur Einordnung: ISO 25010 ist ein Qualitätsmodell, kein
+Anforderungskatalog. Es gibt keine Konformitätserklärung und keine
+Zertifizierung dagegen. Wer behauptet, eine Software „erfülle ISO 25010",
+sagt nichts Prüfbares. Der Bericht macht stattdessen die Kompromisse
+sichtbar.
 
-**Datentrennung.** Auch ein Administrator sieht fremde Einsätze nicht. Jede
-Abfrage bindet an `user_id`; eine fremde UUID liefert 404 statt Daten.
-Administratoren verwalten Zugänge, nicht Inhalte.
+**Zu den DIVI-Farbgruppen.** EN ISO 26825 und die ergänzende
+DIVI-Empfehlung ordnen Wirkstoffe Wirkungsgruppen mit einer Kennfarbe zu.
+SCOPE X führt diese Gruppe als bearbeitbares Feld am Wirkstoff und belegt
+sie nur dort vor, wo die Zuordnung eindeutig ist. Es handelt sich um eine
+Dokumentationsangabe. SCOPE X ist keine Etikettierungsreferenz, leitet
+daraus keine Vorgabe ab, und die Zuordnung sollte gegen die jeweils aktuelle
+DIVI-Veröffentlichung geprüft werden.
 
-**Einladungen.** Ab dem zweiten Konto ist eine gültige Einladung Pflicht.
-Codes gelten befristet und genau einmal und stehen in der Datenbank nur als
-Hash. Im Klartext erscheint ein Code genau einmal, direkt nach dem
-Erstellen. Das ersetzt ein Captcha wirksamer, als ein Captcha es könnte:
-ohne Code kommt niemand bis zum Formular. Ein externes Captcha wäre
-außerdem ein Cloud-Dienst und würde die Content-Security-Policy brechen.
+**SCOPE X ist kein Medizinprodukt** und beansprucht das nicht. Eine
+Risikoanalyse nach ISO 14971 liegt nicht vor.
 
-**Zwei-Faktor bei Eingriffen.** Rollen ändern, Konten sperren, Einladungen
-erstellen und Zurücksetzungs-Links erzeugen verlangen einen frischen Code
-aus der Authenticator-App. Ein Vertrauensgerät hilft dabei ausdrücklich
-nicht, es erspart den Code nur bei der Anmeldung.
+## 15. Qualitätsschleife
 
-**Letzter Administrator.** Der letzte aktive Administrator kann sich weder
-entmachten noch sperren. Sonst wäre die Installation verwaist.
+```sh
+python quality/run_quality.py
+```
 
-**Passwort vergessen.** Der Link per Mail gilt 30 Minuten und einmal. Zum
-Setzen des neuen Passworts ist zusätzlich der zweite Faktor nötig. Ein
-Zugriff auf das Postfach allein reicht also nicht für eine
-Kontoübernahme, und auch ein Administrator kommt über den von ihm erzeugten
-Link nicht in ein fremdes Konto.
+Prüft 24 automatisierbare Anforderungen und schreibt
+`QUALITAETSPRUEFUNG.md`. Rückgabewert ungleich null, sobald etwas
+fehlschlägt. Derselbe Lauf startet über `.github/workflows/qualitaet.yml`
+bei jedem Push, jedem Pull Request und einmal wöchentlich.
 
-**Vertrauensgerät.** Auf Wunsch entfällt der TOTP-Code bei der Anmeldung
-für 90 Tage. Im Profil einsehbar und jederzeit für alle Geräte widerrufbar.
-Passwortwechsel und Zurücksetzung entziehen das Vertrauen automatisch.
+Voraussetzungen über die Laufzeitabhängigkeiten hinaus:
 
-**Automatische Abmeldung.** Serverseitig nach 30 Minuten Leerlauf,
-einstellbar im Administrationsbereich. Der Browser warnt eine Minute
-vorher, maßgeblich ist aber der Server: er verwirft die Sitzung auch dann,
-wenn der Zähler im Browser manipuliert wird.
+```sh
+pip install ruff coverage pip-audit pyyaml httpx playwright
+playwright install --with-deps chromium
+```
 
-**Passwörter.** Argon2id mit Salt. Bestehende scrypt-Hashes bleiben prüfbar
-und werden bei der nächsten erfolgreichen Anmeldung still gehoben, niemand
-muss sein Passwort ändern.
+**Was die Schleife nicht kann.** Sechs Punkte erscheinen im Bericht als
+manuell offen und zählen nicht als bestanden: Penetrationstest,
+Screenreader-Audit mit echten Hilfsmitteln, Risikoanalyse nach ISO 14971,
+Verschlüsselung im Ruhezustand, Betriebsüberwachung und die Prüfung gegen
+MariaDB. Die ersten drei sind Menschenarbeit, der vierte scheitert an der
+Plattform, die letzten beiden brauchen laufende Infrastruktur. Sie stehen
+absichtlich im Bericht: sie dort wegzulassen wäre der einzige Weg zu einem
+vollständig grünen Ergebnis.
 
-**Protokoll.** Fehlversuche, Rollenänderungen, Sperrungen, Einladungen und
-Zurücksetzungen landen im Änderungsprotokoll. Passwörter, Token und
-Klartext-Codes stehen nie darin, IP-Adressen nur als gekürzter Hash.
+## 16. DIVI-Spritzenetiketten in der App
+
+Die Wirkstoffauswahl bildet das Etikett ab, wie es auf der Spritze klebt,
+damit die Auswahl in der App der Spritze in der Hand entspricht. Die Gruppe
+ist je Wirkstoff im Katalog änderbar und nur dort vorbelegt, wo die
+Zuordnung eindeutig ist.
+
+SCOPE X erzeugt **keine druckbaren Etiketten** und ist keine
+Etikettierungsreferenz. Die normative Gestaltung steht in EN ISO 26825; die
+hier verwendeten Farbwerte sind Annäherungen an die Pantone-Vorgaben und
+nicht normativ. Für die tatsächliche Etikettierung gilt ausschließlich die
+jeweils aktuelle DIVI-Veröffentlichung.

@@ -1,0 +1,24 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+exclude = ["quality/vendor"]
+
+[tool.ruff.lint]
+# Bewusste Auswahl statt "alles": Fehler, die auf echte Defekte hindeuten,
+# plus Importordnung und typische Fallstricke. Stilfragen ohne
+# Fehlerbezug bleiben draußen, sonst erzeugt die Prüfung Rauschen und
+# wird ignoriert.
+select = ["E", "F", "W", "I", "B", "C4", "SIM", "RET", "ARG"]
+ignore = [
+  "E501",    # Zeilenlänge prüft bereits das Format
+  "SIM105",  # contextlib.suppress ist hier nicht lesbarer
+  "ARG001",  # FastAPI-Dependencies sehen wie ungenutzte Argumente aus
+  "ARG002",
+  "B008",    # Depends() im Standardwert ist das FastAPI-Muster
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Die Testreihen sind bewusst kompakt und linear geschrieben. Dort
+# gelten Stilregeln nicht, die für Anwendungscode sinnvoll sind.
+"quality/suites/*" = ["E402", "F401", "E722", "E701", "E702", "E741",
+                      "B007", "SIM115", "ARG005", "ARG001"]

@@ -11,7 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..core import (
-    audit, current_user, edit_window_minutes, get_setting, require_admin,
+    audit,
+    current_user,
+    edit_window_minutes,
+    get_setting,
+    require_admin,
     set_setting,
 )
 from ..db import conn, now_iso, q, row

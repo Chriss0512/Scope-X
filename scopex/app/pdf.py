@@ -11,8 +11,6 @@ from datetime import datetime
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
-from .seed import CATEGORY_LABELS
-
 # Designsystem 1.0: Deep Navy trägt, Petrol akzentuiert, Signal Lime bleibt
 # dem X der Wortmarke vorbehalten.
 NAVY = (16, 37, 51)
@@ -94,7 +92,7 @@ class Nachweis(FPDF):
         align = align or ["L"] * len(headers)
         self.set_font("Helvetica", "B", 8.5)
         self.set_text_color(*MUTED)
-        for h, w, a in zip(headers, widths, align):
+        for h, w, a in zip(headers, widths, align, strict=False):
             self.cell(w, 5.5, _safe(h), align=a)
         self.ln(5.5)
         self.set_draw_color(*RULE)
@@ -106,7 +104,7 @@ class Nachweis(FPDF):
             if self.get_y() > self.h - 26:
                 self.add_page()
                 self.set_font("Helvetica", "", 9)
-            for value, w, a in zip(r, widths, align):
+            for value, w, a in zip(r, widths, align, strict=False):
                 self.cell(w, 5.2, _safe(value), align=a)
             self.ln(5.2)
 

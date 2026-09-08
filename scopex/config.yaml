@@ -3,7 +3,7 @@
 # nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
 # Start, Neustart und Backup des Containers.
 name: SCOPE X
-version: "2.0.0"
+version: "3.1.0"
 slug: scopex
 description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
 arch:
@@ -18,13 +18,12 @@ hassio_api: false
 homeassistant_api: false
 host_network: false
 
-# null = der Port wird NICHT auf dem Host veröffentlicht. Nginx Proxy Manager
-# erreicht den Container über das interne Netz unter "local-scopex:8099".
-# Für direkten LAN-Zugriff stattdessen eine Portnummer eintragen.
+# Port 8099 wird auf dem Home-Assistant-Host veröffentlicht.
+# Nginx Proxy Manager erreicht SCOPE X unter der HA-IP auf Port 8099.
 ports:
-  8099/tcp: null
+  8099/tcp: 8099
 ports_description:
-  8099/tcp: Web-Oberfläche, normalerweise nur intern für den Reverse Proxy
+  8099/tcp: Web-Oberfläche für den Reverse Proxy
 
 options:
   log_level: info

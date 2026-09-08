@@ -155,6 +155,28 @@ const STATUS_CLASS = {
   erfolgreich: "ok", fehlgeschlagen: "fail", abgebrochen: "abort",
 };
 
+/* Bildet das Spritzenetikett ab, wie es auf der Spritze aussieht:
+   Hintergrundfarbe der Wirkungsgruppe, Wirkstoffname in Versalien, darunter
+   optional die Konzentration. Schrägstreifen kennzeichnen Antagonisten,
+   zweifarbige Etiketten die nichtdepolarisierenden Relaxanzien.
+
+   Reine Abbildung zur Wiedererkennung. SCOPE X erzeugt keine druckbaren
+   Etiketten und ist keine Etikettierungsreferenz. */
+function diviLabel(med, strength) {
+  const style = (state.constants.divi_labels || {})[med.divi_group];
+  if (!style) {
+    return `<span class="divi-label unset" title="Keine Etikettengruppe hinterlegt">
+      ${esc(med.name.toUpperCase())}</span>`;
+  }
+  // Farbe kommt über data-divi aus dem Stylesheet. Ein style-Attribut wäre
+  // von der Content-Security-Policy blockiert und stillschweigend wirkungslos.
+  return `<span class="divi-label pattern-${esc(style.pattern)}"
+    data-divi="${esc(style.slug)}" title="${esc(med.divi_group)}">
+    <span class="name">${esc(med.name.toUpperCase())}</span>${
+      strength ? `<span class="strength">${esc(strength)}</span>` : ""}
+  </span>`;
+}
+
 function statusBadge(outcome) {
   return `<span class="status ${STATUS_CLASS[outcome] || ""}">${esc(outcome)}</span>`;
 }
@@ -233,9 +255,11 @@ function viewLogin() {
           autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
       <div class="field"><label for="lp">Passwort</label>
         <input id="lp" type="password" name="password" autocomplete="current-password" required></div>
-      <div class="field"><label for="lt">Code aus der Authenticator-App</label>
+      <div class="field hidden" id="totp-field">
+        <label for="lt">Code aus der Authenticator-App</label>
         <input id="lt" name="totp_code" inputmode="numeric" autocomplete="one-time-code"
                pattern="[0-9]*" maxlength="6" placeholder="000000"></div>
+      <div id="device-hint"></div>
       <div class="row gap-md align-start" data-s="gap-md align-start">
         <input id="remember" type="checkbox" data-s="checkbox">
         <label for="remember" data-s="m-0">Auf diesem Gerät merken
@@ -249,8 +273,22 @@ function viewLogin() {
       <p class="tiny muted" id="login-error"></p>
     </form>`);
 
+  /* Ist dieses Gerät hinterlegt, wird gar kein Code gebraucht. Dann bleibt
+     das Feld weg, statt eine Eingabe zu verlangen, die niemand hat. */
+  api("/api/auth/device").then((d) => {
+    if (d.known) {
+      $("#lu").value = d.username || "";
+      $("#device-hint").innerHTML = `<p class="tiny muted">Dieses Gerät ist
+        hinterlegt, ein Code aus der Authenticator-App ist nicht nötig.</p>`;
+      $("#lp").focus();
+    } else {
+      $("#totp-field").classList.remove("hidden");
+    }
+  }).catch(() => $("#totp-field").classList.remove("hidden"));
+
   let recoveryMode = false;
   $("#use-recovery").addEventListener("click", () => {
+    $("#totp-field").classList.remove("hidden");
     recoveryMode = !recoveryMode;
     const f = $("#lt");
     f.placeholder = recoveryMode ? "XXXX-XXXX-XXXX-XXXX" : "000000";
@@ -276,6 +314,9 @@ function viewLogin() {
       });
       await boot();
     } catch (err) {
+      // Schlägt es trotz hinterlegtem Gerät fehl, wird der Code doch
+      // gebraucht: das Vertrauen kann abgelaufen oder entzogen sein.
+      $("#totp-field").classList.remove("hidden");
       $("#login-error").textContent = err.message;
     }
   });
@@ -476,6 +517,8 @@ async function render() {
   // stehen. Abläufe, die nach dem Speichern erneut einen Dialog öffnen,
   // tun das erst nach render und sind davon nicht betroffen.
   closeSheet();
+  scrollAppTop(false);
+  mountScrollTop();
   const { path, params } = currentRoute();
   document.querySelectorAll("nav.tabbar a").forEach((a) => {
     if (a.dataset.route === path) a.setAttribute("aria-current", "page");
@@ -606,7 +649,13 @@ async function viewHome() {
     </div>
 
     <h2 data-s="my-xl">Zuletzt dokumentiert</h2>
-    <div class="stack" id="recent"></div>`;
+    <div class="stack" id="recent"></div>
+
+    <div class="page-foot">
+      <a href="#/rechtliches">Impressum und Datenschutz</a>
+      <span class="tiny muted">SCOPE X ${esc(state.auth.user.role === "admin"
+        ? "· Administrator" : "")}</span>
+    </div>`;
 
   const newDoc = $("#new-doc");
   if (newDoc) newDoc.addEventListener("click", newEncounterSheet);
@@ -682,14 +731,25 @@ function newEncounterSheet() {
       aria-pressed="false">NACA ${esc(n)}</button>`).join("");
   sheet("Neue Dokumentation", `
     <form id="enc-form" class="stack">
+      <p class="small muted">Wann war der Einsatz? Vorbelegt ist jetzt, für
+      Nachträge trag den tatsächlichen Zeitpunkt ein.</p>
       <div class="field-row">
-        <div class="field"><label for="ed">Datum</label>
-          <input id="ed" type="date" name="enc_date" value="${todayISO()}" required></div>
-        <div class="field"><label for="et">Uhrzeit</label>
+        <div class="field"><label for="ed">Datum des Einsatzes</label>
+          <input id="ed" type="date" name="enc_date" value="${todayISO()}"
+            max="${todayISO()}" required></div>
+        <div class="field"><label for="et">Alarmzeit</label>
           <input id="et" type="time" name="enc_time" value="${nowHM()}" required></div>
       </div>
       <div class="field"><label for="em">Einsatznummer (optional)</label>
         <input id="em" name="mission_number" autocomplete="off"></div>
+      <div class="field-row">
+        <div class="field"><label for="es">Schichtkürzel (optional)</label>
+          <input id="es" name="shift_code" autocomplete="off"
+            placeholder="z. B. T1, N2"></div>
+        <div class="field"><label for="ev">Fahrzeugkennung (optional)</label>
+          <input id="ev" name="vehicle_id" autocomplete="off"
+            placeholder="z. B. RTW 1-83-1"></div>
+      </div>
       <div class="field"><label>NACA (optional)</label>
         <div class="chipset" id="naca-set">${naca}</div></div>
       <p class="tiny muted">Einsatznummern und Freitext können je nach Verwendung
@@ -744,9 +804,19 @@ async function viewEncounter(id) {
       <p class="muted small">
         ${enc.naca ? "NACA " + esc(enc.naca) : "ohne NACA"}
         ${enc.mission_number ? " · Einsatznummer " + esc(enc.mission_number) : ""}
+        ${enc.shift_code ? " · Schicht " + esc(enc.shift_code) : ""}
+        ${enc.vehicle_id ? " · " + esc(enc.vehicle_id) : ""}
         · ${enc.attempts.length} Maßnahmen · ${enc.medications.length} Medikamentengaben
       </p>
-      ${editable ? `<button class="btn-quiet small" id="edit-enc">Einsatzdaten ändern</button>` : ""}
+      <p class="tiny muted">Die Frist oben gilt für den gesamten Einsatz und
+      alle Einträge darin.</p>
+      ${enc.complications && enc.complications.length
+        ? `<div class="zek-line" data-s="mt-sm"><span>Einsatz-ZEK: ${
+            zekSummary(enc.complications)}</span></div>` : ""}
+      ${editable ? `<div class="row wrap" data-s="mt-sm gap-sm">
+        <button class="btn-quiet small" id="edit-enc">Einsatzdaten ändern</button>
+        <button class="btn-quiet small" id="enc-zek">ZEK zum Einsatz</button>
+      </div>` : ""}
     </div>
 
     <div class="stack" id="entries"></div>
@@ -780,6 +850,8 @@ async function viewEncounter(id) {
     $("#finish").addEventListener("click", () => { location.hash = "#/"; });
     const editEnc = $("#edit-enc");
     if (editEnc) editEnc.addEventListener("click", () => editEncounterSheet(enc));
+    const encZek = $("#enc-zek");
+    if (encZek) encZek.addEventListener("click", () => encounterZekSheet(enc));
   }
 
   const wdEnc = $("#withdraw-enc");
@@ -788,6 +860,13 @@ async function viewEncounter(id) {
       `/api/encounters/${enc.id}/withdraw`,
       "Der Einsatz und alle zugehörigen Einträge werden stillgelegt.",
       () => { location.hash = "#/neu"; }));
+
+  entries.querySelectorAll("[data-edit-attempt]").forEach((b) =>
+    b.addEventListener("click", () => editAttemptSheet(
+      enc.attempts.find((a) => a.id === b.dataset.editAttempt))));
+  entries.querySelectorAll("[data-edit-med]").forEach((b) =>
+    b.addEventListener("click", () => editMedicationSheet(
+      enc.medications.find((m) => m.id === b.dataset.editMed))));
 
   entries.querySelectorAll("[data-wd-attempt]").forEach((b) =>
     b.addEventListener("click", () =>
@@ -837,10 +916,10 @@ function attemptCard(a, editable) {
           ${a.note ? `<div class="small muted" data-s="mt-xs">${esc(a.note)}</div>` : ""}
         </div>
         <div class="stack right" data-s="shrink-0">
-          ${lockChip(a.lock)}
           ${a.lock.locked
             ? `<button class="btn-quiet small btn-danger" data-wd-attempt="${esc(a.id)}">Entfernen</button>`
-            : `<button class="btn-quiet small btn-danger" data-del-attempt="${esc(a.id)}">Löschen</button>`}
+            : `<button class="btn-quiet small" data-edit-attempt="${esc(a.id)}">Bearbeiten</button>
+               <button class="btn-quiet small btn-danger" data-del-attempt="${esc(a.id)}">Löschen</button>`}
         </div>
       </div>
     </div>`;
@@ -858,18 +937,25 @@ function medCard(m, editable) {
             <span class="cat-badge">Rx</span>
             <strong>${esc(m.medication_name)}</strong>
           </div>
-          <div class="small" data-s="mt-xs">
-            ${esc(dose)}${m.route ? " · " + esc(m.route) : ""}${m.delegation ? " · " + esc(m.delegation) : ""}
+          <div class="row wrap" data-s="mt-sm gap-sm">
+            ${statusBadge(m.outcome || "erfolgreich")}
+            <span class="tiny muted">${esc(dose)}${
+              m.route ? " · " + esc(m.route) : ""}${
+              m.delegation ? " · " + esc(m.delegation) : ""}</span>
           </div>
+          ${m.adverse_effect ? `<div class="zek-line"><span>Nebenwirkung: ${
+            esc(m.adverse_effect)}</span></div>` : ""}
+          ${m.follow_up ? `<div class="small muted" data-s="mt-xs">Folge: ${
+            esc(m.follow_up)}</div>` : ""}
           ${m.preparation_name ? `<div class="small muted">${esc(m.preparation_name)}</div>` : ""}
           ${zek ? `<div class="zek-line"><span>${zek}</span></div>` : ""}
           ${m.note ? `<div class="small muted" data-s="mt-xs">${esc(m.note)}</div>` : ""}
         </div>
         <div class="stack right" data-s="shrink-0">
-          ${lockChip(m.lock)}
           ${m.lock.locked
             ? `<button class="btn-quiet small btn-danger" data-wd-med="${esc(m.id)}">Entfernen</button>`
-            : `<button class="btn-quiet small btn-danger" data-del-med="${esc(m.id)}">Löschen</button>`}
+            : `<button class="btn-quiet small" data-edit-med="${esc(m.id)}">Bearbeiten</button>
+               <button class="btn-quiet small btn-danger" data-del-med="${esc(m.id)}">Löschen</button>`}
         </div>
       </div>
     </div>`;
@@ -889,6 +975,12 @@ function editEncounterSheet(enc) {
       </div>
       <div class="field"><label for="em2">Einsatznummer</label>
         <input id="em2" name="mission_number" value="${esc(enc.mission_number || "")}"></div>
+      <div class="field-row">
+        <div class="field"><label for="es2">Schichtkürzel</label>
+          <input id="es2" name="shift_code" value="${esc(enc.shift_code || "")}"></div>
+        <div class="field"><label for="ev2">Fahrzeugkennung</label>
+          <input id="ev2" name="vehicle_id" value="${esc(enc.vehicle_id || "")}"></div>
+      </div>
       <div class="field"><label>NACA</label><div class="chipset">${naca}</div></div>
       <div class="sheet-actions two">
         <button type="button" class="btn-danger" id="del-enc">Einsatz löschen</button>
@@ -926,6 +1018,139 @@ function editEncounterSheet(enc) {
 /* Gesperrte Einträge werden nicht gelöscht, sondern mit Begründung
    stillgelegt. Die Begründung ist Pflicht, weil eine Lücke im Nachweis
    sonst nicht erklärbar wäre. */
+/* ZEK, die zum Einsatz gehören: Übergabeprobleme, nicht verfügbare
+   Rettungsmittel. Sie einer beliebigen Maßnahme unterzuschieben würde die
+   Auswertung verfälschen. */
+function encounterZekSheet(enc) {
+  sheet("ZEK zum Einsatz", `
+    <p class="small muted">Für Ereignisse, die den Einsatz als Ganzes
+    betreffen und zu keiner einzelnen Maßnahme gehören.</p>
+    <form id="ez-form" class="stack" data-s="mt-md">
+      ${zekBlock()}
+      <button class="btn-primary btn-lg" type="submit">Speichern</button>
+      <p class="tiny muted" id="ez-err"></p>
+    </form>`, (body) => {
+    const zek = bindZek(body, true, enc.complications || []);
+    $("#ez-form", body).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api(`/api/encounters/${enc.id}/complications`, {
+          method: "PUT", body: { complications: zek.collect() } });
+        closeSheet(); toast("Gespeichert."); render();
+      } catch (err) { $("#ez-err", body).textContent = err.message; }
+    });
+  });
+}
+
+function editAttemptSheet(a) {
+  if (!a) return;
+  const outcomes = state.constants.outcomes.map((o) =>
+    `<button type="button" class="chip out-${STATUS_CLASS[o] || "neutral"}"
+      data-outcome="${esc(o)}" aria-pressed="${o === a.outcome}">${esc(o)}</button>`).join("");
+  const roles = state.constants.performer_roles.map((r) =>
+    `<button type="button" class="chip" data-role="${esc(r.key)}"
+      aria-pressed="${r.key === a.performer_role}">${esc(r.key)}</button>`).join("");
+  const delegations = state.constants.delegations.map((d) =>
+    `<button type="button" class="chip" data-deleg="${esc(d)}"
+      aria-pressed="${d === a.delegation}">${esc(d)}</button>`).join("");
+
+  sheet(a.measure_name, `
+    <form id="ea-form" class="stack">
+      <div class="field"><label>Ergebnis</label><div class="chipset">${outcomes}</div></div>
+      <div class="field"><label>Rolle bei der Durchführung</label>
+        <div class="chipset">${roles}</div></div>
+      ${showDelegation() ? `<div class="field"><label>Durchführungsart</label>
+        <div class="chipset">${delegations}</div></div>` : ""}
+      ${zekBlock()}
+      <div class="field"><label for="ea-note">Notiz</label>
+        <textarea id="ea-note" maxlength="500">${esc(a.note || "")}</textarea></div>
+      <button class="btn-primary btn-lg" type="submit">Änderungen speichern</button>
+      <p class="tiny muted" id="ea-err"></p>
+    </form>`, (body) => {
+    let outcome = a.outcome, role = a.performer_role, delegation = a.delegation;
+    const pick = (sel, set) => body.querySelectorAll(sel).forEach((b) =>
+      b.addEventListener("click", () => {
+        body.querySelectorAll(sel).forEach((x) => x.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        set(b.dataset);
+      }));
+    pick("[data-outcome]", (d) => { outcome = d.outcome; });
+    pick("[data-role]", (d) => { role = d.role; });
+    pick("[data-deleg]", (d) => { delegation = d.deleg; });
+    const zek = bindZek(body, true, a.complications || []);
+    $("#ea-form", body).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api(`/api/attempts/${a.id}`, { method: "PATCH", body: {
+          outcome, performer_role: role, delegation,
+          note: $("#ea-note", body).value || null,
+          complications: zek.collect() } });
+        closeSheet(); toast("Gespeichert."); render();
+      } catch (err) { $("#ea-err", body).textContent = err.message; }
+    });
+  });
+}
+
+function editMedicationSheet(m) {
+  if (!m) return;
+  const outcomes = state.constants.outcomes.map((o) =>
+    `<button type="button" class="chip out-${STATUS_CLASS[o] || "neutral"}"
+      data-outcome="${esc(o)}" aria-pressed="${
+        o === (m.outcome || "erfolgreich")}">${esc(o)}</button>`).join("");
+  const units = state.constants.units.map((u) =>
+    `<option ${u === m.unit ? "selected" : ""}>${esc(u)}</option>`).join("");
+  const routes = state.constants.routes.map((r) =>
+    `<option ${r === m.route ? "selected" : ""}>${esc(r)}</option>`).join("");
+
+  sheet(m.medication_name, `
+    <form id="em-form" class="stack">
+      <div class="field"><label>Ergebnis</label><div class="chipset">${outcomes}</div></div>
+      <div class="field-row">
+        <div class="field"><label for="emd">Dosis</label>
+          <input id="emd" type="number" step="any" value="${
+            m.dose === null || m.dose === undefined ? "" : m.dose}"></div>
+        <div class="field"><label for="emu">Einheit</label>
+          <select id="emu"><option value="">ohne Angabe</option>${units}</select></div>
+      </div>
+      <div class="field"><label for="emr">Applikationsweg</label>
+        <select id="emr"><option value="">ohne Angabe</option>${routes}</select></div>
+      ${zekBlock()}
+      <div class="field"><label for="emae">Beobachtete Nebenwirkung</label>
+        <input id="emae" maxlength="200" value="${esc(m.adverse_effect || "")}"></div>
+      <div class="field"><label for="emfu">Dadurch erforderliche weitere Intervention</label>
+        <input id="emfu" maxlength="200" value="${esc(m.follow_up || "")}"></div>
+      <div class="field"><label for="emn">Notiz</label>
+        <textarea id="emn" maxlength="500">${esc(m.note || "")}</textarea></div>
+      <button class="btn-primary btn-lg" type="submit">Änderungen speichern</button>
+      <p class="tiny muted" id="em-err"></p>
+    </form>`, (body) => {
+    let outcome = m.outcome || "erfolgreich";
+    body.querySelectorAll("[data-outcome]").forEach((b) =>
+      b.addEventListener("click", () => {
+        body.querySelectorAll("[data-outcome]").forEach((x) =>
+          x.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        outcome = b.dataset.outcome;
+      }));
+    const zek = bindZek(body, false, m.complications || []);
+    $("#em-form", body).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const dose = $("#emd", body).value;
+      try {
+        await api(`/api/administrations/${m.id}`, { method: "PATCH", body: {
+          outcome, dose: dose === "" ? null : Number(dose),
+          unit: $("#emu", body).value || null,
+          route: $("#emr", body).value || null,
+          adverse_effect: $("#emae", body).value || null,
+          follow_up: $("#emfu", body).value || null,
+          note: $("#emn", body).value || null,
+          complications: zek.collect() } });
+        closeSheet(); toast("Gespeichert."); render();
+      } catch (err) { $("#em-err", body).textContent = err.message; }
+    });
+  });
+}
+
 function withdrawSheet(title, url, hint, after) {
   sheet(title, `
     <div class="notice warn">${esc(hint)} Der Datensatz bleibt erhalten und
@@ -1053,8 +1278,16 @@ function zekBlock() {
 /* Bezug und Schadenseinschätzung erscheinen erst, wenn eine ZEK gewählt ist.
    Solange keine gesetzt ist, kostet die Erweiterung beim Erfassen nichts.
    Gibt einen Sammler zurück, statt den Zustand global zu halten. */
-function bindZek(body, withRelation) {
+function bindZek(body, withRelation, preset = []) {
   const chosen = new Map();
+  preset.forEach((c) => {
+    chosen.set(c.id, {
+      relation: c.relation || "begleitend",
+      patient_harm: c.patient_harm || "kein Schaden erkennbar",
+    });
+    const chip = body.querySelector(`[data-zek="${c.id}"]`);
+    if (chip) chip.setAttribute("aria-pressed", "true");
+  });
   const detail = $("#zek-detail", body);
 
   function drawDetail() {
@@ -1103,6 +1336,7 @@ function bindZek(body, withRelation) {
       drawDetail();
     }));
 
+  drawDetail();
   return {
     collect: () => Array.from(chosen.entries()).map(([id, v]) => ({ id, ...v })),
   };
@@ -1140,9 +1374,9 @@ function attemptForm(enc, measure) {
   const outcomes = state.constants.outcomes.map((o, i) =>
     `<button type="button" class="chip out-${STATUS_CLASS[o] || "neutral"}"
       data-outcome="${esc(o)}" aria-pressed="${i === 0}">${esc(o)}</button>`).join("");
-  const delegations = state.constants.delegations.map((d) =>
+  const delegations = state.constants.delegations.map((d, i) =>
     `<button type="button" class="chip" data-deleg="${esc(d)}"
-      aria-pressed="false">${esc(d)}</button>`).join("");
+      aria-pressed="${i === 0}">${esc(d)}</button>`).join("");
   const roles = state.constants.performer_roles.map((r, i) =>
     `<button type="button" class="chip" data-role="${esc(r.key)}"
       aria-pressed="${i === 0}" title="${esc(r.hint)}">${esc(r.key)}</button>`).join("");
@@ -1167,7 +1401,9 @@ function attemptForm(enc, measure) {
       <button class="btn-quiet" type="submit" data-next="med">Speichern und Medikament hinzufügen</button>
     </form>`, (body) => {
     let outcome = state.constants.outcomes[0];
-    let delegation = null;
+    // Der Regelfall ist eigenverantwortlich. Wer etwas anderes
+    // dokumentiert, tippt einmal; wer den Regelfall dokumentiert, gar nicht.
+    let delegation = state.constants.delegations[0];
     let performerRole = state.constants.performer_roles[0].key;
 
     /* Bei angeleiteten oder assistierten Maßnahmen ist für den Nachweis
@@ -1258,6 +1494,7 @@ function medicationPicker(enc) {
       items = items.filter((m) => !seen.has(m.id) && seen.add(m.id));
       list.innerHTML = items.map((m) => `
         <button class="pick" data-med="${esc(m.id)}">
+          ${diviLabel(m)}
           <span class="grow" data-s="text-left">${esc(m.name)}</span>
         </button>`).join("") ||
         `<div class="empty small">Kein Treffer. Neue Wirkstoffe legst du unter
@@ -1277,11 +1514,26 @@ function medicationForm(enc, med) {
   const routes = state.constants.routes.map((r) => `<option>${esc(r)}</option>`).join("");
   const preps = (med.preparations || []).map((p) =>
     `<option value="${esc(p.id)}">${esc(p.name)}${p.strength ? " " + esc(p.strength) : ""}</option>`).join("");
-  const delegations = state.constants.delegations.map((d) =>
-    `<button type="button" class="chip" data-deleg="${esc(d)}" aria-pressed="false">${esc(d)}</button>`).join("");
+  const delegations = state.constants.delegations.map((d, i) =>
+    `<button type="button" class="chip" data-deleg="${esc(d)}" aria-pressed="${i === 0}">${esc(d)}</button>`).join("");
+
+  const medOutcomes = state.constants.outcomes.map((o, i) =>
+    `<button type="button" class="chip out-${STATUS_CLASS[o] || "neutral"}"
+      data-outcome="${esc(o)}" aria-pressed="${i === 0}">${esc(o)}</button>`).join("");
 
   sheet(med.name, `
+    <div class="divi-preview">
+      ${diviLabel(med)}
+      <span class="tiny muted">${med.divi_group
+        ? esc(med.divi_group)
+        : "Keine Etikettengruppe hinterlegt"}</span>
+    </div>
+    ${(med.trade_names || []).length
+      ? `<p class="tiny muted">Handelsnamen: ${esc(med.trade_names.join(", "))}</p>`
+      : ""}
     <form id="med-form" class="stack">
+      <div class="field"><label>Ergebnis</label>
+        <div class="chipset">${medOutcomes}</div></div>
       ${preps ? `<div class="field"><label for="mp">Präparat (optional)</label>
         <select id="mp"><option value="">ohne Angabe</option>${preps}</select></div>` : ""}
       <div class="field-row">
@@ -1295,6 +1547,14 @@ function medicationForm(enc, med) {
       ${showDelegation() ? `<div class="field"><label>Durchführungsart</label>
         <div class="chipset">${delegations}</div></div>` : ""}
       ${zekBlock()}
+      <div class="field"><label for="mae">Beobachtete Nebenwirkung (optional)</label>
+        <input id="mae" maxlength="200" placeholder="z. B. Blutdruckabfall nach Gabe">
+        <p class="tiny muted" data-s="mt-xs">Freitext. Schwerwiegende Ereignisse
+        zusätzlich als ZEK zuordnen, damit sie in der Auswertung erscheinen.</p></div>
+      <div class="field"><label for="mfu">Dadurch erforderliche weitere Intervention (optional)</label>
+        <input id="mfu" maxlength="200" placeholder="z. B. Volumengabe, Vasopressor">
+        <p class="tiny muted" data-s="mt-xs">Was die Applikation nach sich gezogen
+        hat. Eigenständige Maßnahmen bitte zusätzlich als Maßnahme erfassen.</p></div>
       <div class="field"><label for="mn">Notiz (optional, keine Patientendaten)</label>
         <textarea id="mn" maxlength="500"></textarea></div>
       <div class="sheet-actions two">
@@ -1302,7 +1562,9 @@ function medicationForm(enc, med) {
         <button class="btn-lg" type="submit" data-next="close">Speichern</button>
       </div>
     </form>`, (body) => {
-    let delegation = null;
+    // Der Regelfall ist eigenverantwortlich. Wer etwas anderes
+    // dokumentiert, tippt einmal; wer den Regelfall dokumentiert, gar nicht.
+    let delegation = state.constants.delegations[0];
     body.querySelectorAll("[data-deleg]").forEach((b) =>
       b.addEventListener("click", () => {
         const on = b.getAttribute("aria-pressed") === "true";
@@ -1310,6 +1572,14 @@ function medicationForm(enc, med) {
           x.setAttribute("aria-pressed", "false"));
         b.setAttribute("aria-pressed", on ? "false" : "true");
         delegation = on ? null : b.dataset.deleg;
+      }));
+    let outcome = state.constants.outcomes[0];
+    body.querySelectorAll("[data-outcome]").forEach((b) =>
+      b.addEventListener("click", () => {
+        body.querySelectorAll("[data-outcome]").forEach((x) =>
+          x.setAttribute("aria-pressed", "false"));
+        b.setAttribute("aria-pressed", "true");
+        outcome = b.dataset.outcome;
       }));
     const zek = bindZek(body, false);
     let nextAction = "close";
@@ -1329,7 +1599,9 @@ function medicationForm(enc, med) {
             dose: dose === "" ? null : Number(dose),
             unit: $("#mu", body).value || null,
             route: $("#mr", body).value || null,
-            delegation,
+            delegation, outcome,
+            adverse_effect: $("#mae", body).value || null,
+            follow_up: $("#mfu", body).value || null,
             note: $("#mn", body).value || null,
             complications: zek.collect(),
           },
@@ -2348,6 +2620,47 @@ async function boot() {
 /* Der Browser warnt kurz vor Ablauf und meldet dann ab. Maßgeblich ist
    trotzdem der Server: er verwirft die Sitzung nach derselben Frist, auch
    wenn dieser Zähler manipuliert oder das Fenster geschlossen wird. */
+/* Auf iOS schrumpft beim Öffnen der Tastatur das visuelle Fenster, ohne
+   dass 100dvh sich ändert. Die Navigationsleiste rutscht dadurch unter die
+   Tastatur. Der gemessene Wert aus visualViewport ist die einzige Größe,
+   die dort verlässlich stimmt. */
+function syncViewportHeight() {
+  const vv = window.visualViewport;
+  const h = vv ? vv.height : window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", h + "px");
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", syncViewportHeight);
+  window.visualViewport.addEventListener("scroll", syncViewportHeight);
+}
+window.addEventListener("resize", syncViewportHeight);
+window.addEventListener("orientationchange", syncViewportHeight);
+syncViewportHeight();
+
+/* Der Inhaltsbereich ist der Scroll-Container, deshalb greift das Tippen
+   auf die Statusleiste nicht. Bei jedem Seitenwechsel nach oben springen
+   und ab einer gewissen Tiefe eine Schaltfläche einblenden. */
+function scrollAppTop(smooth = true) {
+  const el = app();
+  if (el) el.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+}
+
+function mountScrollTop() {
+  const el = app();
+  if (!el || el.dataset.scrollBound) return;
+  el.dataset.scrollBound = "1";
+  const btn = document.createElement("button");
+  btn.className = "to-top";
+  btn.type = "button";
+  btn.setAttribute("aria-label", "Zum Seitenanfang");
+  btn.textContent = "Nach oben";
+  btn.addEventListener("click", () => scrollAppTop(true));
+  document.body.appendChild(btn);
+  el.addEventListener("scroll", () => {
+    btn.classList.toggle("visible", el.scrollTop > 600);
+  }, { passive: true });
+}
+
 let idleTimer = null;
 let idleWarnTimer = null;
 const IDLE_MINUTES_FALLBACK = 30;

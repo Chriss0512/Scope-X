@@ -12,13 +12,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ..core import (
-    annotate_lock, audit, audit_diff, current_user, enforce_editable,
+    annotate_lock,
+    audit,
+    audit_diff,
+    current_user,
+    enforce_editable,
+    enforce_encounter_editable,
     require_writer,
 )
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..seed import (
-    DELEGATIONS, NACA_LEVELS, OUTCOMES, PATIENT_HARM, PERFORMER_ROLES,
-    ROUTES, UNITS, ZEK_RELATIONS,
+    DELEGATIONS,
+    NACA_LEVELS,
+    OUTCOMES,
+    PATIENT_HARM,
+    PERFORMER_ROLES,
+    ROUTES,
+    UNITS,
+    ZEK_RELATIONS,
 )
 
 router = APIRouter(prefix="/api", tags=["records"])
@@ -30,6 +41,12 @@ def _own_encounter(c, encounter_id: str, user_id: str) -> dict:
     if not enc:
         raise HTTPException(404, "Einsatz nicht gefunden.")
     return enc
+
+
+def _enforce_via_encounter(c, encounter_id: str, user_id: str) -> None:
+    enc = row(c, "SELECT * FROM encounters WHERE id = :i", i=encounter_id)
+    if enc:
+        enforce_encounter_editable(c, enc, user_id)
 
 
 def _touch(c, encounter_id: str) -> None:
@@ -85,6 +102,8 @@ class EncounterIn(BaseModel):
     enc_time: str
     mission_number: str | None = None
     naca: str | None = None
+    shift_code: str | None = None
+    vehicle_id: str | None = None
 
 
 @router.post("/encounters")
@@ -94,11 +113,13 @@ def create_encounter(data: EncounterIn, user=Depends(require_writer)):
     with conn() as c:
         eid = new_id()
         q(c, "INSERT INTO encounters (id, user_id, enc_date, enc_time, "
-             "mission_number, naca, created_at, updated_at) "
-             "VALUES (:i, :u, :d, :t, :m, :n, :c, :c)",
+             "mission_number, naca, shift_code, vehicle_id, created_at, "
+             "updated_at) VALUES (:i, :u, :d, :t, :m, :n, :s, :v, :c, :c)",
           i=eid, u=user["id"], d=data.enc_date, t=data.enc_time,
           m=(data.mission_number or "").strip() or None,
-          n=data.naca or None, c=now_iso())
+          n=data.naca or None,
+          s=(data.shift_code or "").strip() or None,
+          v=(data.vehicle_id or "").strip() or None, c=now_iso())
         audit(c, user["id"], "encounters", eid, "create")
         return annotate_lock(c, row(c, "SELECT * FROM encounters WHERE id = :i", i=eid),
                              user["id"])
@@ -149,14 +170,18 @@ def get_encounter(encounter_id: str, user=Depends(current_user)):
                    "FROM measure_attempt_parameters WHERE attempt_id = :a", a=a["id"])
             a["complications"] = _complications_for(
                 c, "attempt_complications", "attempt_id", a["id"])
-            a["lock"] = annotate_lock(c, a, user["id"])["lock"]
+            # Kein eigener Countdown je Eintrag: maßgeblich ist der Einsatz.
+            a["lock"] = enc["lock"]
         meds = rows(c, "SELECT * FROM medication_administrations "
                        "WHERE encounter_id = :e AND deleted_at IS NULL "
                        "ORDER BY administered_at, created_at", e=encounter_id)
         for m in meds:
             m["complications"] = _complications_for(
                 c, "medication_complications", "administration_id", m["id"])
-            m["lock"] = annotate_lock(c, m, user["id"])["lock"]
+            m["lock"] = enc["lock"]
+    with conn() as c:
+        enc["complications"] = _complications_for(
+            c, "encounter_complications", "encounter_id", encounter_id)
     enc["attempts"] = attempts
     enc["medications"] = meds
     return enc
@@ -167,6 +192,8 @@ class EncounterPatch(BaseModel):
     enc_time: str | None = None
     mission_number: str | None = None
     naca: str | None = None
+    shift_code: str | None = None
+    vehicle_id: str | None = None
 
 
 @router.patch("/encounters/{encounter_id}")
@@ -180,11 +207,14 @@ def update_encounter(encounter_id: str, data: EncounterPatch,
             raise HTTPException(400, "Unbekannter NACA-Wert.")
         after = {**enc, **payload}
         audit_diff(c, user["id"], "encounters", encounter_id, enc, after,
-                   ["enc_date", "enc_time", "mission_number", "naca"])
+                   ["enc_date", "enc_time", "mission_number", "naca",
+                    "shift_code", "vehicle_id"])
         q(c, "UPDATE encounters SET enc_date = :d, enc_time = :t, "
-             "mission_number = :m, naca = :n, updated_at = :ua WHERE id = :i",
+             "mission_number = :m, naca = :n, shift_code = :s, "
+             "vehicle_id = :v, updated_at = :ua WHERE id = :i",
           d=after["enc_date"], t=after["enc_time"],
           m=(after.get("mission_number") or None), n=after.get("naca") or None,
+          s=(after.get("shift_code") or None), v=(after.get("vehicle_id") or None),
           ua=now_iso(), i=encounter_id)
         return annotate_lock(c, row(c, "SELECT * FROM encounters WHERE id = :i",
                                     i=encounter_id), user["id"])
@@ -206,9 +236,36 @@ def delete_encounter(encounter_id: str, user=Depends(require_writer)):
         q(c, "DELETE FROM measure_attempts WHERE encounter_id = :e", e=encounter_id)
         q(c, "DELETE FROM medication_administrations WHERE encounter_id = :e",
           e=encounter_id)
+        q(c, "DELETE FROM encounter_complications WHERE encounter_id = :e",
+          e=encounter_id)
         q(c, "DELETE FROM encounters WHERE id = :i", i=encounter_id)
         audit(c, user["id"], "encounters", encounter_id, "delete")
     return {"ok": True}
+
+
+class EncounterComplicationsIn(BaseModel):
+    complications: list[ComplicationLink] = Field(default_factory=list)
+
+
+@router.put("/encounters/{encounter_id}/complications")
+def set_encounter_complications(encounter_id: str,
+                                data: EncounterComplicationsIn,
+                                user=Depends(require_writer)):
+    """ZEK, die zum Einsatz gehören und keiner Maßnahme zuzuordnen sind.
+
+    Organisationsprobleme bei der Übergabe oder ein nicht verfügbares
+    Rettungsmittel betreffen den Einsatz als Ganzes. Sie einer beliebigen
+    Maßnahme unterzuschieben würde die Auswertung verfälschen.
+    """
+    _validate_links(data.complications)
+    with conn() as c:
+        enc = _own_encounter(c, encounter_id, user["id"])
+        enforce_encounter_editable(c, enc, user["id"])
+        _link_complications(c, "encounter_complications", "encounter_id",
+                            encounter_id, data.complications)
+        audit(c, user["id"], "encounters", encounter_id, "update", "zek")
+        _touch(c, encounter_id)
+    return get_encounter(encounter_id, user)
 
 
 # --------------------------------------------------------------------------
@@ -298,7 +355,7 @@ def update_attempt(attempt_id: str, data: AttemptPatch, user=Depends(require_wri
                   i=attempt_id, u=user["id"])
         if not att:
             raise HTTPException(404, "Maßnahme nicht gefunden.")
-        enforce_editable(c, "measure_attempts", att, user["id"])
+        _enforce_via_encounter(c, att["encounter_id"], user["id"])
 
         payload = data.model_dump(exclude_unset=True)
         if payload.get("outcome") and payload["outcome"] not in OUTCOMES:
@@ -356,7 +413,7 @@ def delete_attempt(attempt_id: str, user=Depends(require_writer)):
                   i=attempt_id, u=user["id"])
         if not att:
             raise HTTPException(404, "Maßnahme nicht gefunden.")
-        enforce_editable(c, "measure_attempts", att, user["id"])
+        _enforce_via_encounter(c, att["encounter_id"], user["id"])
         q(c, "DELETE FROM measure_attempt_parameters WHERE attempt_id = :a", a=attempt_id)
         q(c, "DELETE FROM attempt_complications WHERE attempt_id = :a", a=attempt_id)
         q(c, "DELETE FROM measure_attempts WHERE id = :i", i=attempt_id)
@@ -377,6 +434,9 @@ class AdministrationIn(BaseModel):
     route: str | None = None
     administered_at: str | None = None
     delegation: str | None = None
+    outcome: str = "erfolgreich"
+    adverse_effect: str | None = None
+    follow_up: str | None = None
     note: str | None = None
     complications: list[ComplicationLink] = Field(default_factory=list)
 
@@ -388,6 +448,8 @@ def create_administration(encounter_id: str, data: AdministrationIn,
         raise HTTPException(400, "Unbekannte Einheit.")
     if data.route and data.route not in ROUTES:
         raise HTTPException(400, "Unbekannter Applikationsweg.")
+    if data.outcome not in OUTCOMES:
+        raise HTTPException(400, "Unbekanntes Ergebnis.")
     _validate_links(data.complications)
     with conn() as c:
         enc = _own_encounter(c, encounter_id, user["id"])
@@ -403,14 +465,18 @@ def create_administration(encounter_id: str, data: AdministrationIn,
         mid = new_id()
         q(c, "INSERT INTO medication_administrations (id, encounter_id, "
              "medication_id, medication_name, preparation_id, preparation_name, "
-             "dose, unit, route, administered_at, delegation, note, "
-             "created_at, updated_at) VALUES (:i, :e, :m, :mn, :p, :pn, :d, "
-             ":u, :r, :a, :dl, :nt, :c, :c)",
+             "dose, unit, route, administered_at, delegation, outcome, "
+             "adverse_effect, follow_up, note, created_at, updated_at) "
+             "VALUES (:i, :e, :m, :mn, :p, :pn, :d, :u, :r, :a, :dl, :o, "
+             ":ae, :fu, :nt, :c, :c)",
           i=mid, e=encounter_id, m=med["id"], mn=med["name"],
           p=prep["id"] if prep else None, pn=prep["name"] if prep else None,
           d=data.dose, u=data.unit, r=data.route,
           a=data.administered_at or f"{enc['enc_date']}T{enc['enc_time']}",
-          dl=data.delegation, nt=(data.note or "").strip() or None, c=now_iso())
+          dl=data.delegation, o=data.outcome,
+          ae=(data.adverse_effect or "").strip() or None,
+          fu=(data.follow_up or "").strip() or None,
+          nt=(data.note or "").strip() or None, c=now_iso())
         _link_complications(c, "medication_complications", "administration_id",
                             mid, data.complications)
         audit(c, user["id"], "medication_administrations", mid, "create",
@@ -425,6 +491,9 @@ class AdministrationPatch(BaseModel):
     route: str | None = None
     administered_at: str | None = None
     delegation: str | None = None
+    outcome: str | None = None
+    adverse_effect: str | None = None
+    follow_up: str | None = None
     note: str | None = None
     complications: list[ComplicationLink] | None = None
 
@@ -440,18 +509,24 @@ def update_administration(administration_id: str, data: AdministrationPatch,
                   i=administration_id, u=user["id"])
         if not adm:
             raise HTTPException(404, "Medikamentengabe nicht gefunden.")
-        enforce_editable(c, "medication_administrations", adm, user["id"])
+        _enforce_via_encounter(c, adm["encounter_id"], user["id"])
         payload = data.model_dump(exclude_unset=True)
         after = {**adm, **{k: v for k, v in payload.items()
                            if k != "complications"}}
+        if payload.get("outcome") and payload["outcome"] not in OUTCOMES:
+            raise HTTPException(400, "Unbekanntes Ergebnis.")
         audit_diff(c, user["id"], "medication_administrations", administration_id,
                    adm, after, ["dose", "unit", "route", "administered_at",
-                                "delegation", "note"])
+                                "delegation", "outcome", "adverse_effect",
+                                "follow_up", "note"])
         q(c, "UPDATE medication_administrations SET dose = :d, unit = :u, "
-             "route = :r, administered_at = :a, delegation = :dl, note = :n, "
+             "route = :r, administered_at = :a, delegation = :dl, "
+             "outcome = :o, adverse_effect = :ae, follow_up = :fu, note = :n, "
              "updated_at = :ua WHERE id = :i",
           d=after["dose"], u=after["unit"], r=after["route"],
-          a=after["administered_at"], dl=after["delegation"], n=after["note"],
+          a=after["administered_at"], dl=after["delegation"],
+          o=after["outcome"], ae=after["adverse_effect"],
+          fu=after["follow_up"], n=after["note"],
           ua=now_iso(), i=administration_id)
         if data.complications is not None:
             _link_complications(c, "medication_complications", "administration_id",
@@ -471,7 +546,7 @@ def delete_administration(administration_id: str, user=Depends(require_writer)):
                   i=administration_id, u=user["id"])
         if not adm:
             raise HTTPException(404, "Medikamentengabe nicht gefunden.")
-        enforce_editable(c, "medication_administrations", adm, user["id"])
+        _enforce_via_encounter(c, adm["encounter_id"], user["id"])
         q(c, "DELETE FROM medication_complications WHERE administration_id = :m",
           m=administration_id)
         q(c, "DELETE FROM medication_administrations WHERE id = :i",

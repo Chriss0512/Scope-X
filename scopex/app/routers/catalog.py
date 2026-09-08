@@ -9,11 +9,22 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..core import audit, current_user, require_admin
-from ..db import conn, new_id, q, row, rows, scalar
+from ..db import conn, new_id, q, row, rows
 from ..seed import (
-    CATEGORIES, DELEGATIONS, NACA_LEVELS, OUTCOMES, PATIENT_HARM,
-    PERFORMER_ROLE_HINTS, PERFORMER_ROLES, QUALIFICATIONS, ROUTES, UNITS,
-    ZEK_RELATIONS, ZEK_RELATION_HINTS,
+    CATEGORIES,
+    DELEGATIONS,
+    DIVI_GROUPS,
+    DIVI_LABELS,
+    NACA_LEVELS,
+    OUTCOMES,
+    PATIENT_HARM,
+    PERFORMER_ROLE_HINTS,
+    PERFORMER_ROLES,
+    QUALIFICATIONS,
+    ROUTES,
+    UNITS,
+    ZEK_RELATION_HINTS,
+    ZEK_RELATIONS,
 )
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
@@ -35,6 +46,8 @@ def constants():
         "routes": ROUTES,
         "units": UNITS,
         "qualifications": QUALIFICATIONS,
+        "divi_groups": DIVI_GROUPS,
+        "divi_labels": DIVI_LABELS,
     }
 
 
@@ -194,6 +207,8 @@ def list_medications(include_inactive: bool = False, user=Depends(current_user))
             {"id": p["id"], "name": p["name"], "strength": p["strength"]})
     for m in meds:
         m["preparations"] = by_med.get(m["id"], [])
+        m["trade_names"] = [t.strip() for t in (m.get("trade_names") or "").split("|")
+                            if t.strip()]
         m["active"] = bool(m["active"])
         m["builtin"] = bool(m["builtin"])
     return {"medications": meds, "recent": [r["medication_id"] for r in recent]}
@@ -220,6 +235,10 @@ def create_medication(data: MedicationIn, user=Depends(require_admin)):
 class MedicationPatch(BaseModel):
     name: str | None = None
     active: bool | None = None
+    divi_group: str | None = None
+    # Handelsnamen als einfache Liste, gespeichert mit | getrennt. Für ein
+    # optionales Freitextfeld braucht es keine eigene Tabelle.
+    trade_names: list[str] | None = None
 
 
 @router.patch("/medications/{medication_id}")
@@ -232,6 +251,8 @@ def update_medication(medication_id: str, data: MedicationPatch,
         for field, value in data.model_dump(exclude_unset=True).items():
             if value is None:
                 continue
+            if field == "trade_names":
+                value = "|".join(t.strip() for t in value if t.strip()) or None
             new = 1 if value is True else 0 if value is False else value
             if str(m[field]) == str(new):
                 continue

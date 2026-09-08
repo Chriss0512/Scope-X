@@ -5,9 +5,8 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 
-from .db import conn, new_id, now_iso, q, row, rows
+from .db import conn, new_id, now_iso, q, row
 from .security import SESSION_COOKIE, resolve_session
-
 
 # --------------------------------------------------------------------------
 # Anmeldung
@@ -167,6 +166,15 @@ def lock_state(c, record: dict, user_id: str | None = None) -> dict:
     return {"locked": False, "locked_at": None, "remaining_seconds": int(remaining)}
 
 
+def enforce_encounter_editable(c, encounter: dict, user_id: str) -> None:
+    """Ein Einsatz hat genau eine Frist, und die gilt für alles darin.
+
+    Ein eigener Countdown je Maßnahme wäre nur zusätzliche Unruhe: wer einen
+    Einsatz nachträgt, arbeitet an allen Einträgen gleichzeitig.
+    """
+    enforce_editable(c, "encounters", encounter, user_id)
+
+
 def enforce_editable(c, table: str, record: dict, user_id: str) -> None:
     """Wirft 409, wenn der Datensatz gesperrt ist. Stempelt locked_at
     nach, falls die Frist abgelaufen war, aber noch nichts gesetzt wurde."""
@@ -174,9 +182,12 @@ def enforce_editable(c, table: str, record: dict, user_id: str) -> None:
     if not state["locked"]:
         return
     if not record.get("locked_at"):
-        q(c, f"UPDATE {table} SET locked_at = :t WHERE id = :i",
-          t=state["locked_at"], i=record["id"])
-        audit(c, user_id, table, record["id"], "lock")
+        # Eigene Transaktion: die HTTPException unten würde den Stempel
+        # sonst zusammen mit der aufrufenden Transaktion zurückrollen.
+        with conn() as c2:
+            q(c2, f"UPDATE {table} SET locked_at = :t WHERE id = :i",
+              t=state["locked_at"], i=record["id"])
+            audit(c2, user_id, table, record["id"], "lock")
     raise HTTPException(
         status_code=409,
         detail="Der Eintrag ist gesperrt und kann nicht mehr geändert werden.",

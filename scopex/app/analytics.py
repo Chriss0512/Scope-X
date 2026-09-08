@@ -163,7 +163,7 @@ def compute(c, f: Filters) -> dict:
     outcome_rows = rows(c, f"""
         SELECT a.outcome AS key, COUNT(*) AS n
         {_ATT_JOIN} WHERE {att_where} GROUP BY a.outcome""", **p_att)
-    outcomes = {o: 0 for o in OUTCOMES}
+    outcomes = dict.fromkeys(OUTCOMES, 0)
     for r in outcome_rows:
         outcomes[r["key"]] = r["n"]
 
@@ -183,6 +183,23 @@ def compute(c, f: Filters) -> dict:
         JOIN measure_attempts a ON a.id = ac.attempt_id
         JOIN encounters e ON e.id = a.encounter_id
         WHERE {att_where}""", **p_att) or 0
+    med_outcomes = rows(c, f"""
+        SELECT COALESCE(m.outcome, 'erfolgreich') AS key, COUNT(*) AS n
+        {_ADM_JOIN} WHERE {adm_where} GROUP BY m.outcome ORDER BY n DESC""",
+        **p_adm)
+    adverse = scalar(c, f"""
+        SELECT COUNT(*) {_ADM_JOIN} WHERE {adm_where}
+        AND m.adverse_effect IS NOT NULL AND TRIM(m.adverse_effect) <> ''""",
+        **p_adm) or 0
+    follow_ups = scalar(c, f"""
+        SELECT COUNT(*) {_ADM_JOIN} WHERE {adm_where}
+        AND m.follow_up IS NOT NULL AND TRIM(m.follow_up) <> ''""",
+        **p_adm) or 0
+    zek_encounters = scalar(c, f"""
+        SELECT COUNT(*) FROM encounter_complications ec
+        JOIN encounters e ON e.id = ec.encounter_id
+        WHERE {enc_where}""", **p_enc) or 0
+
     zek_meds = scalar(c, f"""
         SELECT COUNT(*) FROM medication_complications mc
         JOIN medication_administrations m ON m.id = mc.administration_id
@@ -321,7 +338,7 @@ def compute(c, f: Filters) -> dict:
         harm[r["level"]]["medications"] = r["n"]
 
     graded = sum(outcomes.values())
-    zek_total = zek_attempts + zek_meds
+    zek_total = zek_attempts + zek_meds + zek_encounters
     documented = attempts + administrations
 
     return {
@@ -346,9 +363,13 @@ def compute(c, f: Filters) -> dict:
             "total": zek_total,
             "on_attempts": zek_attempts,
             "on_medications": zek_meds,
+            "on_encounters": zek_encounters,
             "rate": round(100 * zek_total / documented, 1) if documented else None,
             "top": top_zek,
         },
+        "medication_outcomes": med_outcomes,
+        "adverse_effects": adverse,
+        "follow_ups": follow_ups,
         "by_medication": by_medication,
         "by_route": by_route,
         "timeline": timeline,
@@ -386,7 +407,8 @@ def detail_medications(c, f: Filters, limit: int = 2000) -> list[dict]:
     meds = rows(c, f"""
         SELECT e.enc_date, e.enc_time, e.mission_number, e.naca,
                m.id, m.medication_name, m.preparation_name, m.dose, m.unit,
-               m.route, m.delegation, m.administered_at
+               m.route, m.delegation, m.outcome, m.adverse_effect,
+               m.follow_up, m.administered_at
         {_ADM_JOIN} WHERE {where}
         ORDER BY e.enc_date, e.enc_time, m.administered_at LIMIT :lim""", **params)
     for m in meds:

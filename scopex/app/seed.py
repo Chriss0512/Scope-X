@@ -7,7 +7,9 @@ beim Speichern in den historischen Datensatz kopiert werden.
 """
 from __future__ import annotations
 
-from .db import new_id, now_iso, q, row, scalar
+import re
+
+from .db import new_id, q, row, scalar
 
 # Kategorien nach xABCDE plus Trauma und Diagnostik.
 CATEGORIES = [
@@ -50,9 +52,63 @@ ROUTES = [
 UNITS = ["mg", "µg", "g", "ml", "I.E.", "mg/kg", "µg/kg", "ml/kg"]
 
 QUALIFICATIONS = [
-    "Rettungssanitäter", "Rettungsassistent", "Notfallsanitäter",
-    "Arzt / Ärztin",
+    "Rettungssanitäter*in", "Rettungsassistent*in", "Notfallsanitäter*in",
+    "Ärztin / Arzt",
 ]
+
+# Farbgruppen der Spritzenetiketten nach EN ISO 26825 und der ergaenzenden
+# DIVI-Empfehlung. Reine Dokumentationsangabe: SCOPE X leitet daraus keine
+# Etikettierung ab und macht keine Vorgabe. Die Zuordnung eines Wirkstoffs
+# ist im Katalog frei aenderbar und sollte gegen die jeweils aktuelle
+# DIVI-Veroeffentlichung geprueft werden.
+# Aufbau eines Etiketts: Hintergrundfarbe, Schriftfarbe und Muster.
+# "stripes" steht fuer die Schraegstreifen der Antagonisten, "split" fuer
+# zweifarbige Etiketten.
+#
+# Die Farbwerte sind Annaeherungen an die Pantone-Vorgaben der Norm und
+# nicht normativ. SCOPE X bildet das Etikett ab, damit die Auswahl in der
+# App der Spritze in der Hand entspricht. Es ist keine
+# Etikettierungsreferenz und erzeugt keine druckbaren Etiketten.
+DIVI_LABELS = {
+    "Hypnotika / Induktion (gelb)":
+        {"bg": "#f5d400", "fg": "#17242c", "pattern": "solid"},
+    "Benzodiazepine (orange)":
+        {"bg": "#f39200", "fg": "#17242c", "pattern": "solid"},
+    "Benzodiazepin-Antagonisten (orange/weiß gestreift)":
+        {"bg": "#f39200", "fg": "#17242c", "pattern": "stripes"},
+    "Opioide (blau)":
+        {"bg": "#0070b8", "fg": "#ffffff", "pattern": "solid"},
+    "Opioid-Antagonisten (blau/weiß gestreift)":
+        {"bg": "#0070b8", "fg": "#ffffff", "pattern": "stripes"},
+    "Muskelrelaxanzien, depolarisierend (rot)":
+        {"bg": "#e2001a", "fg": "#ffffff", "pattern": "solid"},
+    "Muskelrelaxanzien, nichtdepolarisierend (rot/weiß)":
+        {"bg": "#e2001a", "fg": "#ffffff", "pattern": "split"},
+    "Vasopressoren / Kreislauf (violett)":
+        {"bg": "#6e4b9e", "fg": "#ffffff", "pattern": "solid"},
+    "Antihypertensiva (violett/weiß)":
+        {"bg": "#6e4b9e", "fg": "#ffffff", "pattern": "split"},
+    "Lokalanästhetika (grau)":
+        {"bg": "#7c8790", "fg": "#ffffff", "pattern": "solid"},
+    "Anticholinergika (grün)":
+        {"bg": "#009640", "fg": "#ffffff", "pattern": "solid"},
+    "Antiemetika (lachs)":
+        {"bg": "#f2a08a", "fg": "#17242c", "pattern": "solid"},
+    "Elektrolyte (dunkelgrün)":
+        {"bg": "#005b34", "fg": "#ffffff", "pattern": "solid"},
+    "Diverse (weiß)":
+        {"bg": "#ffffff", "fg": "#17242c", "pattern": "solid"},
+}
+# Ein Slug je Gruppe, weil die Content-Security-Policy keine
+# style-Attribute erlaubt. Die Farben stehen als feste Regeln im
+# Stylesheet und werden über data-divi ausgewählt.
+for _name, _style in DIVI_LABELS.items():
+    _base = _name.split("(")[0].strip().lower()
+    for _a, _b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
+        _base = _base.replace(_a, _b)
+    _style["slug"] = re.sub(r"[^a-z0-9]+", "-", _base).strip("-")
+
+DIVI_GROUPS = list(DIVI_LABELS)
 
 # Rolle bei der Durchführung. Eigene Achse neben der Durchführungsart:
 # eigenverantwortlich oder delegiert beantwortet, unter welcher Legitimation
@@ -136,7 +192,11 @@ MEASURES: list[tuple] = [
     ]),
 
     ("c_iv", "C", "Intravenöser Zugang", [
-        ("ort", "Punktionsort", "text", None, None),
+        ("ort", "Punktionsort", "select", None,
+         "Handrücken links|Handrücken rechts|Unterarm links|Unterarm rechts|"
+         "Ellenbeuge links|Ellenbeuge rechts|Oberarm links|Oberarm rechts|"
+         "V. jugularis externa links|V. jugularis externa rechts|"
+         "Fußrücken links|Fußrücken rechts|andere"),
         ("gauge", "Größe / Farbe", "select", None,
          "14 G (orange)|16 G (grau)|17 G (weiß)|18 G (grün)|20 G (rosa)|"
          "22 G (blau)|24 G (gelb)|26 G (violett)|andere"),
@@ -193,6 +253,33 @@ MEASURES: list[tuple] = [
         ("protokoll", "Fragestellung / Protokoll", "text", None, None),
     ]),
 ]
+
+# Vorbelegung der Farbgruppen. Bewusst nur dort, wo die Zuordnung eindeutig
+# ist; alles Uebrige bleibt leer und wird im Katalog gesetzt. Dieselbe
+# Zuordnung steht in Migration 0006 fuer bestehende Installationen.
+DIVI_ASSIGNMENT = {
+    "Hypnotika / Induktion (gelb)": ["Etomidat", "Propofol", "Thiopental",
+                                     "Esketamin"],
+    "Benzodiazepine (orange)": ["Midazolam", "Diazepam", "Lorazepam",
+                                "Clonazepam"],
+    "Opioide (blau)": ["Fentanyl", "Sufentanil", "Morphin", "Piritramid"],
+    "Muskelrelaxanzien, nichtdepolarisierend (rot/weiß)": [
+        "Rocuronium", "Vecuronium"],
+    "Muskelrelaxanzien, depolarisierend (rot)": ["Succinylcholin"],
+    "Opioid-Antagonisten (blau/weiß gestreift)": ["Naloxon"],
+    "Benzodiazepin-Antagonisten (orange/weiß gestreift)": ["Flumazenil"],
+    "Vasopressoren / Kreislauf (violett)": [
+        "Adrenalin", "Noradrenalin", "Dobutamin", "Cafedrin/Theodrenalin",
+        "Orciprenalin"],
+    "Lokalanästhetika (grau)": ["Lidocain"],
+    "Anticholinergika (grün)": ["Atropin"],
+    "Antiemetika (lachs)": ["Ondansetron", "Granisetron", "Dimenhydrinat"],
+    "Elektrolyte (dunkelgrün)": ["Natriumchlorid 0,9 %", "Ringer-Acetat",
+                                 "Vollelektrolytlösung", "Magnesiumsulfat"],
+}
+_DIVI_BY_NAME = {name: group
+                 for group, names in DIVI_ASSIGNMENT.items()
+                 for name in names}
 
 MEDICATIONS = [
     "Adrenalin", "Noradrenalin", "Amiodaron", "Adenosin", "Atropin",
@@ -304,8 +391,9 @@ def seed_if_empty(c) -> bool:
               o=options, s=j * 10)
 
     for i, name in enumerate(MEDICATIONS):
-        q(c, "INSERT INTO medications (id, name, active, builtin, sort_order) "
-             "VALUES (:i, :n, 1, 1, :s)", i=new_id(), n=name, s=i * 10)
+        q(c, "INSERT INTO medications (id, name, active, builtin, sort_order, "
+             "divi_group) VALUES (:i, :n, 1, 1, :s, :g)",
+          i=new_id(), n=name, s=i * 10, g=_DIVI_BY_NAME.get(name))
 
     for code, cat, label in COMPLICATIONS:
         q(c, "INSERT INTO complications (id, code, category, label, active) "

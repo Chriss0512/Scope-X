@@ -11,13 +11,30 @@ from .. import mailer
 from ..core import ROLE_LABELS, audit, current_user, optional_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..security import (
-    DEVICE_COOKIE, DEVICE_DAYS, SESSION_COOKIE, SESSION_DAYS,
-    consume_recovery_code, create_session, create_trusted_device,
-    forget_all_devices, forget_device, hash_ip, needs_rehash, token_hash,
+    DEVICE_COOKIE,
+    DEVICE_DAYS,
+    SESSION_COOKIE,
+    SESSION_DAYS,
+    consume_recovery_code,
+    create_session,
+    create_trusted_device,
+    destroy_all_sessions,
+    destroy_session,
+    forget_all_devices,
+    forget_device,
+    generate_recovery_codes,
+    hash_ip,
+    hash_password,
+    needs_rehash,
+    new_totp_secret,
+    password_problems,
+    qr_svg,
+    store_recovery_codes,
+    token_hash,
+    totp_uri,
     trusted_device_valid,
-    destroy_all_sessions, destroy_session, generate_recovery_codes,
-    hash_password, new_totp_secret, password_problems, qr_svg,
-    store_recovery_codes, totp_uri, verify_password, verify_totp,
+    verify_password,
+    verify_totp,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -109,6 +126,29 @@ def check_invitation(code: str):
     return {"valid": True, "role": inv["role"],
             "role_label": ROLE_LABELS.get(inv["role"], inv["role"]),
             "email": inv["email"] or ""}
+
+
+@router.get("/device")
+def device_state(request: Request):
+    """Meldet, ob dieses Gerät als vertrauenswürdig hinterlegt ist.
+
+    Verrät nichts, was der Besitzer des Geräts nicht ohnehin weiß, und
+    erlaubt der Anmeldemaske, das Code-Feld erst dann einzublenden, wenn es
+    wirklich gebraucht wird.
+    """
+    token = request.cookies.get(DEVICE_COOKIE)
+    if not token:
+        return {"known": False}
+    with conn() as c:
+        d = row(c, "SELECT user_id, expires_at FROM trusted_devices "
+                   "WHERE token_hash = :h", h=token_hash(token))
+        if not d or d["expires_at"] < now_iso():
+            return {"known": False}
+        u = row(c, "SELECT username FROM users WHERE id = :i AND "
+                   "disabled_at IS NULL", i=d["user_id"])
+    if not u:
+        return {"known": False}
+    return {"known": True, "username": u["username"]}
 
 
 @router.get("/state")
@@ -252,23 +292,49 @@ def recovery_status(request: Request):
     return {"total": total, "unused": unused}
 
 
+def _register_failed_login(failure: dict) -> None:
+    """Schreibt den Fehlversuch in einer eigenen Transaktion und
+    benachrichtigt bei einer Sperre."""
+    with conn() as c:
+        q(c, "UPDATE users SET failed_logins = :f, lock_until = :l WHERE id = :i",
+          f=failure["failed"], l=failure["lock_until"], i=failure["user_id"])
+        audit(c, failure["user_id"], "users", failure["user_id"],
+              "login_locked" if failure["lock_until"] else "login_failed")
+    if failure["notify"] and failure["email"]:
+        mailer.send(failure["email"], "SCOPE X: Konto vorübergehend gesperrt",
+            f"""\
+Für dein SCOPE-X-Konto wurden {MAX_FAILED} fehlgeschlagene Anmeldeversuche
+gezählt. Das Konto ist deshalb {LOCKOUT_MINUTES} Minuten gesperrt.
+
+Warst du das selbst, warte einfach ab oder setze dein Passwort zurück.
+
+Warst du es nicht, kennt jemand deinen Benutzernamen oder deine
+E-Mail-Adresse. Dein Passwort und dein zweiter Faktor sind davon nicht
+betroffen. Wenn dich das beunruhigt, ändere das Passwort und entziehe im
+Profil allen Geräten das Vertrauen.
+
+Diese Nachricht enthält bewusst keine Angaben zu Zeitpunkt oder Herkunft
+der Versuche.
+""")
+
+
 @router.post("/login")
 def login(data: LoginIn, request: Request, response: Response):
+    failure = None
     with conn() as c:
         user = find_login(c, data.username)
         if not user:
             raise HTTPException(401, "Benutzername, Passwort oder Code stimmt nicht.")
         if user["lock_until"] and user["lock_until"] > now_iso():
             raise HTTPException(429, "Zu viele Fehlversuche. Später erneut versuchen.")
-
         if user.get("disabled_at"):
             raise HTTPException(403, "Dieses Konto ist gesperrt.")
 
         ok = verify_password(data.password, user["password_hash"])
         totp = row(c, "SELECT * FROM auth_totp WHERE user_id = :u", u=user["id"])
 
-        # Ein bekanntes Geraet erspart den Code bei der Anmeldung. Es hebt
-        # die Zwei-Faktor-Pflicht nicht auf: Eingriffe in Konten und Daten
+        # Ein bekanntes Gerät erspart den Code bei der Anmeldung. Es hebt die
+        # Zwei-Faktor-Pflicht nicht auf: Eingriffe in Konten und Daten
         # verlangen weiterhin einen frischen Code.
         device_token = request.cookies.get(DEVICE_COOKIE)
         device_known = ok and trusted_device_valid(user["id"], device_token)
@@ -280,28 +346,39 @@ def login(data: LoginIn, request: Request, response: Response):
                 ok = verify_totp(totp["secret"], data.totp_code or "")
 
         if not ok:
+            # Der Zähler darf nicht in derselben Transaktion hochgezählt
+            # werden, in der anschließend eine HTTPException fliegt: die
+            # Exception rollt die Transaktion zurück und die Sperre käme nie
+            # zustande. Deshalb hier nur merken, geschrieben wird außerhalb.
             failed = (user["failed_logins"] or 0) + 1
             lock_until = None
+            notify = False
             if failed >= MAX_FAILED:
                 lock_until = (datetime.now(timezone.utc)
                               + timedelta(minutes=LOCKOUT_MINUTES)
                               ).replace(microsecond=0).isoformat()
                 failed = 0
-            q(c, "UPDATE users SET failed_logins = :f, lock_until = :l WHERE id = :i",
-              f=failed, l=lock_until, i=user["id"])
-            audit(c, user["id"], "users", user["id"], "login_failed")
-            raise HTTPException(401, "Benutzername, Passwort oder Code stimmt nicht.")
+                # Benachrichtigt wird erst bei der Sperre, nicht bei jedem
+                # Fehlversuch. Sonst ließe sich über das Anmeldeformular ein
+                # fremdes Postfach fluten.
+                notify = True
+            failure = {"user_id": user["id"], "email": user["email"],
+                       "failed": failed, "lock_until": lock_until,
+                       "notify": notify}
+        else:
+            # Bestehende scrypt-Hashes werden hier still auf Argon2id gehoben.
+            if needs_rehash(user["password_hash"]):
+                q(c, "UPDATE users SET password_hash = :p WHERE id = :i",
+                  p=hash_password(data.password), i=user["id"])
+                audit(c, user["id"], "users", user["id"], "password_rehash")
+            q(c, "UPDATE users SET failed_logins = 0, lock_until = NULL, "
+                 "last_login_at = :t WHERE id = :i", t=now_iso(), i=user["id"])
+            audit(c, user["id"], "users", user["id"], "login")
+            totp_confirmed = bool(totp and totp["confirmed_at"])
 
-        # Bestehende scrypt-Hashes werden hier still auf Argon2id gehoben.
-        if needs_rehash(user["password_hash"]):
-            q(c, "UPDATE users SET password_hash = :p WHERE id = :i",
-              p=hash_password(data.password), i=user["id"])
-            audit(c, user["id"], "users", user["id"], "password_rehash")
-
-        q(c, "UPDATE users SET failed_logins = 0, lock_until = NULL, "
-             "last_login_at = :t WHERE id = :i", t=now_iso(), i=user["id"])
-        audit(c, user["id"], "users", user["id"], "login")
-        totp_confirmed = bool(totp and totp["confirmed_at"])
+    if failure:
+        _register_failed_login(failure)
+        raise HTTPException(401, "Benutzername, Passwort oder Code stimmt nicht.")
 
     token = create_session(user["id"])
     _set_cookie(response, request, token)
