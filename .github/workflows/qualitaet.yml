@@ -34,6 +34,12 @@ jobs:
       - name: Browser für die Barrierefreiheitsprüfung
         run: playwright install --with-deps chromium
 
+      - name: axe-core für Barrierefreiheitsprüfung laden
+        run: |
+          curl -fsSL \
+            -o quality/vendor/axe.min.js \
+            https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js
+
       - name: Qualitätsprüfung
         run: python quality/run_quality.py
 
