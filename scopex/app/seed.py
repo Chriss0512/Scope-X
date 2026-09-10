@@ -70,38 +70,55 @@ QUALIFICATIONS = [
 # App der Spritze in der Hand entspricht. Es ist keine
 # Etikettierungsreferenz und erzeugt keine druckbaren Etiketten.
 DIVI_LABELS = {
-    "Hypnotika / Induktion (gelb)":
-        {"bg": "#f5d400", "fg": "#17242c", "pattern": "solid"},
-    "Benzodiazepine (orange)":
-        {"bg": "#f39200", "fg": "#17242c", "pattern": "solid"},
-    "Benzodiazepin-Antagonisten (orange/weiß gestreift)":
-        {"bg": "#f39200", "fg": "#17242c", "pattern": "stripes"},
-    "Opioide (blau)":
-        {"bg": "#0070b8", "fg": "#ffffff", "pattern": "solid"},
-    "Opioid-Antagonisten (blau/weiß gestreift)":
-        {"bg": "#0070b8", "fg": "#ffffff", "pattern": "stripes"},
-    "Muskelrelaxanzien, depolarisierend (rot)":
-        {"bg": "#e2001a", "fg": "#ffffff", "pattern": "solid"},
-    "Muskelrelaxanzien, nichtdepolarisierend (rot/weiß)":
-        {"bg": "#e2001a", "fg": "#ffffff", "pattern": "split"},
-    "Vasopressoren / Kreislauf (violett)":
-        {"bg": "#6e4b9e", "fg": "#ffffff", "pattern": "solid"},
-    "Antihypertensiva (violett/weiß)":
-        {"bg": "#6e4b9e", "fg": "#ffffff", "pattern": "split"},
-    "Lokalanästhetika (grau)":
-        {"bg": "#7c8790", "fg": "#ffffff", "pattern": "solid"},
-    "Anticholinergika (grün)":
-        {"bg": "#009640", "fg": "#ffffff", "pattern": "solid"},
-    "Antiemetika (lachs)":
-        {"bg": "#f2a08a", "fg": "#17242c", "pattern": "solid"},
-    "Elektrolyte (dunkelgrün)":
-        {"bg": "#005b34", "fg": "#ffffff", "pattern": "solid"},
-    "Diverse (weiß)":
+    "Hypnotika":
+        {"bg": "#fedd00", "fg": "#17242c", "pattern": "solid"},
+    "Benzodiazepine":
+        {"bg": "#ff8200", "fg": "#17242c", "pattern": "solid"},
+    "Benzodiazepin-Antagonisten":
+        {"bg": "#ff8200", "fg": "#17242c", "pattern": "stripes"},
+    "Muskelrelaxantien":
+        {"bg": "#f9423a", "fg": "#ffffff", "pattern": "solid"},
+    "Muskelrelaxans-Antagonisten":
+        {"bg": "#f9423a", "fg": "#ffffff", "pattern": "stripes"},
+    "Opiate / Opioide":
+        {"bg": "#71c5e8", "fg": "#17242c", "pattern": "solid"},
+    "Opioid-Antagonisten":
+        {"bg": "#71c5e8", "fg": "#17242c", "pattern": "stripes"},
+    "Lokalanästhetika":
+        {"bg": "#c4bfb6", "fg": "#17242c", "pattern": "solid"},
+    "Vasopressoren":
+        {"bg": "#d6bfdd", "fg": "#17242c", "pattern": "solid"},
+    "Antihypertonika / Vasodilatantien":
+        {"bg": "#d6bfdd", "fg": "#17242c", "pattern": "stripes"},
+    "Anticholinergika":
+        {"bg": "#a4d65e", "fg": "#17242c", "pattern": "solid"},
+    "Antiemetika":
+        {"bg": "#efbe7d", "fg": "#17242c", "pattern": "solid"},
+    "Antiarrhythmika":
+        {"bg": "#ff7f32", "fg": "#17242c", "pattern": "solid"},
+    "Antikonvulsiva":
+        {"bg": "#6b4c9a", "fg": "#ffffff", "pattern": "solid"},
+    "Bronchodilatatoren":
+        {"bg": "#10069f", "fg": "#ffffff", "pattern": "solid"},
+    "Inodilatatoren":
+        {"bg": "#ef95b5", "fg": "#17242c", "pattern": "solid"},
+    "Hormone":
+        {"bg": "#a9744f", "fg": "#ffffff", "pattern": "solid"},
+    "Elektrolyte":
+        {"bg": "#046a38", "fg": "#ffffff", "pattern": "solid"},
+    "Antikoagulantien":
+        {"bg": "#c8c9c7", "fg": "#17242c", "pattern": "solid"},
+    "Heparin":
+        {"bg": "#ffffff", "fg": "#17242c", "pattern": "framed"},
+    "Protamin":
+        {"bg": "#1c1c1c", "fg": "#ffffff", "pattern": "stripes"},
+    "Verschiedene Medikamente":
         {"bg": "#ffffff", "fg": "#17242c", "pattern": "solid"},
 }
+
 # Ein Slug je Gruppe, weil die Content-Security-Policy keine
 # style-Attribute erlaubt. Die Farben stehen als feste Regeln im
-# Stylesheet und werden über data-divi ausgewählt.
+# Stylesheet und werden ueber data-divi ausgewaehlt.
 for _name, _style in DIVI_LABELS.items():
     _base = _name.split("(")[0].strip().lower()
     for _a, _b in (("ä", "ae"), ("ö", "oe"), ("ü", "ue"), ("ß", "ss")):
@@ -258,24 +275,33 @@ MEASURES: list[tuple] = [
 # ist; alles Uebrige bleibt leer und wird im Katalog gesetzt. Dieselbe
 # Zuordnung steht in Migration 0006 fuer bestehende Installationen.
 DIVI_ASSIGNMENT = {
-    "Hypnotika / Induktion (gelb)": ["Etomidat", "Propofol", "Thiopental",
-                                     "Esketamin"],
-    "Benzodiazepine (orange)": ["Midazolam", "Diazepam", "Lorazepam",
-                                "Clonazepam"],
-    "Opioide (blau)": ["Fentanyl", "Sufentanil", "Morphin", "Piritramid"],
-    "Muskelrelaxanzien, nichtdepolarisierend (rot/weiß)": [
-        "Rocuronium", "Vecuronium"],
-    "Muskelrelaxanzien, depolarisierend (rot)": ["Succinylcholin"],
-    "Opioid-Antagonisten (blau/weiß gestreift)": ["Naloxon"],
-    "Benzodiazepin-Antagonisten (orange/weiß gestreift)": ["Flumazenil"],
-    "Vasopressoren / Kreislauf (violett)": [
-        "Adrenalin", "Noradrenalin", "Dobutamin", "Cafedrin/Theodrenalin",
-        "Orciprenalin"],
-    "Lokalanästhetika (grau)": ["Lidocain"],
-    "Anticholinergika (grün)": ["Atropin"],
-    "Antiemetika (lachs)": ["Ondansetron", "Granisetron", "Dimenhydrinat"],
-    "Elektrolyte (dunkelgrün)": ["Natriumchlorid 0,9 %", "Ringer-Acetat",
-                                 "Vollelektrolytlösung", "Magnesiumsulfat"],
+    "Hypnotika": ["Etomidat", "Propofol", "Thiopental", "Esketamin"],
+    "Benzodiazepine": ["Midazolam", "Diazepam", "Lorazepam", "Clonazepam"],
+    "Benzodiazepin-Antagonisten": ["Flumazenil"],
+    "Muskelrelaxantien": ["Rocuronium", "Vecuronium", "Succinylcholin"],
+    "Opiate / Opioide": ["Fentanyl", "Sufentanil", "Morphin", "Piritramid"],
+    "Opioid-Antagonisten": ["Naloxon"],
+    "Lokalanästhetika": ["Lidocain"],
+    "Vasopressoren": ["Adrenalin", "Noradrenalin", "Cafedrin/Theodrenalin",
+                      "Orciprenalin"],
+    "Antihypertonika / Vasodilatantien": ["Metoprolol", "Urapidil",
+                                          "Nitroglycerin"],
+    "Anticholinergika": ["Atropin", "Biperidin", "Butylscopolamin"],
+    "Antiemetika": ["Ondansetron", "Granisetron", "Dimenhydrinat"],
+    "Antiarrhythmika": ["Amiodaron", "Adenosin", "Ajmalin"],
+    "Antikonvulsiva": ["Phenytoin"],
+    "Bronchodilatatoren": ["Salbutamol", "Fenoterol", "Reproterol",
+                           "Ipratropiumbromid"],
+    "Inodilatatoren": ["Dobutamin"],
+    "Hormone": ["Dexamethason", "Prednisolon", "Prednison", "Oxytocin"],
+    "Elektrolyte": ["Natriumchlorid 0,9 %", "Ringer-Acetat",
+                    "Vollelektrolytlösung", "Magnesiumsulfat"],
+    "Antikoagulantien": ["Acetylsalicylsäure"],
+    "Heparin": ["Heparin"],
+    "Verschiedene Medikamente": [
+        "Paracetamol", "Metamizol", "Furosemid", "Glukose", "Tranexamsäure",
+        "Dimetinden", "Clemastin", "Promethazin", "Haloperidol",
+        "Gelatinelösung"],
 }
 _DIVI_BY_NAME = {name: group
                  for group, names in DIVI_ASSIGNMENT.items()
@@ -368,6 +394,10 @@ DEFAULT_SETTINGS = {
     "imprint_name": "Christian Faust",
     "imprint_address": "Eichenweg 2c, 29690 Buchholz/Aller",
     "imprint_email": "",
+    "imprint_phone": "",
+    "imprint_profession": "",
+    "imprint_authority": "",
+    "imprint_law": "",
     "theme": "auto",
     "show_delegation": "auto",
 }

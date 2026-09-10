@@ -381,8 +381,13 @@ table.data td > .status { margin: -.1rem 0; }
     order: 2; position: relative; flex: 0 0 auto;
     left: auto; right: auto; bottom: auto;
   }
-  body.auth { display: block; overflow: auto; height: auto; }
-  body.auth #app { overflow: visible; }
+  /* Auf den Anmeldeseiten bleibt die Spalte bestehen, nur die Leiste ist
+     ausgeblendet. Früher wurde hier auf display:block umgestellt; damit
+     verlor die Leiste ihre Reihenfolge, rutschte an den Seitenanfang und
+     überlagerte den Inhalt. */
+  body.auth { overflow: hidden; }
+  body.auth nav.tabbar { display: none; }
+  body.auth #app { overflow-y: auto; }
 }
 
 nav.tabbar {
@@ -561,7 +566,7 @@ table.data td {
    gleichen Teilen und die Beschriftung bricht um. Zahlenspalten bekommen
    deshalb ein festes Maß, die Beschriftung erhält den Rest. */
 table.data td.num, table.data th.num {
-  width: 3.4rem; text-align: right; font-variant-numeric: tabular-nums;
+  width: 4rem; text-align: right; font-variant-numeric: tabular-nums;
   font-feature-settings: var(--nums);
 }
 table.data td.num { font-weight: 550; color: var(--ink-strong); }
@@ -792,22 +797,30 @@ body.auth .to-top { display: none; }
   position: relative; z-index: 1;
   font-weight: 500; font-size: .6rem; opacity: .85;
 }
-/* Farbwerte je Wirkungsgruppe. Naeherungen an die Pantone-Vorgaben der
-   Norm, nicht normativ. */
-[data-divi="hypnotika-induktion"] { --label-bg: #f5d400; --label-fg: #17242c; }
-[data-divi="benzodiazepine"] { --label-bg: #f39200; --label-fg: #17242c; }
-[data-divi="benzodiazepin-antagonisten"] { --label-bg: #f39200; --label-fg: #17242c; }
-[data-divi="opioide"] { --label-bg: #0070b8; --label-fg: #ffffff; }
-[data-divi="opioid-antagonisten"] { --label-bg: #0070b8; --label-fg: #ffffff; }
-[data-divi="muskelrelaxanzien-depolarisierend"] { --label-bg: #e2001a; --label-fg: #ffffff; }
-[data-divi="muskelrelaxanzien-nichtdepolarisierend"] { --label-bg: #e2001a; --label-fg: #ffffff; }
-[data-divi="vasopressoren-kreislauf"] { --label-bg: #6e4b9e; --label-fg: #ffffff; }
-[data-divi="antihypertensiva"] { --label-bg: #6e4b9e; --label-fg: #ffffff; }
-[data-divi="lokalanaesthetika"] { --label-bg: #7c8790; --label-fg: #ffffff; }
-[data-divi="anticholinergika"] { --label-bg: #009640; --label-fg: #ffffff; }
-[data-divi="antiemetika"] { --label-bg: #f2a08a; --label-fg: #17242c; }
-[data-divi="elektrolyte"] { --label-bg: #005b34; --label-fg: #ffffff; }
-[data-divi="diverse"] { --label-bg: #ffffff; --label-fg: #17242c; }
+/* Farbwerte je Wirkungsgruppe nach der DIVI-Standardtabelle.
+   Annäherungen an die Pantone-Vorgaben, nicht normativ. */
+[data-divi="hypnotika"] { --label-bg: #fedd00; --label-fg: #17242c; }
+[data-divi="benzodiazepine"] { --label-bg: #ff8200; --label-fg: #17242c; }
+[data-divi="benzodiazepin-antagonisten"] { --label-bg: #ff8200; --label-fg: #17242c; }
+[data-divi="muskelrelaxantien"] { --label-bg: #f9423a; --label-fg: #ffffff; }
+[data-divi="muskelrelaxans-antagonisten"] { --label-bg: #f9423a; --label-fg: #ffffff; }
+[data-divi="opiate-opioide"] { --label-bg: #71c5e8; --label-fg: #17242c; }
+[data-divi="opioid-antagonisten"] { --label-bg: #71c5e8; --label-fg: #17242c; }
+[data-divi="lokalanaesthetika"] { --label-bg: #c4bfb6; --label-fg: #17242c; }
+[data-divi="vasopressoren"] { --label-bg: #d6bfdd; --label-fg: #17242c; }
+[data-divi="antihypertonika-vasodilatantien"] { --label-bg: #d6bfdd; --label-fg: #17242c; }
+[data-divi="anticholinergika"] { --label-bg: #a4d65e; --label-fg: #17242c; }
+[data-divi="antiemetika"] { --label-bg: #efbe7d; --label-fg: #17242c; }
+[data-divi="antiarrhythmika"] { --label-bg: #ff7f32; --label-fg: #17242c; }
+[data-divi="antikonvulsiva"] { --label-bg: #6b4c9a; --label-fg: #ffffff; }
+[data-divi="bronchodilatatoren"] { --label-bg: #10069f; --label-fg: #ffffff; }
+[data-divi="inodilatatoren"] { --label-bg: #ef95b5; --label-fg: #17242c; }
+[data-divi="hormone"] { --label-bg: #a9744f; --label-fg: #ffffff; }
+[data-divi="elektrolyte"] { --label-bg: #046a38; --label-fg: #ffffff; }
+[data-divi="antikoagulantien"] { --label-bg: #c8c9c7; --label-fg: #17242c; }
+[data-divi="heparin"] { --label-bg: #ffffff; --label-fg: #17242c; }
+[data-divi="protamin"] { --label-bg: #1c1c1c; --label-fg: #ffffff; }
+[data-divi="verschiedene-medikamente"] { --label-bg: #ffffff; --label-fg: #17242c; }
 
 .divi-label.unset {
   background: repeating-linear-gradient(45deg,
@@ -823,6 +836,10 @@ body.auth .to-top { display: none; }
   opacity: .85;
 }
 
+/* Umrandet: Heparin trägt nach der Tabelle einen kräftigen schwarzen
+   Rahmen auf weißem Grund. */
+.divi-label.pattern-framed { border: 2px solid #1c1c1c; }
+
 /* Zweifarbig: untere Hälfte weiß, etwa bei nichtdepolarisierenden
    Relaxanzien und Antihypertensiva. */
 .divi-label.pattern-split::before {
@@ -836,3 +853,49 @@ body.auth .to-top { display: none; }
   display: flex; align-items: center; gap: .6rem;
   padding: .5rem 0 .2rem;
 }
+
+
+/* ------------------------------------------------------------- Diagramme
+
+   Rein als SVG, ohne Bibliothek. Die Farben stehen hier, weil die
+   Content-Security-Policy keine style-Attribute erlaubt; fill und stroke
+   sind Präsentationsattribute und davon nicht betroffen. */
+
+.chart { margin: .8rem 0 0; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart-line { stroke: var(--accent); }
+.chart-area { fill: var(--accent); opacity: .1; }
+.chart-dot { fill: var(--accent); }
+.chart-axis {
+  display: flex; justify-content: space-between;
+  font-size: .72rem; color: var(--muted); margin-top: .3rem;
+}
+
+.donut { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.donut svg { width: 132px; height: 132px; flex: 0 0 auto; }
+.donut-total {
+  font-size: 1.4rem; font-weight: 700; fill: var(--ink-strong);
+  font-family: var(--font);
+}
+.donut-legend {
+  display: grid; gap: .3rem; font-size: .82rem; flex: 1 1 140px; min-width: 0;
+}
+.donut-key { display: flex; align-items: center; gap: .45rem; }
+.donut-key b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.donut-swatch {
+  width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; display: block;
+}
+
+/* Acht unterscheidbare Töne aus der Markenpalette, nicht aus einem
+   Regenbogen. Reihenfolge so gewählt, dass benachbarte Segmente sich
+   deutlich unterscheiden. */
+.donut-0 { stroke: #126878; background: #126878; }
+.donut-1 { stroke: #19a6b5; background: #19a6b5; }
+.donut-2 { stroke: #102533; background: #102533; }
+.donut-3 { stroke: #667680; background: #667680; }
+.donut-4 { stroke: #4e70a8; background: #4e70a8; }
+.donut-5 { stroke: #628b68; background: #628b68; }
+.donut-6 { stroke: #a63d4a; background: #a63d4a; }
+.donut-7 { stroke: #c48b32; background: #c48b32; }
+
+@media (min-width: 520px) { .donut svg { width: 150px; height: 150px; } }

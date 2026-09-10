@@ -24,7 +24,10 @@ from ..seed import QUALIFICATIONS
 router = APIRouter(prefix="/api", tags=["profile"])
 
 EDITABLE_SETTINGS = {"edit_window_minutes", "theme", "show_delegation"}
-IMPRINT_SETTINGS = {"imprint_name", "imprint_address", "imprint_email"}
+IMPRINT_SETTINGS = {
+    "imprint_name", "imprint_address", "imprint_email", "imprint_phone",
+    "imprint_profession", "imprint_authority", "imprint_law",
+}
 
 # Sieben Tage. Darüber hinaus verliert ein Nachweis seinen Sinn, weil
 # rückwirkende Änderungen dann die Regel statt die Ausnahme wären.
@@ -141,6 +144,14 @@ class ImprintIn(BaseModel):
     imprint_name: str | None = None
     imprint_address: str | None = None
     imprint_email: str | None = None
+    # § 5 Abs. 1 Nr. 2 DDG verlangt Angaben zur schnellen Kontaktaufnahme.
+    # Eine E-Mail-Adresse allein genügt dafür nach der Rechtsprechung nicht.
+    imprint_phone: str | None = None
+    # Nr. 5 gilt für reglementierte Berufe. Notfallsanitäterin und
+    # Notfallsanitäter sind nach dem NotSanG reglementiert.
+    imprint_profession: str | None = None
+    imprint_authority: str | None = None
+    imprint_law: str | None = None
 
 
 @router.get("/legal")
@@ -150,6 +161,10 @@ def legal():
             "name": get_setting(c, "imprint_name", "") or "",
             "address": get_setting(c, "imprint_address", "") or "",
             "email": get_setting(c, "imprint_email", "") or "",
+            "phone": get_setting(c, "imprint_phone", "") or "",
+            "profession": get_setting(c, "imprint_profession", "") or "",
+            "authority": get_setting(c, "imprint_authority", "") or "",
+            "law": get_setting(c, "imprint_law", "") or "",
         }
 
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 
 from ..analytics import Filters, compute, resolve_period
 from ..core import current_user
-from ..db import conn, rows
+from ..db import conn, rows, scalar
 
 router = APIRouter(prefix="/api", tags=["stats"])
 
@@ -36,17 +36,24 @@ def stats(
 
 
 @router.get("/audit")
-def audit_log(entity_id: str | None = None, limit: int = 100,
+def audit_log(entity_id: str | None = None, limit: int = 50, offset: int = 0,
               user=Depends(current_user)):
     """Einsehbares Aenderungsprotokoll. Nur lesend, es gibt keinen
     Endpunkt zum Loeschen oder Aendern von Audit-Eintraegen."""
+    limit = min(limit, 200)
     with conn() as c:
         if entity_id:
             items = rows(c, "SELECT * FROM audit_log WHERE user_id = :u "
-                            "AND entity_id = :e ORDER BY at DESC LIMIT :l",
-                         u=user["id"], e=entity_id, l=min(limit, 500))
+                            "AND entity_id = :e ORDER BY at DESC "
+                            "LIMIT :l OFFSET :o",
+                         u=user["id"], e=entity_id, l=limit, o=offset)
+            total = scalar(c, "SELECT COUNT(*) FROM audit_log WHERE user_id = :u "
+                              "AND entity_id = :e", u=user["id"], e=entity_id)
         else:
             items = rows(c, "SELECT * FROM audit_log WHERE user_id = :u "
-                            "ORDER BY at DESC LIMIT :l",
-                         u=user["id"], l=min(limit, 500))
-    return {"entries": items}
+                            "ORDER BY at DESC LIMIT :l OFFSET :o",
+                         u=user["id"], l=limit, o=offset)
+            total = scalar(c, "SELECT COUNT(*) FROM audit_log WHERE user_id = :u",
+                           u=user["id"])
+    return {"entries": items, "total": total or 0, "offset": offset,
+            "limit": limit}

@@ -11,7 +11,16 @@ from fastapi.staticfiles import StaticFiles
 
 from .core import sweep_locks
 from .db import conn, migrate, normalize_legacy_outcomes
-from .routers import admin, auth, catalog, exports, profile, records, stats
+from .routers import (
+    admin,
+    auth,
+    catalog,
+    exports,
+    passkeys,
+    profile,
+    records,
+    stats,
+)
 from .seed import seed_if_empty
 
 log = logging.getLogger("scopex")
@@ -70,6 +79,7 @@ async def security_headers(request: Request, call_next):
 
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(passkeys.router)
 app.include_router(catalog.router)
 app.include_router(records.router)
 app.include_router(stats.router)

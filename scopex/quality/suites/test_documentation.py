@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import time as _t
@@ -30,7 +31,7 @@ check("DIVI-Etiketten vollständig definiert",
       all(g in const["divi_labels"] for g in const["divi_groups"]) and
       all({"bg","fg","pattern","slug"} <= set(v) for v in const["divi_labels"].values()),
       list(const["divi_labels"].values())[:1])
-check("DIVI-Gruppen vorhanden", len(const["divi_groups"]) == 14, const["divi_groups"])
+check("DIVI-Gruppen vorhanden", len(const["divi_groups"]) == 22, const["divi_groups"])
 
 cat = c.get("/api/catalog/measures").json()["measures"]
 iv = next(m for m in cat if m["name"] == "Intravenöser Zugang")
@@ -41,20 +42,20 @@ check("Punktionsort als Auswahl", ort["type"] == "select" and
 meds = c.get("/api/catalog/medications").json()["medications"]
 adr = next(m for m in meds if m["name"] == "Adrenalin")
 check("DIVI-Gruppe vorbelegt",
-      adr["divi_group"] == "Vasopressoren / Kreislauf (violett)", adr["divi_group"])
+      adr["divi_group"] == "Vasopressoren", adr["divi_group"])
 roc = next(m for m in meds if m["name"] == "Rocuronium")
 suc = next(m for m in meds if m["name"] == "Succinylcholin")
 nal = next(m for m in meds if m["name"] == "Naloxon")
-check("Relaxanzien nach Wirkmechanismus getrennt",
-      "nichtdepolarisierend" in roc["divi_group"] and
-      "depolarisierend (rot)" in suc["divi_group"], (roc["divi_group"], suc["divi_group"]))
-check("Antagonist trägt die Streifen seiner Bezugsgruppe",
-      nal["divi_group"] == "Opioid-Antagonisten (blau/weiß gestreift)", nal["divi_group"])
+check("Relaxanzien zugeordnet",
+      roc["divi_group"] == "Muskelrelaxantien" and
+      suc["divi_group"] == "Muskelrelaxantien", (roc["divi_group"], suc["divi_group"]))
+check("Antagonist in eigener Gruppe",
+      nal["divi_group"] == "Opioid-Antagonisten", nal["divi_group"])
 amio = next(m for m in meds if m["name"] == "Amiodaron")
-check("Unklare Zuordnung bleibt offen", amio["divi_group"] is None, amio["divi_group"])
+check("Antiarrhythmikum zugeordnet", amio["divi_group"] == "Antiarrhythmika", amio["divi_group"])
 
 r = c.patch(f"/api/catalog/medications/{amio['id']}", json={
-    "divi_group": "Diverse (weiß)", "trade_names": ["Cordarex", "Amiohexal"]})
+    "divi_group": "Verschiedene Medikamente", "trade_names": ["Cordarex", "Amiohexal"]})
 check("Gruppe und Handelsnamen pflegbar", r.status_code == 200, r.text[:120])
 meds = c.get("/api/catalog/medications").json()["medications"]
 amio = next(m for m in meds if m["name"] == "Amiodaron")
@@ -153,4 +154,108 @@ check("Für unbekannte Kennung keine Mail", "to" not in sent)
 
 r = c.get("/api/exports/pdf?period=all&detailed=true")
 check("PDF weiterhin erzeugbar", r.status_code == 200 and r.content[:4] == b"%PDF")
-print("\nUpdate 3: alle Prüfungen bestanden.")
+
+# --- Update 4: Etiketten und Passkeys -----------------------------------
+const = c.get("/api/catalog/constants").json()
+check("Alle 22 Etikettengruppen definiert", len(const["divi_groups"]) == 22,
+      len(const["divi_groups"]))
+meds_all = c.get("/api/catalog/medications").json()["medications"]
+ohne = [m["name"] for m in meds_all if not m["divi_group"]]
+check("Jeder ausgelieferte Wirkstoff hat eine Gruppe", not ohne, ohne[:5])
+by_name = {m["name"]: m["divi_group"] for m in meds_all}
+erwartet = {
+    "Propofol": "Hypnotika", "Midazolam": "Benzodiazepine",
+    "Flumazenil": "Benzodiazepin-Antagonisten", "Morphin": "Opiate / Opioide",
+    "Naloxon": "Opioid-Antagonisten", "Atropin": "Anticholinergika",
+    "Adenosin": "Antiarrhythmika", "Phenytoin": "Antikonvulsiva",
+    "Salbutamol": "Bronchodilatatoren", "Dobutamin": "Inodilatatoren",
+    "Heparin": "Heparin", "Natriumchlorid 0,9 %": "Elektrolyte",
+    "Nitroglycerin": "Antihypertonika / Vasodilatantien",
+    "Metamizol": "Verschiedene Medikamente",
+}
+falsch = {k: (by_name.get(k), v) for k, v in erwartet.items() if by_name.get(k) != v}
+check("Zuordnung entspricht der DIVI-Tabelle", not falsch, falsch)
+check("Antagonisten tragen Schrägstreifen",
+      const["divi_labels"]["Opioid-Antagonisten"]["pattern"] == "stripes" and
+      const["divi_labels"]["Muskelrelaxans-Antagonisten"]["pattern"] == "stripes")
+
+# Passkeys
+r = c.get("/api/auth/passkeys")
+check("Passkey-Liste abrufbar", r.status_code == 200 and
+      r.json()["passkeys"] == [], r.text[:120])
+r = c.post("/api/auth/passkeys/register/options")
+check("Ohne Basis-Adresse keine Passkeys", r.status_code == 503, r.status_code)
+os.environ["SCOPEX_BASE_URL"] = "https://scopex.example.de"
+r = c.post("/api/auth/passkeys/register/options")
+check("Mit Basis-Adresse Registrierung möglich", r.status_code == 200, r.text[:150])
+opts = r.json()
+check("Nutzerverifikation verpflichtend",
+      opts["options"]["authenticatorSelection"]["userVerification"] == "required",
+      opts["options"].get("authenticatorSelection"))
+check("Domain gebunden", opts["options"]["rp"]["id"] == "scopex.example.de",
+      opts["options"]["rp"])
+r = c.post("/api/auth/passkeys/register/verify", json={
+    "handle": opts["handle"], "credential": {"id": "x", "rawId": "x",
+    "type": "public-key", "response": {"clientDataJSON": "x",
+    "attestationObject": "x"}}})
+check("Gefälschter Nachweis abgelehnt", r.status_code == 400, r.status_code)
+r = c.post("/api/auth/passkeys/register/verify", json={
+    "handle": opts["handle"], "credential": {"id": "x", "rawId": "x",
+    "type": "public-key", "response": {"clientDataJSON": "x",
+    "attestationObject": "x"}}})
+check("Vorgang nur einmal verwendbar", r.status_code == 400, r.status_code)
+os.environ["SCOPEX_BASE_URL"] = "http://unsicher.example.de"
+r = c.post("/api/auth/passkeys/login/options")
+check("Ohne HTTPS keine Passkeys", r.status_code == 503, r.status_code)
+os.environ.pop("SCOPEX_BASE_URL", None)
+
+
+# --- Update 4.1: Auskunft, Löschung, Protokoll, Impressum ---------------
+r = c.put("/api/legal", json={"imprint_phone": "+49 5071 000000",
+    "imprint_profession": "Notfallsanitäter", "imprint_law": "NotSanG"})
+check("Pflichtangaben speicherbar", r.status_code == 200, r.text[:120])
+l = c.get("/api/legal").json()
+check("Telefonnummer im Impressum", l["phone"] == "+49 5071 000000", l)
+check("Berufsangaben im Impressum",
+      l["profession"] == "Notfallsanitäter" and l["law"] == "NotSanG", l)
+
+# Ein Einsatz mit Maßnahme und Parametern, damit die Auskunft etwas zu
+# zeigen hat.
+enc2 = c.post("/api/encounters", json={"enc_date": "2026-09-02",
+                                       "enc_time": "09:00"}).json()
+c.post(f"/api/encounters/{enc2['id']}/attempts", json={
+    "measure_id": iv["id"], "outcome": "erfolgreich",
+    "parameters": {"gauge": "18 G (grün)", "ort": "Unterarm links"}})
+
+r = c.get("/api/exports/my-data")
+check("Auskunft abrufbar", r.status_code == 200, r.status_code)
+aus = r.json()
+check("Auskunft enthält Einsätze", len(aus["einsaetze"]) >= 1, len(aus["einsaetze"]))
+check("Auskunft enthält Maßnahmen mit Parametern",
+      any(a.get("parameters") for e in aus["einsaetze"] for a in e["attempts"]))
+blob = json.dumps(aus, ensure_ascii=False)
+check("Auskunft ohne Zugangsmittel",
+      "password_hash" not in blob and "$argon2" not in blob and
+      "secret" not in blob and "token_hash" not in blob)
+
+r = c.get("/api/audit?limit=5&offset=0")
+check("Protokoll blätterbar", r.status_code == 200 and
+      len(r.json()["entries"]) <= 5 and r.json()["total"] > 5, r.json()["total"])
+first = r.json()["entries"][0]
+check("Protokoll mit Zeitstempel", "T" in first["at"] and len(first["at"]) >= 19, first["at"])
+r2 = c.get("/api/audit?limit=5&offset=5")
+check("Zweite Seite unterscheidet sich",
+      r2.json()["entries"][0]["id"] != first["id"])
+
+# Kontolöschung: letzter Administrator wird geschützt
+r = c.post("/api/account/delete", json={"password": "einsatzprotokoll2026",
+    "totp_code": code(sec), "confirm": "falsch"})
+check("Bestätigungswort wird erzwungen", r.status_code == 400, r.status_code)
+r = c.post("/api/account/delete", json={"password": "falsch",
+    "totp_code": code(sec), "confirm": "LÖSCHEN"})
+check("Löschung ohne Passwort abgelehnt", r.status_code == 400, r.status_code)
+r = c.post("/api/account/delete", json={"password": "einsatzprotokoll2026",
+    "totp_code": code(sec), "confirm": "LÖSCHEN"})
+check("Letzter Administrator kann sich nicht löschen", r.status_code == 409, r.status_code)
+
+print("\nUpdate 4.1: alle Prüfungen bestanden.")

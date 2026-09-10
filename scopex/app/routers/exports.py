@@ -18,7 +18,7 @@ from ..analytics import (
     resolve_period,
 )
 from ..core import audit, current_user, edit_window_minutes, require_admin
-from ..db import conn, engine, new_id, now_iso, q, row, rows
+from ..db import conn, engine, new_id, now_iso, q, row, rows, scalar
 from ..security import verify_password, verify_totp
 
 router = APIRouter(prefix="/api", tags=["exports"])
@@ -235,3 +235,153 @@ async def restore_backup(file: UploadFile = File(...),
         audit(c, user["id"], "exports", new_id(), "restore", "records",
               None, sum(counts.values()))
     return {"ok": True, "restored": counts}
+
+
+# --------------------------------------------------------------------------
+# Auskunft und Löschung nach DSGVO
+# --------------------------------------------------------------------------
+
+USER_TABLES = {
+    "encounters": "user_id",
+    "measure_attempts": None,      # über den Einsatz
+    "medication_administrations": None,
+    "favorites": "user_id",
+    "settings": "user_id",
+    "audit_log": "user_id",
+}
+
+
+@router.get("/exports/my-data")
+def export_own_data(user=Depends(current_user)):
+    """Vollständige Auskunft nach Art. 15 und 20 DSGVO.
+
+    Enthält alles, was zu diesem Konto gespeichert ist, in einem
+    maschinenlesbaren Format. Passwort-Hash, TOTP-Geheimnis, Reset-Token
+    und Gerätekennungen sind bewusst nicht enthalten: sie sind
+    Zugangsmittel, keine Auskunft, und ein Export in falschen Händen wäre
+    sonst ein Kontozugriff.
+    """
+    with conn() as c:
+        account = row(c, "SELECT id, username, email, created_at, "
+                         "last_login_at, role FROM users WHERE id = :u",
+                      u=user["id"])
+        profile = row(c, "SELECT * FROM user_profile WHERE user_id = :u",
+                      u=user["id"])
+        encounters = rows(c, "SELECT * FROM encounters WHERE user_id = :u "
+                             "ORDER BY enc_date", u=user["id"])
+        ids = [e["id"] for e in encounters]
+        for enc in encounters:
+            enc["attempts"] = rows(
+                c, "SELECT * FROM measure_attempts WHERE encounter_id = :e",
+                e=enc["id"])
+            for a in enc["attempts"]:
+                a["parameters"] = rows(
+                    c, "SELECT pkey, label, value_text, unit FROM "
+                       "measure_attempt_parameters WHERE attempt_id = :a",
+                    a=a["id"])
+                a["complications"] = rows(
+                    c, "SELECT code, label, relation, patient_harm FROM "
+                       "attempt_complications WHERE attempt_id = :a", a=a["id"])
+            enc["medications"] = rows(
+                c, "SELECT * FROM medication_administrations "
+                   "WHERE encounter_id = :e", e=enc["id"])
+            for m in enc["medications"]:
+                m["complications"] = rows(
+                    c, "SELECT code, label, relation, patient_harm FROM "
+                       "medication_complications WHERE administration_id = :a",
+                    a=m["id"])
+            enc["complications"] = rows(
+                c, "SELECT code, label, relation, patient_harm FROM "
+                   "encounter_complications WHERE encounter_id = :e", e=enc["id"])
+        settings_rows = rows(c, "SELECT skey, svalue FROM settings "
+                                "WHERE user_id = :u", u=user["id"])
+        audit_rows = rows(c, "SELECT at, entity_type, entity_id, action, "
+                             "field, old_value, new_value FROM audit_log "
+                             "WHERE user_id = :u ORDER BY at", u=user["id"])
+        devices = rows(c, "SELECT label, created_at, expires_at, last_used_at "
+                          "FROM trusted_devices WHERE user_id = :u", u=user["id"])
+        keys = rows(c, "SELECT label, created_at, last_used_at FROM passkeys "
+                       "WHERE user_id = :u", u=user["id"])
+        audit(c, user["id"], "exports", new_id(), "self_export", "encounters",
+              None, len(ids))
+
+    payload = {
+        "format": "scopex-auskunft", "version": 1, "created_at": now_iso(),
+        "hinweis": "Auskunft nach Art. 15 und 20 DSGVO. Zugangsmittel wie "
+                   "Passwort-Hash und Zwei-Faktor-Geheimnis sind nicht "
+                   "enthalten.",
+        "konto": account, "profil": profile, "einsaetze": encounters,
+        "einstellungen": settings_rows, "aenderungsprotokoll": audit_rows,
+        "vertraute_geraete": devices, "passkeys": keys,
+    }
+    stamp = datetime.now().strftime("%Y%m%d")
+    return Response(
+        content=json.dumps(payload, ensure_ascii=False, indent=1),
+        media_type="application/json",
+        headers={"Content-Disposition":
+                 f'attachment; filename="scopex-auskunft-{stamp}.json"'})
+
+
+class DeleteAccountIn(BaseModel):
+    password: str
+    totp_code: str | None = None
+    confirm: str
+
+
+@router.post("/account/delete")
+def delete_own_account(data: DeleteAccountIn, user=Depends(current_user)):
+    """Löschung nach Art. 17 DSGVO.
+
+    Entfernt Konto, Profil, alle dokumentierten Daten und alle
+    Zugangsmittel physisch. Die Einträge im Änderungsprotokoll bleiben
+    bestehen, verlieren aber ihren Personenbezug: sie sichern die
+    Nachvollziehbarkeit administrativer Vorgänge und enthalten selbst keine
+    personenbezogenen Inhalte.
+    """
+    if data.confirm.strip().upper() != "LÖSCHEN":
+        raise HTTPException(400, "Zur Bestätigung bitte LÖSCHEN eingeben.")
+    if not verify_password(data.password, user["password_hash"]):
+        raise HTTPException(400, "Passwort stimmt nicht.")
+    with conn() as c:
+        t = row(c, "SELECT * FROM auth_totp WHERE user_id = :u", u=user["id"])
+        if t and t["confirmed_at"] and not verify_totp(t["secret"],
+                                                       data.totp_code or ""):
+            raise HTTPException(400, "Ungültiger Code.")
+        # Die Installation darf nicht ohne Administrator zurückbleiben.
+        if (user.get("role") or "user") == "admin":
+            others = scalar(c, "SELECT COUNT(*) FROM users WHERE role = 'admin' "
+                               "AND disabled_at IS NULL AND id <> :i",
+                            i=user["id"]) or 0
+            if others == 0:
+                raise HTTPException(
+                    409, "Das ist der letzte aktive Administrator. Ernenne "
+                         "zuerst eine andere Person.")
+
+        enc_ids = [e["id"] for e in rows(
+            c, "SELECT id FROM encounters WHERE user_id = :u", u=user["id"])]
+        for eid in enc_ids:
+            for aid in [a["id"] for a in rows(
+                    c, "SELECT id FROM measure_attempts WHERE encounter_id = :e",
+                    e=eid)]:
+                q(c, "DELETE FROM measure_attempt_parameters WHERE attempt_id = :a", a=aid)
+                q(c, "DELETE FROM attempt_complications WHERE attempt_id = :a", a=aid)
+            for mid in [m["id"] for m in rows(
+                    c, "SELECT id FROM medication_administrations "
+                       "WHERE encounter_id = :e", e=eid)]:
+                q(c, "DELETE FROM medication_complications "
+                     "WHERE administration_id = :m", m=mid)
+            q(c, "DELETE FROM measure_attempts WHERE encounter_id = :e", e=eid)
+            q(c, "DELETE FROM medication_administrations WHERE encounter_id = :e", e=eid)
+            q(c, "DELETE FROM encounter_complications WHERE encounter_id = :e", e=eid)
+        q(c, "DELETE FROM encounters WHERE user_id = :u", u=user["id"])
+        for table in ("favorites", "settings", "recovery_codes", "sessions",
+                      "trusted_devices", "passkeys", "password_resets",
+                      "auth_totp", "user_profile"):
+            q(c, f"DELETE FROM {table} WHERE user_id = :u", u=user["id"])
+        # Protokoll bleibt, verliert aber den Personenbezug.
+        q(c, "UPDATE audit_log SET user_id = NULL WHERE user_id = :u", u=user["id"])
+        q(c, "UPDATE invitations SET used_by = NULL WHERE used_by = :u", u=user["id"])
+        q(c, "DELETE FROM users WHERE id = :i", i=user["id"])
+        audit(c, None, "users", "gelöscht", "self_delete", "encounters",
+              len(enc_ids), None)
+    return {"ok": True, "deleted_encounters": len(enc_ids)}

@@ -442,6 +442,97 @@ def check_addon_isolation():
 
 
 # --------------------------------------------------------------------------
+# Versionierung
+# --------------------------------------------------------------------------
+
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+
+def _version() -> tuple[str, tuple[int, int, int]]:
+    import yaml
+    raw = str(yaml.safe_load((ROOT / "config.yaml").read_text(
+        encoding="utf-8"))["version"])
+    m = SEMVER.match(raw)
+    if not m:
+        raise AssertionError(f"'{raw}' ist kein gültiges SemVer")
+    return raw, tuple(int(x) for x in m.groups())
+
+
+@check("maintainability", "Version folgt SemVer und ist dokumentiert")
+def check_version():
+    raw, parts = _version()
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    if f"## {raw}" not in changelog:
+        return False, f"kein Abschnitt '## {raw}' im Änderungsprotokoll"
+    documented = [tuple(int(x) for x in m.groups())
+                  for m in re.finditer(r"^## (\d+)\.(\d+)\.(\d+)$",
+                                       changelog, re.M)]
+    older = [v for v in documented if v != parts]
+    if older and parts <= max(older):
+        return False, f"{raw} ist nicht höher als {max(older)}"
+    return True, f"{raw}, {len(documented)} Fassungen dokumentiert"
+
+
+@check("maintainability", "Keine stille Änderung der öffentlichen Schnittstelle")
+def check_public_surface():
+    """Vergleicht Endpunkte und Sicherungsformat mit der letzten Fassung.
+
+    Verschwindet ein Pfad oder springt das Sicherungsformat, ohne dass die
+    MAJOR-Stelle steigt, ist das ein SemVer-Verstoß. Genau diesen Fall
+    übersieht man beim Umbenennen einer Route.
+    """
+    import json as _json
+    raw, parts = _version()
+    from app.main import app as fastapi_app
+    from app.routers.exports import BACKUP_VERSION
+
+    # Neuere FastAPI-Fassungen kapseln eingebundene Router, deshalb muss
+    # der Baum durchlaufen werden statt nur die oberste Ebene.
+    def walk(routes):
+        for r in routes:
+            path = getattr(r, "path", "")
+            if path.startswith("/api/"):
+                yield path
+            # Neuere FastAPI-Fassungen kapseln eingebundene Router in
+            # _IncludedRouter und legen den echten Router unter
+            # original_router ab.
+            inner = getattr(r, "original_router", None) or r
+            children = getattr(inner, "routes", [])
+            if children is not routes:
+                yield from walk(children)
+
+    current = {
+        "paths": sorted(set(walk(fastapi_app.routes))),
+        "backup_version": BACKUP_VERSION,
+    }
+    baseline_path = ROOT / "quality" / "api-oberflaeche.json"
+    if not baseline_path.exists():
+        baseline_path.write_text(
+            _json.dumps({"version": raw, **current}, indent=2, ensure_ascii=False),
+            encoding="utf-8")
+        return True, f"Grundlage angelegt, {len(current['paths'])} Pfade"
+
+    baseline = _json.loads(baseline_path.read_text(encoding="utf-8"))
+    base_major = int(baseline["version"].split(".")[0])
+    problems = []
+    if parts[0] == base_major:
+        gone = sorted(set(baseline["paths"]) - set(current["paths"]))
+        if gone:
+            problems.append("entfallene Pfade ohne MAJOR: " + ", ".join(gone[:3]))
+        if baseline["backup_version"] != current["backup_version"]:
+            problems.append("Sicherungsformat gesprungen ohne MAJOR")
+    if problems:
+        return False, "; ".join(problems)
+
+    added = len(set(current["paths"]) - set(baseline["paths"]))
+    baseline_path.write_text(
+        _json.dumps({"version": raw, **current}, indent=2, ensure_ascii=False),
+        encoding="utf-8")
+    return True, (f"{len(current['paths'])} Pfade, {added} neu, "
+                  f"Sicherungsformat {current['backup_version']}")
+
+
+# --------------------------------------------------------------------------
 # Nicht automatisierbar
 # --------------------------------------------------------------------------
 # Diese Punkte erscheinen im Bericht und zählen nicht als bestanden. Sie
@@ -466,7 +557,8 @@ MANUAL_ITEMS = [
 
 def main() -> int:
     ordered = [
-        check_lint, check_coverage, check_suites, check_route_coverage,
+        check_lint, check_coverage, check_version, check_public_surface,
+        check_suites, check_route_coverage,
         check_response_times, check_asset_budget,
         check_sql_portability, check_db_abstraction,
         check_accessibility, check_color_independence, check_no_inline_styles,

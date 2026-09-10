@@ -1,5 +1,106 @@
 # Änderungen
 
+Versionierung nach Semantic Versioning 2.0.0, Regeln in
+`VERSIONIERUNG.md`.
+
+## 4.1.0
+
+**Versionierung**
+
+- `VERSIONIERUNG.md` legt die öffentliche Schnittstelle verbindlich fest:
+  Sicherungsformat, Add-on-Optionen, HTTP-Endpunkte und Migrationspfad.
+  Alles andere, insbesondere Oberfläche und interne Struktur, gehört
+  ausdrücklich nicht dazu.
+- Die Prüfschleife erzwingt die Regeln: gültiges SemVer, Abschnitt im
+  Änderungsprotokoll, höhere Nummer als zuvor, und ein Abgleich der
+  61 API-Pfade gegen die letzte Fassung. Verschwindet ein Pfad oder springt
+  das Sicherungsformat ohne MAJOR, schlägt die Prüfung fehl.
+- Offen dokumentiert: die Sprünge auf 2.0.0, 3.0.0 und 4.0.0 waren
+  SemVer-Verstöße und hätten 1.2.0, 1.3.0 und 1.4.0 heißen müssen.
+  Zurückversioniert wird nicht, weil Home Assistant ein Update nur bei
+  höherer Nummer anbietet.
+
+**Impressum und Datenschutz**
+
+- Telefonnummer als Pflichtangabe nach § 5 Abs. 1 Nr. 2 DDG, dazu Felder
+  für Berufsbezeichnung, zuständige Stelle und berufsrechtliche Regelung
+  nach Nr. 5 für reglementierte Berufe.
+- Verweis auf Impressum, Datenschutz und Barrierefreiheit im Fuß **jeder**
+  Seite. Damit ist die Anbieterkennzeichnung von überall mit einem Klick
+  erreichbar; § 5 DDG verlangt höchstens zwei.
+- Abschnitt zu Cookies: ausschließlich technisch notwendige, deshalb nach
+  § 25 Abs. 2 TDDDG kein Einwilligungsdialog.
+- Abschnitt zu Server-Protokollen und zur Speicherung von Herkunftsdaten
+  als gekürzter Hashwert.
+- Freiwillige Erklärung zur Barrierefreiheit mit Stand der Umsetzung und
+  benannten Einschränkungen.
+
+**Auskunft und Löschung**
+
+- Vollständiger Datenauszug nach Art. 15 und 20 DSGVO, im Profil
+  selbst herunterladbar. Enthält Konto, Profil, alle Einsätze mit
+  Maßnahmen, Parametern, Medikamentengaben und ZEK, Einstellungen und das
+  Änderungsprotokoll. Zugangsmittel sind bewusst nicht enthalten.
+- Kontolöschung nach Art. 17 DSGVO ohne Umweg über einen Administrator.
+  Verlangt Passwort, Code und ein getipptes Bestätigungswort. Das
+  Änderungsprotokoll bleibt bestehen, verliert aber den Personenbezug. Der
+  letzte aktive Administrator kann sich nicht löschen.
+
+**Änderungsprotokoll**
+
+- Eigene Seite unter `#/protokoll` mit vollständigem Zeitstempel bis zur
+  Sekunde und serverseitigem Blättern. Vorher stand es als Karte im Profil
+  und hätte diese Seite mit wachsender Länge unbenutzbar gemacht.
+- Vorgänge und Objekte werden in Klartext übersetzt statt als interne
+  Bezeichner angezeigt.
+
+**Dashboard**
+
+- Liniendiagramm für die Entwicklung über die Zeit, Ringdiagramme für die
+  Verteilung nach xABCDE und nach NACA. Reines SVG ohne Bibliothek, Farben
+  aus der Markenpalette statt aus einem Regenbogen.
+
+## 4.0.0
+
+**Passkeys mit Biometrie**
+
+- Anmeldung per Passkey nach WebAuthn, entsperrt über Face ID, Touch ID,
+  Windows Hello oder die Geräte-PIN. Ersetzt Passwort und Code in einem
+  Schritt.
+- Phishing-resistent, weil der Schlüssel an die Domain gebunden ist und auf
+  einer nachgebauten Seite gar nicht erst antwortet. Der private Schlüssel
+  verlässt das Gerät nie.
+- Nutzerverifikation ist verpflichtend: ein Passkey ohne Biometrie oder PIN
+  wird abgelehnt. `sign_count` erkennt geklonte Authentifikatoren.
+- Verwaltung im Profil: Passkeys anlegen, benennen und entfernen. Passwort
+  und Zwei-Faktor bleiben immer als Weg bestehen, ein Konto kann sich also
+  nicht aussperren.
+- Voraussetzung ist eine hinterlegte Basis-Adresse mit HTTPS. Fehlt sie,
+  meldet die Oberfläche das ausdrücklich, statt eine Anmeldung anzubieten,
+  die scheitern müsste.
+- Die kryptografische Prüfung übernimmt py_webauthn. Signaturprüfung und
+  CBOR-Auswertung selbst zu schreiben wäre genau die Art von
+  Sicherheitscode, die man nicht selbst schreibt.
+
+**DIVI-Spritzenetiketten nach Standardtabelle**
+
+- 22 Wirkungsgruppen statt bisher 14, alle 60 ausgelieferten Wirkstoffe sind
+  zugeordnet. Neu darunter Antiarrhythmika, Antikonvulsiva,
+  Bronchodilatatoren, Inodilatatoren, Hormone, Antikoagulantien, Heparin und
+  Protamin.
+- Schrägstreifen bei allen drei Antagonistengruppen, schwarzer Rahmen bei
+  Heparin.
+- Die Zuordnung eines Wirkstoffs bleibt im Katalog änderbar; selbst
+  angelegte Wirkstoffe werden bei der Migration nicht überschrieben.
+
+**Behobener Anzeigefehler**
+
+- Auf schmalen Displays überlagerte die Navigationsleiste den Inhalt der
+  Impressumsseite. Ursache: die Klasse für Anmeldeseiten stellte das Layout
+  auf `display: block` um und hob damit die Reihenfolge der Flex-Spalte auf,
+  wodurch die Leiste an den Seitenanfang rutschte. Der Zustand der Hülle
+  wird jetzt bei jedem Seitenwechsel an einer Stelle festgelegt.
+
 ## 3.1.0
 
 **Qualitätsschleife**

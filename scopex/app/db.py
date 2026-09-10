@@ -500,6 +500,63 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         "'Benzodiazepin-Antagonisten (orange/weiß gestreift)' "
         "WHERE divi_group = 'Antagonisten (gestreift)'",
     ]),
+
+    # Etikettengruppen nach der DIVI-Standardtabelle. Ersetzt die grobe
+    # Vorbelegung aus 0006 und 0007: alle ausgelieferten Wirkstoffe sind
+    # jetzt zugeordnet, auch Antiarrhythmika, Bronchodilatatoren, Hormone
+    # und Antikoagulantien, die vorher offen bleiben mussten. Selbst
+    # angelegte Wirkstoffe bleiben unberührt.
+    ("0008_divi_standardtabelle", [
+        "UPDATE medications SET divi_group = 'Hypnotika' WHERE name IN ('Etomidat', 'Propofol', 'Thiopental', 'Esketamin')",
+        "UPDATE medications SET divi_group = 'Benzodiazepine' WHERE name IN ('Midazolam', 'Diazepam', 'Lorazepam', 'Clonazepam')",
+        "UPDATE medications SET divi_group = 'Benzodiazepin-Antagonisten' WHERE name IN ('Flumazenil')",
+        "UPDATE medications SET divi_group = 'Muskelrelaxantien' WHERE name IN ('Rocuronium', 'Vecuronium', 'Succinylcholin')",
+        "UPDATE medications SET divi_group = 'Opiate / Opioide' WHERE name IN ('Fentanyl', 'Sufentanil', 'Morphin', 'Piritramid')",
+        "UPDATE medications SET divi_group = 'Opioid-Antagonisten' WHERE name IN ('Naloxon')",
+        "UPDATE medications SET divi_group = 'Lokalanästhetika' WHERE name IN ('Lidocain')",
+        "UPDATE medications SET divi_group = 'Vasopressoren' WHERE name IN ('Adrenalin', 'Noradrenalin', 'Cafedrin/Theodrenalin', 'Orciprenalin')",
+        "UPDATE medications SET divi_group = 'Antihypertonika / Vasodilatantien' WHERE name IN ('Metoprolol', 'Urapidil', 'Nitroglycerin')",
+        "UPDATE medications SET divi_group = 'Anticholinergika' WHERE name IN ('Atropin', 'Biperidin', 'Butylscopolamin')",
+        "UPDATE medications SET divi_group = 'Antiemetika' WHERE name IN ('Ondansetron', 'Granisetron', 'Dimenhydrinat')",
+        "UPDATE medications SET divi_group = 'Antiarrhythmika' WHERE name IN ('Amiodaron', 'Adenosin', 'Ajmalin')",
+        "UPDATE medications SET divi_group = 'Antikonvulsiva' WHERE name IN ('Phenytoin')",
+        "UPDATE medications SET divi_group = 'Bronchodilatatoren' WHERE name IN ('Salbutamol', 'Fenoterol', 'Reproterol', 'Ipratropiumbromid')",
+        "UPDATE medications SET divi_group = 'Inodilatatoren' WHERE name IN ('Dobutamin')",
+        "UPDATE medications SET divi_group = 'Hormone' WHERE name IN ('Dexamethason', 'Prednisolon', 'Prednison', 'Oxytocin')",
+        "UPDATE medications SET divi_group = 'Elektrolyte' WHERE name IN ('Natriumchlorid 0,9 %', 'Ringer-Acetat', 'Vollelektrolytlösung', 'Magnesiumsulfat')",
+        "UPDATE medications SET divi_group = 'Antikoagulantien' WHERE name IN ('Acetylsalicylsäure')",
+        "UPDATE medications SET divi_group = 'Heparin' WHERE name IN ('Heparin')",
+        "UPDATE medications SET divi_group = 'Verschiedene Medikamente' WHERE name IN ('Paracetamol', 'Metamizol', 'Furosemid', 'Glukose', 'Tranexamsäure', 'Dimetinden', 'Clemastin', 'Promethazin', 'Haloperidol', 'Gelatinelösung')",
+    ]),
+
+    # Passkeys nach WebAuthn. Der oeffentliche Schluessel liegt hier, der
+    # private verlaesst das Geraet des Nutzers nie. sign_count erkennt
+    # geklonte Authentifikatoren.
+    ("0009_passkeys", [
+        """CREATE TABLE passkeys (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            credential_id TEXT NOT NULL,
+            public_key TEXT NOT NULL,
+            sign_count INTEGER NOT NULL DEFAULT 0,
+            label TEXT,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT
+        )""",
+        "CREATE UNIQUE INDEX ix_passkeys_cred ON passkeys(credential_id)",
+        "CREATE INDEX ix_passkeys_user ON passkeys(user_id)",
+
+        """CREATE TABLE webauthn_challenges (
+            id TEXT PRIMARY KEY,
+            user_id TEXT,
+            kind TEXT NOT NULL,
+            challenge TEXT NOT NULL,
+            handle TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_challenge_handle ON webauthn_challenges(handle)",
+    ]),
 ]
 
 

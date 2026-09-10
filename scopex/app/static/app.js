@@ -177,6 +177,18 @@ function diviLabel(med, strength) {
   </span>`;
 }
 
+/* § 5 DDG verlangt, dass die Anbieterkennzeichnung von jeder Unterseite
+   aus mit höchstens zwei Klicks erreichbar ist. Deshalb steht der Verweis
+   im Fuß jeder Seite, nicht nur auf der Startseite. */
+function pageFoot() {
+  return `<div class="page-foot">
+    <a href="#/rechtliches">Impressum</a>
+    <a href="#/rechtliches">Datenschutz</a>
+    <a href="#/rechtliches">Barrierefreiheit</a>
+    <span class="tiny muted">SCOPE X</span>
+  </div>`;
+}
+
 function statusBadge(outcome) {
   return `<span class="status ${STATUS_CLASS[outcome] || ""}">${esc(outcome)}</span>`;
 }
@@ -226,11 +238,71 @@ function showDelegation() {
   return !/arzt|ärztin/i.test(q);
 }
 
+// -------------------------------------------------------------- Passkeys
+
+/* WebAuthn tauscht Binärdaten als base64url aus. Die Umwandlung muss auf
+   beiden Wegen exakt stimmen, sonst schlägt die Signaturprüfung fehl. */
+const b64urlToBuf = (v) => Uint8Array.from(
+  atob(v.replace(/-/g, "+").replace(/_/g, "/")
+        .padEnd(v.length + ((4 - v.length % 4) % 4), "=")),
+  (ch) => ch.charCodeAt(0));
+
+const bufToB64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+function passkeysSupported() {
+  return !!(window.PublicKeyCredential && navigator.credentials);
+}
+
+async function passkeyLogin() {
+  const { handle, options } = await api("/api/auth/passkeys/login/options",
+    { method: "POST" });
+  options.challenge = b64urlToBuf(options.challenge);
+  (options.allowCredentials || []).forEach((c) => { c.id = b64urlToBuf(c.id); });
+  const assertion = await navigator.credentials.get({ publicKey: options });
+  return api("/api/auth/passkeys/login/verify", { method: "POST", body: {
+    handle,
+    credential: {
+      id: assertion.id, rawId: bufToB64url(assertion.rawId), type: assertion.type,
+      response: {
+        clientDataJSON: bufToB64url(assertion.response.clientDataJSON),
+        authenticatorData: bufToB64url(assertion.response.authenticatorData),
+        signature: bufToB64url(assertion.response.signature),
+        userHandle: assertion.response.userHandle
+          ? bufToB64url(assertion.response.userHandle) : null,
+      },
+    },
+  }});
+}
+
+async function passkeyRegister(label) {
+  const { handle, options } = await api("/api/auth/passkeys/register/options",
+    { method: "POST" });
+  options.challenge = b64urlToBuf(options.challenge);
+  options.user.id = b64urlToBuf(options.user.id);
+  (options.excludeCredentials || []).forEach((c) => { c.id = b64urlToBuf(c.id); });
+  const cred = await navigator.credentials.create({ publicKey: options });
+  return api("/api/auth/passkeys/register/verify", { method: "POST", body: {
+    handle, label,
+    credential: {
+      id: cred.id, rawId: bufToB64url(cred.rawId), type: cred.type,
+      response: {
+        clientDataJSON: bufToB64url(cred.response.clientDataJSON),
+        attestationObject: bufToB64url(cred.response.attestationObject),
+      },
+    },
+  }});
+}
+
 // ------------------------------------------------------------ Anmeldung
 
+function setShell(authenticated) {
+  document.body.classList.toggle("auth", !authenticated);
+  document.getElementById("nav").hidden = !authenticated;
+}
+
 function authShell(title, inner) {
-  document.body.classList.add("auth");
-  document.getElementById("nav").hidden = true;
+  setShell(false);
   app().innerHTML = `
     <div class="auth-wrap">
       <div class="auth-head">
@@ -267,6 +339,7 @@ function viewLogin() {
           fremden oder geteilten Geräten verwenden.</span></label>
       </div>
       <button class="btn-primary btn-lg" type="submit">Anmelden</button>
+      <div id="passkey-login"></div>
       <button class="btn-quiet small" type="button" id="use-recovery">Stattdessen Wiederherstellungscode verwenden</button>
       <a class="btn-quiet small link-plain" href="#/passwort-vergessen"
          data-s="center link-plain">Passwort vergessen</a>
@@ -285,6 +358,25 @@ function viewLogin() {
       $("#totp-field").classList.remove("hidden");
     }
   }).catch(() => $("#totp-field").classList.remove("hidden"));
+
+  if (passkeysSupported()) {
+    $("#passkey-login").innerHTML = `
+      <button type="button" class="btn-lg" id="pk-login" data-s="mt-sm">
+        Mit Passkey anmelden</button>
+      <p class="tiny muted" data-s="mt-xs center">Entsperrt über Face ID,
+      Touch ID, Windows Hello oder die Geräte-PIN. Ersetzt Passwort und Code.</p>`;
+    $("#pk-login").addEventListener("click", async () => {
+      try {
+        await passkeyLogin();
+        await boot();
+      } catch (err) {
+        // Ein Abbruch durch den Nutzer ist kein Fehler, der eine Meldung
+        // verdient. Alles andere schon.
+        if (err && err.name === "NotAllowedError") return;
+        $("#login-error").textContent = err.message || "Passkey-Anmeldung fehlgeschlagen.";
+      }
+    });
+  }
 
   let recoveryMode = false;
   $("#use-recovery").addEventListener("click", () => {
@@ -495,6 +587,7 @@ function viewResetPassword(token) {
 const routes = {
   "/": viewHome,
   "/rechtliches": viewLegal,
+  "/protokoll": viewAuditLog,
   "/neu": viewEncounters,
   "/dashboard": viewDashboard,
   "/nachweise": viewProofs,
@@ -517,6 +610,10 @@ async function render() {
   // stehen. Abläufe, die nach dem Speichern erneut einen Dialog öffnen,
   // tun das erst nach render und sind davon nicht betroffen.
   closeSheet();
+  // Der Zustand der Hülle wird bei jedem Seitenwechsel neu gesetzt. Vorher
+  // konnte die Klasse "auth" von einer öffentlichen Seite hängen bleiben,
+  // während die Leiste sichtbar war.
+  setShell(state.auth && state.auth.authenticated);
   scrollAppTop(false);
   mountScrollTop();
   const { path, params } = currentRoute();
@@ -558,9 +655,22 @@ async function viewLegal() {
       <address data-s="mt-sm">
         ${missing(l.name, "Name nicht hinterlegt")}<br>
         ${missing(l.address, "Anschrift nicht hinterlegt")}<br>
-        ${l.email ? `E-Mail: ${esc(l.email)}`
-          : `<span class="missing">E-Mail-Adresse nicht hinterlegt</span>`}
+        ${l.email ? `E-Mail: ${esc(l.email)}<br>`
+          : `<span class="missing">E-Mail-Adresse nicht hinterlegt</span><br>`}
+        ${l.phone ? `Telefon: ${esc(l.phone)}`
+          : `<span class="missing">Telefonnummer nicht hinterlegt</span>`}
       </address>
+      <p class="tiny muted" data-s="mt-sm">§ 5 Abs. 1 Nr. 2 DDG verlangt
+      Angaben, die eine schnelle elektronische Kontaktaufnahme ermöglichen.
+      Eine E-Mail-Adresse allein genügt dafür nach der Rechtsprechung nicht.</p>
+
+      ${l.profession ? `
+      <h2>Berufsrechtliche Angaben</h2>
+      <p class="small">Berufsbezeichnung: ${esc(l.profession)}<br>
+      ${l.authority ? `Zuständige Stelle: ${esc(l.authority)}<br>` : ""}
+      ${l.law ? `Berufsrechtliche Regelung: ${esc(l.law)}` : ""}</p>
+      <p class="tiny muted">Angaben nach § 5 Abs. 1 Nr. 5 DDG für
+      reglementierte Berufe.</p>` : ""}
       <p class="small" data-s="mt-md"><strong>Privates Projekt.</strong>
       SCOPE X ist eine nicht kommerzielle, privat betriebene Anwendung. Es
       werden keine Leistungen angeboten, keine Werbung ausgespielt und keine
@@ -604,6 +714,40 @@ async function viewLegal() {
       Widerspruch nach Art. 15 bis 21 DSGVO, dazu ein Beschwerderecht bei
       einer Aufsichtsbehörde. Einen vollständigen Export deiner Daten
       erzeugst du selbst unter Profil und Einstellungen.</p>
+
+      <h2>Cookies</h2>
+      <p class="small">SCOPE X setzt ausschließlich technisch notwendige
+      Cookies: eines für die Sitzung, optional eines für ein als
+      vertrauenswürdig markiertes Gerät. Es gibt keine Analyse-, Werbe- oder
+      Reichweitenmessung. Für technisch notwendige Cookies ist nach § 25
+      Abs. 2 TDDDG keine Einwilligung erforderlich, deshalb gibt es hier
+      keinen Einwilligungsdialog.</p>
+
+      <h2>Server-Protokolle</h2>
+      <p class="small">Der vorgeschaltete Webserver protokolliert
+      Verbindungen mit IP-Adresse, Zeitpunkt und aufgerufener Adresse. Das
+      geschieht außerhalb dieser Anwendung und dient dem sicheren Betrieb
+      nach Art. 6 Abs. 1 lit. f DSGVO. SCOPE X selbst speichert keine
+      IP-Adressen; wo eine Herkunft für die Erkennung wiederholter
+      Anmeldeversuche gebraucht wird, steht dort nur ein gekürzter Hashwert.</p>
+
+      <h2>Erklärung zur Barrierefreiheit</h2>
+      <p class="small">SCOPE X ist ein privates, nicht kommerzielles Angebot
+      und fällt damit nicht unter das Barrierefreiheitsstärkungsgesetz. Diese
+      Erklärung ist freiwillig.</p>
+      <p class="small"><strong>Stand der Umsetzung.</strong> Die Oberfläche
+      wird bei jedem Entwicklungsdurchlauf automatisiert mit axe-core gegen
+      die WCAG-Kriterien geprüft; Verstöße der Stufen kritisch und
+      schwerwiegend führen zum Abbruch. Bedienelemente sind mindestens
+      44&nbsp;Pixel groß, die Tastaturbedienung ist durchgängig möglich,
+      Statusinformationen werden nie allein über Farbe transportiert, und
+      reduzierte Bewegung wird respektiert.</p>
+      <p class="small"><strong>Bekannte Einschränkungen.</strong> Ein Test mit
+      echten Hilfsmitteln wie VoiceOver oder NVDA hat nicht stattgefunden.
+      Die Signalfarbe der Wortmarke unterschreitet den Kontrastwert für
+      Fließtext; sie wird ausschließlich als Markenelement eingesetzt, wo die
+      WCAG das zulassen. Rückmeldungen zu Hürden bitte an die oben genannte
+      Adresse.</p>
 
       <h2>Kein medizinisches Produkt</h2>
       <p class="small">SCOPE X ist ein persönliches Logbuch. Es ist kein
@@ -651,11 +795,7 @@ async function viewHome() {
     <h2 data-s="my-xl">Zuletzt dokumentiert</h2>
     <div class="stack" id="recent"></div>
 
-    <div class="page-foot">
-      <a href="#/rechtliches">Impressum und Datenschutz</a>
-      <span class="tiny muted">SCOPE X ${esc(state.auth.user.role === "admin"
-        ? "· Administrator" : "")}</span>
-    </div>`;
+    ${pageFoot()}`;
 
   const newDoc = $("#new-doc");
   if (newDoc) newDoc.addEventListener("click", newEncounterSheet);
@@ -698,7 +838,8 @@ async function viewEncounters() {
     ${canWrite() ? `<button class="btn-start has-ring" id="new-doc">
       ${ringBg()}<span class="txt">Neue Dokumentation</span>
     </button>` : ""}
-    <div class="stack" data-s="mt-lg" id="list"></div>`;
+    <div class="stack" data-s="mt-lg" id="list"></div>
+    ${pageFoot()}`;
   const nd = $("#new-doc");
   if (nd) nd.addEventListener("click", newEncounterSheet);
 
@@ -1642,6 +1783,66 @@ function toggleFilter(key, value) {
     ? cur.filter((v) => v !== value) : cur.concat(value);
 }
 
+/* Diagramme als reines SVG, ohne Bibliothek und ohne Zeichenfläche. Farben
+   kommen über Klassen aus dem Stylesheet, weil die Content-Security-Policy
+   keine style-Attribute erlaubt. Präsentationsattribute wie fill und stroke
+   sind davon nicht betroffen. */
+function lineChart(points, labelKey, valueKey, title) {
+  if (points.length < 2) return "";
+  const w = 320, h = 96, pad = 6;
+  const values = points.map((p) => p[valueKey]);
+  const max = Math.max(...values, 1);
+  const step = (w - pad * 2) / (points.length - 1);
+  const y = (v) => h - pad - (v / max) * (h - pad * 2);
+  const path = points.map((p, i) =>
+    `${i ? "L" : "M"}${(pad + i * step).toFixed(1)},${y(p[valueKey]).toFixed(1)}`).join(" ");
+  const area = `${path} L${(pad + (points.length - 1) * step).toFixed(1)},${h - pad} `
+    + `L${pad},${h - pad} Z`;
+  return `<figure class="chart">
+    <svg viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="none"
+         aria-label="${esc(title)}">
+      <path class="chart-area" d="${area}"/>
+      <path class="chart-line" d="${path}" fill="none" stroke-width="2"
+            stroke-linejoin="round" stroke-linecap="round"/>
+      ${points.map((p, i) => `<circle class="chart-dot"
+        cx="${(pad + i * step).toFixed(1)}" cy="${y(p[valueKey]).toFixed(1)}"
+        r="2.5"><title>${esc(p[labelKey])}: ${p[valueKey]}</title></circle>`).join("")}
+    </svg>
+    <figcaption class="chart-axis">
+      <span>${esc(points[0][labelKey])}</span>
+      <span>${esc(points[points.length - 1][labelKey])}</span>
+    </figcaption>
+  </figure>`;
+}
+
+function donutChart(slices, title) {
+  const total = slices.reduce((a, s) => a + s.n, 0);
+  if (!total) return "";
+  const r = 42, c = 2 * Math.PI * r;
+  let offset = 0;
+  const arcs = slices.map((s, i) => {
+    const len = (s.n / total) * c;
+    const seg = `<circle class="donut-seg donut-${i % 8}" cx="60" cy="60" r="${r}"
+      fill="none" stroke-width="16" stroke-dasharray="${len.toFixed(2)} ${(c - len).toFixed(2)}"
+      stroke-dashoffset="${(-offset).toFixed(2)}" transform="rotate(-90 60 60)">
+      <title>${esc(s.label)}: ${s.n}</title></circle>`;
+    offset += len;
+    return seg;
+  }).join("");
+  return `<figure class="chart donut">
+    <svg viewBox="0 0 120 120" role="img" aria-label="${esc(title)}">
+      ${arcs}
+      <text class="donut-total" x="60" y="60" text-anchor="middle"
+            dominant-baseline="central">${total}</text>
+    </svg>
+    <figcaption class="donut-legend">
+      ${slices.map((s, i) => `<span class="donut-key">
+        <i class="donut-swatch donut-${i % 8}"></i>${esc(s.label)}
+        <b>${s.n}</b></span>`).join("")}
+    </figcaption>
+  </figure>`;
+}
+
 function barList(items, nameKey, max, variant = "") {
   if (!items.length) return `<p class="small muted">Keine Daten im Zeitraum.</p>`;
   return `<div class="bars">${items.map((r) => `
@@ -1757,6 +1958,12 @@ async function viewDashboard() {
     </div>` : ""}
 
     <div class="card" data-s="mt-md">
+      <h2>Verteilung nach xABCDE</h2>
+      ${donutChart(s.by_category.map((r) => ({ label: r.key, n: r.n })),
+                   "Maßnahmen je Kategorie")}
+    </div>
+
+    <div class="card" data-s="mt-md">
       <h2>Maßnahmen nach xABCDE</h2>
       <div data-s="mt-md">${barList(
         s.by_category.map((r) => ({ ...r, label: `${r.key} · ${r.label}` })), "label", maxCat)}</div>
@@ -1769,8 +1976,8 @@ async function viewDashboard() {
 
     <div class="card" data-s="mt-md">
       <h2>Entwicklung über die Zeit</h2>
-      <div data-s="mt-md">${barList(
-        s.timeline.map((r) => ({ ...r, bucket: r.bucket })), "bucket", maxTl)}</div>
+      ${lineChart(s.timeline, "bucket", "n", "Maßnahmen je Monat")}
+      <div data-s="mt-md">${barList(s.timeline, "bucket", maxTl)}</div>
     </div>
 
     <div class="card" data-s="mt-md">
@@ -1795,6 +2002,8 @@ async function viewDashboard() {
 
     <div class="card" data-s="mt-md">
       <h2>NACA-Verteilung</h2>
+      ${donutChart(s.naca.map((r) => ({ label: "NACA " + r.naca, n: r.encounters })),
+                   "Einsätze je NACA-Stufe")}
       ${s.naca.length ? `<table class="data" data-s="mt-sm">
         <tr><th>NACA</th><th class="num">Eins.</th><th class="num">Anteil</th>
           <th class="num">Maßn.</th><th class="num">Med.</th><th class="num">ZEK</th></tr>
@@ -1873,7 +2082,8 @@ async function viewProofs() {
     </div>
 
     <p class="tiny muted" data-s="mt-lg">Der Nachweis enthält ausschließlich
-    Angaben, die dokumentiert wurden. Fehlende Werte bleiben leer und werden nicht ergänzt.</p>`;
+    Angaben, die dokumentiert wurden. Fehlende Werte bleiben leer und werden nicht ergänzt.</p>
+    ${pageFoot()}`;
 
   let period = "year";
   const range = $("#proof-range");
@@ -1904,6 +2114,95 @@ async function viewProofs() {
   });
   $("#csv-med").addEventListener("click", () => {
     location.href = "/api/exports/csv?kind=medications&" + query();
+  });
+}
+
+// ---------------------------------------------------- Änderungsprotokoll
+
+/* Eigene Seite statt einer Karte im Profil: das Protokoll wächst
+   unbegrenzt und hätte die Profilseite sonst irgendwann unbenutzbar
+   gemacht. Geblättert wird serverseitig. */
+const AUDIT_LABELS = {
+  create: "angelegt", update: "geändert", delete: "gelöscht",
+  withdraw: "stillgelegt", lock: "gesperrt", login: "angemeldet",
+  login_failed: "Anmeldung fehlgeschlagen", login_locked: "Konto gesperrt",
+  login_passkey: "mit Passkey angemeldet", password_change: "Passwort geändert",
+  password_reset: "Passwort zurückgesetzt", password_rehash: "Hash erneuert",
+  email_change: "E-Mail geändert", role_change: "Rolle geändert",
+  disable: "Konto gesperrt", enable: "Konto entsperrt",
+  revoke: "zurückgezogen", revoke_all: "alle widerrufen",
+  migrate: "durch Update umgesetzt", pdf: "PDF erzeugt",
+  backup: "Sicherung erzeugt", restore: "Sicherung eingespielt",
+  self_export: "Auskunft heruntergeladen", confirm: "bestätigt",
+  regenerate: "neu erzeugt", request: "angefordert",
+  admin_request: "durch Administrator angefordert",
+};
+
+const ENTITY_LABELS = {
+  encounters: "Einsatz", measure_attempts: "Maßnahme",
+  medication_administrations: "Medikamentengabe", measures: "Maßnahmenkatalog",
+  medications: "Medikamentenkatalog", complications: "ZEK-Katalog",
+  users: "Konto", user_profile: "Profil", settings: "Einstellung",
+  invitations: "Einladung", passkeys: "Passkey", exports: "Export",
+  trusted_devices: "Vertrautes Gerät", auth_totp: "Zwei-Faktor",
+  recovery_codes: "Wiederherstellungscodes", password_resets: "Zurücksetzung",
+  measure_parameter_definitions: "Parameter",
+  medication_preparations: "Präparat",
+};
+
+function fmtStamp(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return esc(iso);
+  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}, `
+    + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} Uhr`;
+}
+
+let auditOffset = 0;
+
+async function viewAuditLog() {
+  const limit = 50;
+  const data = await api(`/api/audit?limit=${limit}&offset=${auditOffset}`);
+  const from = data.total ? auditOffset + 1 : 0;
+  const to = Math.min(auditOffset + limit, data.total);
+
+  app().innerHTML = `
+    <div class="page-head">
+      <a class="small link-plain" href="#/profil">Zurück zum Profil</a>
+      <h1 data-s="mt-sm">Änderungsprotokoll</h1>
+      <p class="muted small">${data.total} Einträge, angezeigt ${from} bis ${to}.
+      Nur lesbar.</p>
+    </div>
+
+    ${data.entries.length ? `<div class="stack">
+      ${data.entries.map((e) => `
+        <div class="card flat pad-xs">
+          <div class="tiny muted">${fmtStamp(e.at)}</div>
+          <div class="small" data-s="mt-xs">
+            <strong>${esc(ENTITY_LABELS[e.entity_type] || e.entity_type)}</strong>
+            ${esc(AUDIT_LABELS[e.action] || e.action)}${
+              e.field ? " · " + esc(e.field) : ""}
+          </div>
+          ${e.old_value !== null && e.old_value !== undefined
+            ? `<div class="tiny muted" data-s="mt-xs">${esc(e.old_value)}
+               → ${esc(e.new_value === null ? "leer" : e.new_value)}</div>`
+            : (e.new_value ? `<div class="tiny muted" data-s="mt-xs">${
+                esc(e.new_value)}</div>` : "")}
+        </div>`).join("")}
+    </div>` : `<div class="empty">${markSvg("mark")}
+      <strong>Noch keine Einträge.</strong></div>`}
+
+    <div class="sheet-actions two" data-s="mt-lg">
+      <button id="audit-prev" ${auditOffset === 0 ? "disabled" : ""}>Neuere</button>
+      <button id="audit-next" ${to >= data.total ? "disabled" : ""}>Ältere</button>
+    </div>
+    ${pageFoot()}`;
+
+  $("#audit-prev").addEventListener("click", () => {
+    auditOffset = Math.max(0, auditOffset - limit); render();
+  });
+  $("#audit-next").addEventListener("click", () => {
+    auditOffset += limit; render();
   });
 }
 
@@ -2027,7 +2326,10 @@ async function viewProfile() {
 
     <div class="card pad-lg" data-s="mt-md">
       <h2>Änderungsprotokoll</h2>
-      <div id="audit" class="small muted" data-s="mt-sm">Wird geladen …</div>
+      <p class="small muted" data-s="mt-xs">Jede Änderung mit Zeitpunkt,
+      altem und neuem Wert. Nur lesbar, es gibt keinen Weg, Einträge zu
+      entfernen.</p>
+      <a class="btn link-plain" href="#/protokoll" data-s="mt-md">Protokoll öffnen</a>
     </div>
 
     <div class="card pad-lg" data-s="mt-md">
@@ -2040,6 +2342,14 @@ async function viewProfile() {
         <div class="field"><label for="la">Anschrift</label><input id="la"></div>
         <div class="field"><label for="le">E-Mail-Adresse</label>
           <input id="le" type="email" autocomplete="email"></div>
+        <div class="field"><label for="lp">Telefonnummer</label>
+          <input id="lp" type="tel" autocomplete="tel"></div>
+        <div class="field"><label for="lb">Berufsbezeichnung (optional)</label>
+          <input id="lb" placeholder="z. B. Notfallsanitäter"></div>
+        <div class="field"><label for="lz">Zuständige Stelle (optional)</label>
+          <input id="lz"></div>
+        <div class="field"><label for="lr">Berufsrechtliche Regelung (optional)</label>
+          <input id="lr" placeholder="z. B. NotSanG"></div>
         <button class="btn-primary" type="submit">Angaben speichern</button>
       </form>
       <a href="#/rechtliches" class="small" data-s="mt-md link-plain">Seite ansehen</a>
@@ -2052,6 +2362,33 @@ async function viewProfile() {
       trotzdem.</p>
       <div id="devices" class="small muted" data-s="mt-md">Wird geladen …</div>
       <button class="btn-danger" id="revoke-devices" data-s="mt-md">Allen Geräten das Vertrauen entziehen</button>
+    </div>
+
+    <div class="card pad-lg" data-s="mt-md">
+      <h2>Passkeys</h2>
+      <p class="small muted" data-s="mt-xs">Ein Passkey ersetzt Passwort und
+      Code in einem Schritt. Der Schlüssel bleibt auf dem Gerät und wird über
+      Face ID, Touch ID, Windows Hello oder die Geräte-PIN entsperrt. Weil er
+      an die Domain gebunden ist, funktioniert er auf einer nachgebauten
+      Seite gar nicht erst.</p>
+      <div id="passkey-list" class="small muted" data-s="mt-md">Wird geladen …</div>
+      <button class="btn-primary" id="add-passkey" data-s="mt-md">Passkey hinzufügen</button>
+    </div>
+
+    <div class="card pad-lg" data-s="mt-md">
+      <h2>Deine Daten</h2>
+      <p class="small muted" data-s="mt-xs">Auskunft und Löschung nach
+      Art. 15, 20 und 17 DSGVO. Beides läuft ohne Umweg über einen
+      Administrator.</p>
+      <div class="sheet-actions two">
+        <button id="my-data">Vollständige Auskunft herunterladen</button>
+        <button class="btn-danger" id="delete-account">Konto löschen</button>
+      </div>
+      <p class="tiny muted" data-s="mt-md">Die Auskunft enthält Konto, Profil,
+      alle Einsätze mit Maßnahmen, Medikamentengaben und ZEK, Einstellungen
+      und das Änderungsprotokoll. Zugangsmittel wie Passwort-Hash und
+      Zwei-Faktor-Geheimnis sind nicht enthalten: sie sind keine Auskunft,
+      und ein Export in falschen Händen wäre sonst ein Kontozugriff.</p>
     </div>
 
     <div id="admin-area"></div>
@@ -2241,12 +2578,18 @@ async function viewProfile() {
     $("#ln").value = l.name || "";
     $("#la").value = l.address || "";
     $("#le").value = l.email || "";
+    $("#lp").value = l.phone || "";
+    $("#lb").value = l.profession || "";
+    $("#lz").value = l.authority || "";
+    $("#lr").value = l.law || "";
   });
   $("#legal-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     await api("/api/legal", { method: "PUT", body: {
       imprint_name: $("#ln").value, imprint_address: $("#la").value,
-      imprint_email: $("#le").value } });
+      imprint_email: $("#le").value, imprint_phone: $("#lp").value,
+      imprint_profession: $("#lb").value, imprint_authority: $("#lz").value,
+      imprint_law: $("#lr").value } });
     toast("Rechtliche Angaben gespeichert.");
   });
 
@@ -2269,7 +2612,46 @@ async function viewProfile() {
     toast("Vertrauen entzogen."); render();
   });
 
+  renderPasskeys();
   if ((state.auth.user.role || "user") === "admin") renderAdmin();
+
+  $("#my-data").addEventListener("click", () => {
+    location.href = "/api/exports/my-data";
+  });
+
+  $("#delete-account").addEventListener("click", () => sheet("Konto löschen", `
+    <div class="notice warn">Gelöscht werden Konto, Profil, alle Einsätze mit
+    allen Einträgen sowie sämtliche Zugangsmittel. Das lässt sich nicht
+    rückgängig machen und es gibt keinen Papierkorb.</div>
+    <p class="small muted" data-s="mt-md">Das Änderungsprotokoll bleibt
+    bestehen, verliert aber seinen Personenbezug. Es sichert die
+    Nachvollziehbarkeit administrativer Vorgänge und enthält selbst keine
+    personenbezogenen Inhalte. Lade dir vorher deine Auskunft herunter, wenn
+    du die Daten behalten willst.</p>
+    <form id="del-form" class="stack" data-s="mt-md">
+      <div class="field"><label for="dp">Passwort</label>
+        <input id="dp" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="dc">Code aus der Authenticator-App</label>
+        <input id="dc" inputmode="numeric" maxlength="6" pattern="[0-9]*" required></div>
+      <div class="field"><label for="dw">Tippe LÖSCHEN zur Bestätigung</label>
+        <input id="dw" autocapitalize="characters" required></div>
+      <button class="btn-primary btn-lg btn-danger" type="submit">Konto endgültig löschen</button>
+      <p class="tiny muted" id="del-err"></p>
+    </form>`, (body) => {
+    $("#del-form", body).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api("/api/account/delete", { method: "POST", body: {
+          password: $("#dp", body).value, totp_code: $("#dc", body).value,
+          confirm: $("#dw", body).value } });
+        closeSheet();
+        state.auth = null;
+        authShell("Konto gelöscht", `
+          <p class="small">Dein Konto und alle zugehörigen Daten wurden
+          entfernt. Danke, dass du SCOPE X genutzt hast.</p>`);
+      } catch (err) { $("#del-err", body).textContent = err.message; }
+    });
+  }));
 
   $("#logout").addEventListener("click", async () => {
     await api("/api/auth/logout", { method: "POST" });
@@ -2277,22 +2659,59 @@ async function viewProfile() {
     boot();
   });
 
-  api("/api/audit?limit=25").then((a) => {
-    const box = $("#audit");
-    if (!box) return;
-    if (!a.entries.length) { box.textContent = "Noch keine Änderungen protokolliert."; return; }
-    box.innerHTML = `<table class="data">${a.entries.map((r) => `
-      <tr><td data-s="nowrap">${esc(fmtDate(r.at))}</td>
-        <td>${esc(r.entity_type)}</td><td>${esc(r.action)}${
-          r.field ? " · " + esc(r.field) : ""}</td>
-        <td class="tiny">${r.old_value !== null && r.old_value !== undefined
-          ? esc(r.old_value) + " → " + esc(r.new_value) : ""}</td></tr>`).join("")}</table>`;
-  });
 }
 
 /* Administrationsbereich. Die Oberfläche blendet ihn für andere Rollen aus,
    aber das ist Bequemlichkeit: jede Route dahinter prüft die Rolle selbst
    und verlangt bei Eingriffen in fremde Konten einen frischen Code. */
+async function renderPasskeys() {
+  const box = $("#passkey-list");
+  const btn = $("#add-passkey");
+  if (!box) return;
+  if (!passkeysSupported()) {
+    box.textContent = "Dieser Browser unterstützt keine Passkeys.";
+    btn.disabled = true;
+    return;
+  }
+  const data = await api("/api/auth/passkeys");
+  if (!data.available) {
+    box.innerHTML = `<span class="missing">Für Passkeys muss in der
+      Add-on-Konfiguration eine Basis-Adresse hinterlegt sein und die
+      Anwendung über HTTPS erreichbar sein.</span>`;
+    btn.disabled = true;
+    return;
+  }
+  box.innerHTML = data.passkeys.length
+    ? `<table class="data">${data.passkeys.map((k) => `
+        <tr><td>${esc(k.label || "Passkey")}<div class="tiny muted">seit ${
+          esc(fmtDate(k.created_at))}${k.last_used_at
+            ? ", zuletzt " + esc(fmtDate(k.last_used_at)) : ", noch nicht benutzt"}</div></td>
+          <td class="num"><button class="btn-quiet small btn-danger"
+            data-del-pk="${esc(k.id)}">Entfernen</button></td></tr>`).join("")}</table>`
+    : "Noch kein Passkey hinterlegt.";
+
+  box.querySelectorAll("[data-del-pk]").forEach((b) =>
+    b.addEventListener("click", async () => {
+      if (!confirm("Diesen Passkey entfernen?")) return;
+      await api("/api/auth/passkeys/" + b.dataset.delPk, { method: "DELETE" });
+      toast("Passkey entfernt."); renderPasskeys();
+    }));
+
+  btn.disabled = false;
+  btn.onclick = async () => {
+    const label = prompt("Bezeichnung für dieses Gerät",
+                         "Passkey auf diesem Gerät");
+    if (label === null) return;
+    try {
+      await passkeyRegister(label || "Passkey");
+      toast("Passkey hinterlegt."); renderPasskeys();
+    } catch (err) {
+      if (err && err.name === "NotAllowedError") return;
+      toast(err.message || "Passkey konnte nicht angelegt werden.");
+    }
+  };
+}
+
 async function renderAdmin() {
   const box = $("#admin-area");
   if (!box) return;
@@ -2591,8 +3010,7 @@ function publicRoute() {
   }
   if (path === "/passwort-vergessen") { viewForgotPassword(); return true; }
   if (path === "/rechtliches") {
-    document.body.classList.add("auth");
-    document.getElementById("nav").hidden = true;
+    setShell(false);
     viewLegal();
     return true;
   }
@@ -2609,8 +3027,7 @@ async function boot() {
     const totp = await api("/api/auth/totp/setup");
     return viewTotpSetup(totp);
   }
-  document.body.classList.remove("auth");
-  document.getElementById("nav").hidden = false;
+  setShell(true);
   await loadCatalogs();
   resetIdleTimer();
   if (!location.hash) location.hash = "#/";
