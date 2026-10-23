@@ -325,4 +325,55 @@ r = c.get("/assets/app.js")
 check("app.js ausgeliefert", r.status_code == 200 and len(r.content) > 20000, len(r.content))
 r = c.get("/assets/app.css"); check("app.css ausgeliefert", r.status_code == 200)
 
+# Unbekannte Pfade. Der Catch-all lieferte früher für jeden Pfad außer
+# api/ die vollständige Oberfläche mit 200. Navigiert wird ausschließlich
+# über den Fragmentteil, der den Server nie erreicht.
+for pfad in ("/.git/config", "/.env", "/wp-login.php", "/dashboard",
+             "/api/gibtsnicht"):
+    r = c.get(pfad)
+    check(f"404 für {pfad}", r.status_code == 404, r.status_code)
+
+# Weiterleitungs-Header einer nicht vertrauenswürdigen Gegenstelle.
+# Der TestClient spricht die Anwendung direkt an, ohne uvicorns
+# ProxyHeaders-Middleware — genau die Lage eines Geräts, das den
+# veröffentlichten Host-Port erreicht. Ein selbst gesetztes
+# X-Forwarded-Proto darf daran nichts ändern.
+r = c.get("/", headers={"X-Forwarded-Proto": "https"})
+check("Kein HSTS durch gefälschten Header",
+      "strict-transport-security" not in r.headers,
+      dict(r.headers))
+
+spoof = TestClient(app)
+r = spoof.post("/api/auth/login",
+               json={"username": "nfs", "password": "einsatzprotokoll2026",
+                     "totp_code": _totp_at(secret, int(_t.time()) // 30)},
+               headers={"X-Forwarded-Proto": "https"})
+gesetzt = " ".join(r.headers.get_list("set-cookie")).lower()
+check("Sitzungscookie ohne Secure bei gefälschtem Header",
+      r.status_code == 200 and "secure" not in gesetzt, gesetzt[:200])
+
+# Basis-Adresse. Ein fehlendes Schema war der Grund, aus dem Passkeys
+# still mit 503 abgelehnt haben.
+from app.core import base_url as _base_url
+from app.routers.passkeys import passkeys_available
+
+_vorher = os.environ.get("SCOPEX_BASE_URL")
+try:
+    os.environ["SCOPEX_BASE_URL"] = "scopex.example.de/"
+    check("Fehlendes Schema wird zu https",
+          _base_url() == "https://scopex.example.de", _base_url())
+    check("Passkeys verfügbar trotz fehlendem Schema", passkeys_available())
+
+    os.environ["SCOPEX_BASE_URL"] = "http://scopex.example.de"
+    check("Passkeys abgeschaltet bei http", not passkeys_available())
+
+    os.environ.pop("SCOPEX_BASE_URL")
+    check("Leere Adresse bleibt leer", _base_url() == "")
+    check("Passkeys abgeschaltet ohne Adresse", not passkeys_available())
+finally:
+    if _vorher is None:
+        os.environ.pop("SCOPEX_BASE_URL", None)
+    else:
+        os.environ["SCOPEX_BASE_URL"] = _vorher
+
 print("\nAlle Prüfungen bestanden.")

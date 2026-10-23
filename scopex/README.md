@@ -67,19 +67,37 @@ Neuer **Proxy Host**, Reiter *Details*:
 |---|---|
 | Domain Names | `scopex.deine-domain.de` (vollqualifiziert, kein bloßes `scopex`) |
 | Scheme | `http` |
-| Forward Hostname / IP | `local-scopex` |
+| Forward Hostname / IP | Hostname des Containers, siehe unten |
 | Forward Port | `8099` |
 | Access List | eigene Liste, nicht „Publicly Accessible" |
 | Websockets Support | an |
 | Block Common Exploits | an |
 
-`local-scopex` ist der Container des Add-ons. Nicht `homeassistant` eintragen,
-das ist der Home-Assistant-Core-Container, dort lauscht auf 8099 nichts. Den
-tatsächlichen Hostnamen bestätigt das Terminal-Add-on:
+Der Hostname richtet sich danach, woher das Add-on installiert wurde. Bei
+einer lokalen Installation aus `/addons/scopex` lautet er `local-scopex`,
+bei der Installation über dieses Repository trägt er das Repository-Präfix,
+etwa `1e724329-scopex`. Nicht `homeassistant` eintragen, das ist der
+Home-Assistant-Core-Container, dort lauscht auf 8099 nichts. Den
+tatsächlichen Wert nennt das Terminal-Add-on, mit dem eigenen Slug aus der
+Add-on-Übersicht:
 
 ```sh
-ha addons info local_scopex | grep -i hostname
+ha addons info <slug> | grep -i hostname
 ```
+
+**Host-IP statt Hostname.** Port 8099 ist auf dem Host veröffentlicht, NPM
+erreicht SCOPE X also auch über die HA-IP. Das funktioniert, hat aber einen
+Preis: über denselben Port erreicht jedes Gerät im LAN die Anwendung direkt,
+unverschlüsselt und an NPM vorbei — Access List, *Block Common Exploits* und
+*Force SSL* greifen auf diesem Weg nicht. Wer das nicht will, trägt in NPM
+den Container-Hostnamen ein und leert anschließend im Add-on unter
+*Netzwerk* das Feld für Port 8099. **In dieser Reihenfolge**, sonst ist die
+Seite bis zur Korrektur nicht erreichbar.
+
+Unabhängig davon glaubt SCOPE X die Weiterleitungs-Header nur noch den
+Netzen aus der Option `trusted_proxies`, Vorgabe `172.30.32.0/23`. Ein
+Gerät, das den Host-Port direkt anspricht, fällt nicht darunter: seine
+Header werden verworfen und seine echte Adresse protokolliert.
 
 Reiter *SSL*: Zertifikat anfordern, dazu **Force SSL**, **HTTP/2 Support** und
 **HSTS Enabled**.

@@ -470,6 +470,12 @@ def check_version():
     older = [v for v in documented if v != parts]
     if older and parts <= max(older):
         return False, f"{raw} ist nicht höher als {max(older)}"
+    # Die Anwendung trägt die Nummer ein zweites Mal. Zwei Quellen für
+    # dieselbe Angabe laufen auseinander, sobald nichts sie vergleicht:
+    # main.py stand bis 4.2.0 unbemerkt auf 1.0.0.
+    from app.main import APP_VERSION
+    if raw != APP_VERSION:
+        return False, f"config.yaml sagt {raw}, app/main.py sagt {APP_VERSION}"
     return True, f"{raw}, {len(documented)} Fassungen dokumentiert"
 
 

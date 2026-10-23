@@ -3,6 +3,62 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.2.0
+
+MINOR, weil eine Add-on-Option mit Vorgabewert hinzukommt. Endpunkte,
+Sicherungsformat und Migrationspfad bleiben unverändert.
+
+**Weiterleitungs-Header nur noch von bekannten Netzen**
+
+- Neue Option `trusted_proxies`, Vorgabe `172.30.32.0/23`. Bisher lief
+  uvicorn mit `--forwarded-allow-ips='*'`, es durfte also **jeder** Client
+  `X-Forwarded-Proto` und `X-Forwarded-For` selbst setzen. Weil Port 8099
+  auf dem Host veröffentlicht ist, erreicht ein Gerät im LAN den Container
+  direkt, an Nginx Proxy Manager vorbei. Es konnte damit das Secure-Flag
+  der Sitzungscookies steuern und eine frei erfundene Client-IP ins
+  Änderungsprotokoll schreiben, wo sie als gehashte Herkunft landete.
+  Die Vorgabe deckt das Supervisor-Netz ab, in dem die Add-on-Container
+  liegen; ein LAN-Gerät fällt nicht darunter und wird mit seiner echten
+  Adresse protokolliert.
+- `_is_secure()` und der HSTS-Header werteten zusätzlich den **Rohheader**
+  aus und umgingen damit die Vertrauensliste vollständig. Beide Stellen
+  benutzen jetzt `request.url.scheme`, das uvicorn nur für Gegenstellen
+  aus `trusted_proxies` aus dem Header ableitet. Ohne Secure-Flag kann ein
+  Sitzungscookie über eine unverschlüsselte Verbindung zum selben Host
+  abfließen; genau das war vorher von außen steuerbar.
+
+**Basis-Adresse ohne Schema**
+
+- Eine Adresse wie `scopex.example.de` ergibt in `urlparse` weder Schema
+  noch Host. Passkeys lehnten deshalb mit 503 ab und die Links in den
+  Mails waren nicht anklickbar — ohne dass irgendwo ein Fehler erschien.
+  Ein fehlendes Schema wird jetzt zentral in `core.base_url()` auf
+  `https://` ergänzt, und `run.sh` schreibt die wirksame Adresse beim
+  Start ins Protokoll, mit Warnung bei fehlendem Schema oder `http`.
+- Der Grund für die Lautlosigkeit war ein zweiter, schwächerer Test: die
+  Oberfläche fragte `available` ab, das lediglich prüfte, ob die Variable
+  gesetzt war. Sie meldete „verfügbar", während der Endpunkt ablehnte.
+  `passkeys_available()` stellt nun dieselbe Prüfung an wie der Endpunkt.
+
+**Unbekannte Pfade**
+
+- Der Catch-all beantwortete jeden Pfad außer `api/` mit 200 und der
+  vollständigen Oberfläche. Scans nach `/.git/config`, `/wp-login.php`
+  oder `/.env` bekamen damit eine Erfolgsmeldung, sahen wie Treffer aus
+  und zogen jedes Mal die komplette Anwendung über die Leitung. Da die
+  Oberfläche ausschließlich über den Fragmentteil navigiert und ein
+  Fragment den Server nie erreicht, braucht er genau einen Pfad: `/`.
+  Alles andere antwortet jetzt mit 404.
+
+**Nicht betroffen**
+
+- Die PHP-Lücken aus CVE-2026-109618 und CVE-2026-109619 betreffen
+  SCOPE X nicht: die Anwendung enthält kein PHP.
+- Die Node-Lücken der Veröffentlichung vom Oktober 2026, darunter
+  CVE-2026-111497 im Brotli-Decoder, ebenfalls nicht. Das Add-on läuft auf
+  `python:3.12-slim`, es gibt kein Node, kein npm und keinen Build-Schritt;
+  die Oberfläche ist reines JavaScript im Browser.
+
 ## 4.1.0
 
 **Versionierung**

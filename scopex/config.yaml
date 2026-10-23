@@ -3,7 +3,7 @@
 # nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
 # Start, Neustart und Backup des Containers.
 name: SCOPE X
-version: "4.1.0"
+version: "4.2.0"
 slug: scopex
 description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
 arch:
@@ -28,6 +28,7 @@ ports_description:
 options:
   log_level: info
   base_url: ""
+  trusted_proxies: "172.30.32.0/23"
   smtp_host: ""
   smtp_port: 465
   smtp_security: ssl
@@ -36,9 +37,16 @@ options:
   smtp_from: ""
 schema:
   log_level: list(critical|error|warning|info|debug)
-  # Öffentliche Adresse der Anwendung, z. B. https://scopex.example.de
-  # Wird für die Links in Einladungs- und Zurücksetzungs-Mails gebraucht.
+  # Öffentliche Adresse der Anwendung, vollständig mit Schema, also
+  # https://scopex.example.de und nicht scopex.example.de. Wird für die
+  # Links in den Mails gebraucht und bindet die Passkeys an die Domain;
+  # ohne Schema sind Passkeys nicht nutzbar.
   base_url: str?
+  # Netze, deren X-Forwarded-Proto und X-Forwarded-For geglaubt wird.
+  # Vorgabe ist das Supervisor-Netz, in dem Nginx Proxy Manager liegt.
+  # Mehrere Angaben mit Komma trennen. Steht ein weiterer Proxy davor,
+  # dessen Netz hier ergänzen.
+  trusted_proxies: str?
   smtp_host: str?
   smtp_port: port
   smtp_security: list(ssl|starttls|none)

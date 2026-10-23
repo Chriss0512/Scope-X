@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 10.09.2026 um 08:23 Uhr für SCOPE X.
+Erzeugt am 23.10.2026 um 16:07 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 208 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 220 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -60,8 +60,8 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 80.5 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.1.0, 7 Fassungen dokumentiert |
+| Testabdeckung mindestens 70 Prozent | bestanden | 80.7 Prozent |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.2.0, 8 Fassungen dokumentiert |
 | Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 63 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
@@ -69,7 +69,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.1.0, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.2.0, Änderungsprotokoll vorhanden |
 
 ## Safety
 
