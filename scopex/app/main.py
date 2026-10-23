@@ -26,6 +26,11 @@ from .seed import seed_if_empty
 log = logging.getLogger("scopex")
 STATIC_DIR = Path(__file__).parent / "static"
 
+# Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
+# vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
+# nichts den Abgleich erzwang.
+APP_VERSION = "4.2.0"
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -48,7 +53,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="SCOPE X",
     description="Das Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst",
-    version="1.0.0",
+    version=APP_VERSION,
     lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
@@ -70,8 +75,11 @@ async def security_headers(request: Request, call_next):
         "default-src 'self'; script-src 'self'; style-src 'self'; "
         "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
         "form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
-    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    if proto == "https":
+    # request.url.scheme, nicht der Rohheader: uvicorn setzt das Schema aus
+    # X-Forwarded-Proto nur dann, wenn die Gegenstelle in
+    # --forwarded-allow-ips steht. Den Header hier selbst zu lesen hiesse,
+    # jedem Client zu glauben, der den Container direkt erreicht.
+    if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains")
     return response
@@ -97,8 +105,18 @@ app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
 
 @app.get("/{full_path:path}")
 def spa(full_path: str):
-    """Alle nicht-API-Pfade liefern die Anwendung aus. Die Navigation
-    findet im Browser statt."""
-    if full_path.startswith("api/"):
-        return JSONResponse({"detail": "Nicht gefunden."}, status_code=404)
-    return FileResponse(STATIC_DIR / "index.html")
+    """Liefert die Anwendung aus, aber nur unter der Wurzel.
+
+    Die Oberflaeche navigiert ausschliesslich ueber den Fragmentteil
+    (#/dashboard, #/neu). Ein Fragment erreicht den Server nie, Assets
+    liegen unter /assets. Der Server braucht also genau einen Pfad: '/'.
+
+    Vorher beantwortete dieser Catch-all jeden Pfad mit 200 und der SPA.
+    Scans nach /.git/config, /wp-login.php oder /.env bekamen damit eine
+    Erfolgsmeldung und sahen aus wie Treffer, echte Fehler verschwanden
+    zwischen falschen 200ern, und jeder Scantreffer lud die vollstaendige
+    Oberflaeche aus. Ein 404 ist hier die wahre Antwort.
+    """
+    if full_path in ("", "/"):
+        return FileResponse(STATIC_DIR / "index.html")
+    return JSONResponse({"detail": "Nicht gefunden."}, status_code=404)

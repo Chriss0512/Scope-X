@@ -57,8 +57,17 @@ def find_login(c, identifier: str) -> dict | None:
 
 
 def _is_secure(request: Request) -> bool:
-    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
-    return (proto or request.url.scheme) == "https"
+    """Entscheidet ueber das Secure-Flag der Cookies.
+
+    Grundlage ist ausschliesslich request.url.scheme. uvicorn leitet das
+    aus X-Forwarded-Proto ab, aber nur fuer Gegenstellen aus
+    --forwarded-allow-ips. Den Header selbst zu lesen hiesse, die
+    Entscheidung dem Client zu ueberlassen: wer den Container direkt
+    erreicht, koennte das Secure-Flag nach Belieben setzen oder
+    unterdruecken, und ohne Flag kann ein Sitzungscookie ueber eine
+    unverschluesselte Verbindung zum selben Host abfliessen.
+    """
+    return request.url.scheme == "https"
 
 
 def _set_device_cookie(response: Response, request: Request, token: str) -> None:
