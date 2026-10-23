@@ -3,7 +3,7 @@
 # nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
 # Start, Neustart und Backup des Containers.
 name: SCOPE X
-version: "4.1.0"
+version: "4.2.0"
 slug: scopex
 description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
 arch:
@@ -28,17 +28,55 @@ ports_description:
 options:
   log_level: info
   base_url: ""
+  trusted_proxies: "172.30.32.0/23"
+  laenderfilter: europa
+  zusatznetze: ""
+  anfragen_je_fenster: 30
   smtp_host: ""
   smtp_port: 465
   smtp_security: ssl
   smtp_user: ""
   smtp_password: ""
   smtp_from: ""
+  kontakt: ""
 schema:
   log_level: list(critical|error|warning|info|debug)
-  # Öffentliche Adresse der Anwendung, z. B. https://scopex.example.de
-  # Wird für die Links in Einladungs- und Zurücksetzungs-Mails gebraucht.
+  # Öffentliche Adresse der Anwendung, vollständig mit Schema, also
+  # https://scopex.example.de und nicht scopex.example.de. Wird für die
+  # Links in den Mails gebraucht und bindet die Passkeys an die Domain;
+  # ohne Schema sind Passkeys nicht nutzbar.
   base_url: str?
+  # Netze, deren X-Forwarded-Proto und X-Forwarded-For geglaubt wird.
+  # Vorgabe ist das Supervisor-Netz, in dem Nginx Proxy Manager liegt.
+  # Mehrere Angaben mit Komma trennen. Steht ein weiterer Proxy davor,
+  # dessen Netz hier ergänzen.
+  trusted_proxies: str?
+  # Aus welchen Ländern Anmeldungen angenommen werden.
+  #
+  # "europa" lässt die 27 EU-Staaten, die EFTA, das Vereinigte Königreich
+  # mit den Kronbesitzungen, die europäischen Kleinstaaten sowie
+  # Gibraltar, Färöer, Grönland und Åland zu. Nicht enthalten sind
+  # Russland und Belarus, der Balkan außerhalb der EU, die Ukraine,
+  # Moldau und die Türkei. Bulgarien, Griechenland, Kroatien, Rumänien
+  # und Slowenien sind EU-Mitglieder und deshalb enthalten.
+  #
+  # Grundlage ist eine Netzliste im Image, erzeugt aus den
+  # Delegationsdateien von RIPE NCC und ARIN. Zur Laufzeit wird nichts
+  # nachgeladen. Fehlt die Liste, wird durchgelassen und gewarnt: eine
+  # Herkunftsprüfung, die bei einem Datenfehler den rechtmäßigen Nutzer
+  # aussperrt, richtet mehr Schaden an als der Scanverkehr, den sie
+  # abhält.
+  #
+  # "aus" schaltet die Prüfung ab.
+  laenderfilter: list(europa|aus)
+  # Zusätzliche Netze, die unabhängig vom Länderfilter zugelassen werden.
+  # Mehrere mit Komma trennen, CIDR-Schreibweise, zum Beispiel für einen
+  # Aufenthalt außerhalb Europas oder für ein Firmennetz.
+  zusatznetze: str?
+  # Wie viele Anmeldeanfragen eine einzelne Adresse in zehn Minuten
+  # stellen darf. Höher setzen, wenn mehrere Personen hinter demselben
+  # Anschluss sitzen, etwa im WLAN derselben Wache.
+  anfragen_je_fenster: int(5,10000)
   smtp_host: str?
   smtp_port: port
   smtp_security: list(ssl|starttls|none)
@@ -47,3 +85,6 @@ schema:
   # landet nicht im Klartext in der Add-on-Übersicht.
   smtp_password: password?
   smtp_from: str?
+  # Kontaktadresse für .well-known/security.txt nach RFC 9116. Leer
+  # gelassen, verweist die Datei auf das Impressum.
+  kontakt: str?

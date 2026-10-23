@@ -16,6 +16,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# Haengt den Arbeitsnachweis an jeden TestClient dieses Prozesses. Muss vor
+# dem ersten Client stehen, deshalb hier und nicht in den einzelnen Reihen.
+from . import nachweis  # noqa: E402,F401
+
 PASSWORD = "pruefdurchlauf2026"
 
 

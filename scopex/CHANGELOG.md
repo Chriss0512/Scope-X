@@ -3,6 +3,195 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.2.0
+
+MINOR: neue Add-on-Optionen mit Vorgabewerten und ein neuer Endpunkt.
+Bestehende Endpunkte, Sicherungsformat und Migrationspfad bleiben
+unverändert, es läuft **keine Migration**.
+
+Diese Fassung ist die Antwort auf eine veränderte Lage: SCOPE X bleibt
+bewusst aus dem offenen Netz erreichbar, ohne Access List im Reverse
+Proxy. Damit trägt der Anmeldeweg die gesamte Last, und das hielt er in
+der bisherigen Form nicht aus.
+
+### Die Anmeldung konnte ausgespäht werden
+
+- **Laufzeit verriet, welche Konten es gibt.** Bei unbekanntem
+  Anmeldenamen kam die Abweisung sofort, bei bekanntem erst nach einem
+  vollständigen Argon2id-Durchlauf mit 64 MiB und drei Durchgängen. Der
+  Unterschied liegt bei mehreren Zehntelsekunden und ist aus dem offenen
+  Netz mühelos messbar. Die Fehlermeldung war immer dieselbe, die
+  Antwortzeit nicht. Jetzt läuft bei unbekanntem Konto ein Leerlauf-Hash
+  mit demselben Aufwand.
+- **Statuscodes verrieten denselben Umstand.** Ein gesperrtes Konto
+  antwortete mit 429, ein stillgelegtes mit 403, ein unbekanntes mit 401.
+  Nach außen gibt es jetzt genau eine Antwort; der Grund steht
+  ausschließlich im Änderungsprotokoll.
+
+### Die Kontosperre war selbst eine Waffe
+
+Acht falsche Passwörter sperrten ein Konto fünfzehn Minuten — von jeder
+Adresse aus. Aus dem offenen Netz genügte damit ein Skript in zwei
+Zeilen, um alle Nutzer dauerhaft auszusperren, mitten im Dienst. Eine
+Maßnahme, die der Angreifer gegen den Besitzer richten kann, schützt
+niemanden.
+
+- Die automatische kontoweite Sperre **entfällt**. An ihre Stelle tritt
+  eine exponentiell wachsende Abkühlung **je Adresse und Konto**, bis
+  fünfzehn Minuten: der Angreifer bremst nur sich selbst aus, der
+  rechtmäßige Nutzer bleibt von seinem eigenen Anschluss unbehelligt.
+- Die Benachrichtigung ab acht Fehlversuchen bleibt und sagt jetzt, was
+  tatsächlich geschieht. Gezählt werden auch Versuche, die schon an der
+  Abkühlung scheitern — sonst käme ein langsamer Angreifer nie bis zur
+  Warnschwelle und der Besitzer erführe von einem Angriff gar nichts.
+- Eine Sperre von Hand bleibt möglich, über die Verwaltung und über das
+  neue Wiederherstellungswerkzeug.
+- Wird ein Konto freigegeben oder sein Passwort zurückgesetzt, fallen
+  Fehlversuchszähler, Sperrfrist und Abkühlung mit weg. Ohne das bliebe
+  ausgerechnet die Person draußen, die ein Fremder ausgebremst hat.
+
+### Neue Schichten vor der Anmeldung
+
+- **Herkunftsprüfung.** Neue Option `laenderfilter`, Vorgabe `europa`:
+  die 27 EU-Staaten, die EFTA, das Vereinigte Königreich mit den
+  Kronbesitzungen, die europäischen Kleinstaaten sowie Gibraltar, Färöer,
+  Grönland und Åland. Nicht enthalten sind Russland und Belarus, der
+  Balkan außerhalb der EU, die Ukraine, Moldau und die Türkei. Grundlage
+  ist eine Netzliste im Image mit 36.781 IPv4- und 18.420 IPv6-Netzen,
+  erzeugt aus den Delegationsdateien von RIPE NCC und ARIN durch
+  `tools/netzliste_erzeugen.py`. Zur Laufzeit wird nichts nachgeladen.
+  Fehlt die Liste, wird durchgelassen und gewarnt: eine Prüfung, die bei
+  einem Datenfehler den rechtmäßigen Nutzer aussperrt, richtet mehr
+  Schaden an als der Scanverkehr, den sie abhält. Über `zusatznetze`
+  lassen sich einzelne Netze freigeben, etwa für einen Aufenthalt
+  außerhalb Europas.
+- **Drosselung.** Höchstens 30 Anmeldeanfragen je Adresse in zehn
+  Minuten, einstellbar über `anfragen_je_fenster` für den Fall, dass
+  mehrere Personen hinter demselben Anschluss sitzen.
+- **Rechenaufgabe.** Anmeldung, Registrierung und Reset-Anforderung
+  tragen einen Arbeitsnachweis: finde eine Zahl, deren SHA-256 mit genug
+  Nullbits beginnt. Die Schwierigkeit wächst mit den Fehlversuchen des
+  Kontos, von 12 auf höchstens 16 Bit. Für eine einzelne Anmeldung sind
+  das Millisekunden bis etwa eine Sekunde, für Zehntausende Versuche der
+  Unterschied zwischen billig und teuer. Die Aufgabe trägt ihr eigenes
+  HMAC-Siegel, ist einmal verwendbar und übersteht einen Neustart. Im
+  Browser steht SHA-256 ausgeschrieben, weil `crypto.subtle` nur
+  asynchron arbeitet und in einer Suchschleife ein Vielfaches kostet;
+  die Umsetzung ist gegen die Standardbibliothek von Python geprüft,
+  einschließlich der Blockgrenzen bei 55, 56 und 64 Byte.
+
+### Passkeys zuerst
+
+Die Passkey-Anmeldung steht jetzt über dem Passwortformular. Sie ist der
+einzige Weg, der sich weder abfischen noch durchprobieren lässt: der
+Schlüssel verlässt das Gerät nie und ist an genau diese Domain gebunden.
+Das Passwort bleibt als zweiter Weg erhalten.
+
+### Basis-Adresse ohne Schema
+
+`scopex.example.de` ergibt in `urlparse` weder Schema noch Host. Passkeys
+lehnten deshalb mit 503 ab und die Links in den Mails waren nicht
+anklickbar — ohne dass irgendwo ein Fehler erschien. Lautlos war der
+Ausfall wegen eines zweiten, schwächeren Tests: die Oberfläche fragte
+`available` ab, das lediglich prüfte, ob die Variable gesetzt war. Sie
+meldete „verfügbar", während der Endpunkt ablehnte.
+
+- `core.base_url()` normalisiert zentral und ergänzt ein fehlendes Schema.
+- `passkeys_available()` stellt dieselbe Prüfung an wie der Endpunkt.
+- `run.sh` schreibt die wirksame Adresse beim Start ins Protokoll, mit
+  Warnung bei fehlendem Schema oder `http`.
+
+### Weiterleitungs-Header
+
+`uvicorn` lief mit `--forwarded-allow-ips='*'`, jeder Client durfte also
+`X-Forwarded-Proto` und `X-Forwarded-For` selbst setzen. Weil Port 8099
+auf dem Host veröffentlicht ist, erreicht ein Gerät im LAN den Container
+direkt, am Reverse Proxy vorbei. Schwerer wog, dass `_is_secure()` und
+der HSTS-Header den **Rohheader** zusätzlich selbst auslasen und die
+Vertrauensliste damit vollständig umgingen: das Secure-Flag der
+Sitzungscookies war von außen steuerbar, und ohne dieses Flag kann ein
+Sitzungscookie über eine unverschlüsselte Verbindung zum selben Host
+abfließen.
+
+Beide Stellen benutzen jetzt `request.url.scheme`, das uvicorn nur für
+Gegenstellen aus der neuen Option `trusted_proxies` ableitet (Vorgabe
+`172.30.32.0/23`, das Supervisor-Netz). Erst dadurch ist überhaupt eine
+verlässliche Herkunftsprüfung möglich — vorher hätte jeder Scanner sein
+Land frei behaupten können.
+
+### Passwörter
+
+- Prüfung gegen 10.038 häufige Passwörter und Wortstämme, mitgeliefert im
+  Image, ohne externen Aufruf. Geprüft wird auch der Stamm: `passwort2026`
+  fällt über `passwort`. Bei zwölf Zeichen Mindestlänge ist genau das der
+  Normalfall, ein kurzes Wort mit angehängter Jahreszahl.
+- Abgelehnt werden außerdem Passwörter mit weniger als fünf
+  verschiedenen Zeichen und solche, die den eigenen Benutzernamen oder
+  den lokalen Teil der E-Mail-Adresse enthalten.
+- Beim Zurücksetzen wird die Prüfung erst nach dem Nachschlagen des
+  Kontos ausgeführt, weil sie den Benutzernamen braucht.
+
+### Wiederherstellung vom Server aus
+
+Neu: `python -m app.wiederherstellung`. Konten auflisten, entsperren,
+freigeben, zweiten Faktor entfernen, Passwort setzen, Rolle vergeben.
+Jeder Eingriff landet als `wiederherstellung:*` im Änderungsprotokoll,
+ohne Urheber-Kennung — hier hat sich niemand angemeldet, sondern jemand
+mit Zugriff auf den Server gehandelt. Nach einem Eingriff in die
+Anmeldedaten werden alle Sitzungen beendet und alle Geräte vergessen.
+
+Das schließt eine Sackgasse, die mit jeder Härtung wahrscheinlicher wird:
+wer Authenticator und Wiederherstellungscodes zugleich verliert, kam
+bisher nicht mehr in sein Konto, auch nicht über „Passwort vergessen",
+denn auch die Zurücksetzung verlangt den zweiten Faktor.
+
+Bewusst ein Kommandozeilenwerkzeug und kein Notzugang über das Netz: ein
+Endpunkt, der den zweiten Faktor aushebeln kann, wäre auf einem öffentlich
+erreichbaren Dienst genau die Hintertür, gegen die der ganze Rest gebaut
+ist.
+
+### Unbekannte Pfade, robots.txt, security.txt
+
+- Der Catch-all beantwortete jeden Pfad außer `api/` mit 200 und der
+  vollständigen Oberfläche. Im Protokoll war zu sehen, wie ein Scanner
+  `/.env`, `/.env.local`, `/.env.production`, `/.env.bak`,
+  `/credentials.json`, `/service-account.json` und `/.git/HEAD` abfragte
+  und auf jede dieser Anfragen 200 oder 206 bekam. Die Oberfläche
+  navigiert ausschließlich über den Fragmentteil, der den Server nie
+  erreicht — er braucht genau einen Pfad: `/`. Alles andere antwortet
+  jetzt mit 404.
+- `robots.txt` hält Suchmaschinen fern. `/.well-known/security.txt` nennt
+  nach RFC 9116 eine Anlaufstelle, aus der neuen Option `kontakt` oder
+  ersatzweise dem Impressum; im Protokoll war zu sehen, dass die Datei
+  tatsächlich abgefragt wird.
+
+### Weiteres
+
+- Vertrauenswürdige Geräte verfallen nach 30 statt 90 Tagen.
+- Mail bei erfolgreicher Anmeldung von einem unbekannten Gerät. Bisher
+  wurde nur der **gescheiterte** Angriff gemeldet, der gelungene blieb
+  still. Die Nachricht nennt bewusst weder Adresse noch Ort.
+- `/api/health` gibt zusätzlich die Version aus, weiterhin ohne jede
+  Angabe über den Datenbestand.
+- `fpdf2` von 2.8.2 auf 2.8.9 wegen CVE-2026-114609. Der wöchentliche
+  Lauf hatte die Lücke am 2. November selbst gemeldet.
+- GitHub Actions auf `checkout@v5`, `setup-python@v6`,
+  `upload-artifact@v5`; Runner auf `ubuntu-24.04` festgenagelt, damit die
+  Umgebung nicht unangekündigt auf Ubuntu 26 wandert.
+- Die Prüfschleife vergleicht die Version in `config.yaml` mit
+  `app/main.py`. Die stand von der Erstfassung bis hierher unbemerkt auf
+  `1.0.0`, weil nichts den Abgleich erzwang.
+- `axe.min.js` und die Ergebnisdateien des Laufs stehen jetzt in
+  `.gitignore`.
+
+### Nicht betroffen
+
+- CVE-2026-109618 und CVE-2026-109619 (PHP2Shell): SCOPE X enthält kein
+  PHP.
+- Die Node-Lücken vom Oktober 2026 einschließlich CVE-2026-111497 im
+  Brotli-Decoder: `python:3.12-slim`, kein Node, kein npm, kein
+  Build-Schritt. Die Oberfläche ist reines JavaScript im Browser.
+
 ## 4.1.0
 
 **Versionierung**

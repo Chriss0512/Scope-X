@@ -1,5 +1,5 @@
 {
-  "version": "4.1.0",
+  "version": "4.2.0",
   "paths": [
     "/api/account/delete",
     "/api/admin/invitations",
@@ -13,6 +13,7 @@
     "/api/attempts/{attempt_id}",
     "/api/attempts/{attempt_id}/withdraw",
     "/api/audit",
+    "/api/auth/challenge",
     "/api/auth/device",
     "/api/auth/devices",
     "/api/auth/email",

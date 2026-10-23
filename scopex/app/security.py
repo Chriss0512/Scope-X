@@ -14,6 +14,7 @@ import secrets
 import struct
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import quote
 
 from .db import conn, new_id, now_iso, q, row
@@ -81,6 +82,29 @@ def _hash_password_scrypt(password: str) -> str:
     )
 
 
+_LEERLAUF_HASH: str | None = None
+
+
+def verify_leerlauf(password: str) -> bool:
+    """Rechnet denselben Aufwand wie eine echte Pruefung und verwirft ihn.
+
+    Ohne diesen Umweg verraet die Antwortzeit, ob ein Konto existiert:
+    bei unbekanntem Anmeldenamen kaeme das 401 sofort zurueck, bei
+    bekanntem erst nach einem vollstaendigen Argon2id-Durchlauf mit 64 MiB
+    und drei Durchgaengen. Dieser Unterschied liegt im Bereich mehrerer
+    Zehntelsekunden und ist aus dem offenen Netz muehelos messbar. Die
+    Fehlermeldung war immer schon fuer alle Faelle dieselbe; die Laufzeit
+    war es nicht.
+
+    Der Vergleichs-Hash entsteht beim ersten Aufruf aus einem Zufallswert.
+    Er passt zu keinem Passwort, und das Ergebnis wird ohnehin verworfen.
+    """
+    global _LEERLAUF_HASH
+    if _LEERLAUF_HASH is None:
+        _LEERLAUF_HASH = hash_password(secrets.token_urlsafe(32))
+    return verify_password(password, _LEERLAUF_HASH)
+
+
 def verify_password(password: str, stored: str) -> bool:
     if stored.startswith("$argon2"):
         if _argon is None:
@@ -103,13 +127,59 @@ def verify_password(password: str, stored: str) -> bool:
         return False
 
 
-def password_problems(password: str) -> list[str]:
-    """Bewusst schlank: Laenge schlaegt Zeichenklassen-Regeln."""
+_HAEUFIG: set[str] | None = None
+_HAEUFIG_DATEI = Path(__file__).parent / "data" / "haeufige-passwoerter.txt"
+
+
+def _haeufige() -> set[str]:
+    global _HAEUFIG
+    if _HAEUFIG is None:
+        try:
+            _HAEUFIG = {
+                z.strip().lower()
+                for z in _HAEUFIG_DATEI.read_text(encoding="utf-8").splitlines()
+                if z.strip() and not z.startswith("#")
+            }
+        except OSError:
+            _HAEUFIG = set()
+    return _HAEUFIG
+
+
+def _stamm(password: str) -> str:
+    """Streicht Ziffern und Satzzeichen am Rand.
+
+    'passwort2026!' und 'Passwort' sind dasselbe Passwort mit anderer
+    Verkleidung. Eine Mindestlaenge von zwoelf Zeichen laedt geradezu
+    dazu ein, ein kurzes Wort mit einer Jahreszahl aufzufuellen; genau
+    das faengt diese Pruefung ab.
+    """
+    return password.lower().strip("0123456789!?.,-_#*$+ ")
+
+
+def password_problems(password: str, *, kennungen: tuple[str, ...] = ()) -> list[str]:
+    """Laenge schlaegt Zeichenklassen-Regeln, aber Laenge allein genuegt nicht."""
     out = []
     if len(password) < 12:
         out.append("Mindestens 12 Zeichen.")
-    if password.lower() in {"password", "passwort", "scopex", "123456789012"}:
-        out.append("Zu leicht zu erraten.")
+
+    klein = password.lower()
+    stamm = _stamm(password)
+    haeufige = _haeufige()
+    if klein in haeufige or (len(stamm) >= 4 and stamm in haeufige):
+        out.append("Dieses Passwort steht auf den einschlägigen Listen, auch "
+                   "mit angehängter Jahreszahl. Nimm ein anderes.")
+
+    if len(set(klein)) < 5:
+        out.append("Zu wenige verschiedene Zeichen.")
+
+    # Ein Passwort, das den eigenen Namen oder die eigene Adresse enthaelt,
+    # ist fuer jemanden, der beides kennt, kein Passwort.
+    for kennung in kennungen:
+        teil = (kennung or "").split("@")[0].strip().lower()
+        if len(teil) >= 4 and teil in klein:
+            out.append("Das Passwort darf den Benutzernamen oder die "
+                       "E-Mail-Adresse nicht enthalten.")
+            break
     return out
 
 
@@ -299,7 +369,11 @@ def destroy_all_sessions(user_id: str) -> None:
 # verlangen weiterhin einen frischen Code, unabhaengig vom Geraet.
 
 DEVICE_COOKIE = "scopex_device"
-DEVICE_DAYS = 90
+# Dreißig statt neunzig Tage. Ein vertrauenswürdiges Gerät umgeht die
+# Code-Abfrage; je länger es das darf, desto länger nützt ein
+# entwendetes Telefon einem Fremden. Bei einem Dienst, der aus dem
+# offenen Netz erreichbar ist, ist ein Vierteljahr zu lang.
+DEVICE_DAYS = 30
 
 
 def create_trusted_device(user_id: str, label: str | None = None) -> str:

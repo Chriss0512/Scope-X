@@ -3,3 +3,11 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+
+# Ergebnisse der Prüfschleife, bei jedem Lauf neu erzeugt.
+.coverage
+.coverage-report.json
+
+# axe-core ist eine Prüfabhängigkeit und wird vom Lauf geholt, siehe
+# scopex/quality/vendor/README.md. Es gehört nicht in die Versionierung.
+scopex/quality/vendor/axe.min.js

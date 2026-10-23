@@ -15,6 +15,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.security import _totp_at
 
+# Haengt den Arbeitsnachweis an die geschuetzten Endpunkte. Muss vor
+# dem ersten TestClient-Aufruf stehen.
+from quality import nachweis  # noqa: F401,E402
+
 c = TestClient(app)
 c.__enter__()  # löst den lifespan-Start aus: Migration und Stammdaten
 
@@ -324,5 +328,161 @@ check("Kein Framing", r.headers.get("x-frame-options") == "DENY")
 r = c.get("/assets/app.js")
 check("app.js ausgeliefert", r.status_code == 200 and len(r.content) > 20000, len(r.content))
 r = c.get("/assets/app.css"); check("app.css ausgeliefert", r.status_code == 200)
+
+# Unbekannte Pfade. Der Catch-all lieferte früher für jeden Pfad außer
+# api/ die vollständige Oberfläche mit 200. Navigiert wird ausschließlich
+# über den Fragmentteil, der den Server nie erreicht.
+for pfad in ("/.git/config", "/.env", "/wp-login.php", "/dashboard",
+             "/api/gibtsnicht", "/credentials.json", "/.env.bak"):
+    r = c.get(pfad)
+    check(f"404 für {pfad}", r.status_code == 404, r.status_code)
+
+# Diese beiden Dateien werden nachweislich abgefragt und sollen echte
+# Antworten geben statt 404.
+r = c.get("/robots.txt")
+check("robots.txt hält Suchmaschinen fern",
+      r.status_code == 200 and "Disallow: /" in r.text, r.status_code)
+r = c.get("/.well-known/security.txt")
+check("security.txt nennt eine Anlaufstelle",
+      r.status_code == 200 and "Contact:" in r.text, r.status_code)
+r = c.get("/api/health")
+check("Gesundheitsendpunkt ohne Anmeldung",
+      r.status_code == 200 and r.json()["status"] == "ok", r.status_code)
+check("Gesundheitsendpunkt verrät nichts über den Bestand",
+      not any(k in r.json() for k in ("users", "konten", "count")), r.json())
+
+# Weiterleitungs-Header einer nicht vertrauenswürdigen Gegenstelle.
+# Der TestClient spricht die Anwendung direkt an, ohne uvicorns
+# ProxyHeaders-Middleware — genau die Lage eines Geräts, das den
+# veröffentlichten Host-Port erreicht. Ein selbst gesetztes
+# X-Forwarded-Proto darf daran nichts ändern.
+r = c.get("/", headers={"X-Forwarded-Proto": "https"})
+check("Kein HSTS durch gefälschten Header",
+      "strict-transport-security" not in r.headers,
+      dict(r.headers))
+
+spoof = TestClient(app)
+r = spoof.post("/api/auth/login",
+               json={"username": "nfs", "password": "einsatzprotokoll2026",
+                     "totp_code": _totp_at(secret, int(_t.time()) // 30)},
+               headers={"X-Forwarded-Proto": "https"})
+gesetzt = " ".join(r.headers.get_list("set-cookie")).lower()
+check("Sitzungscookie ohne Secure bei gefälschtem Header",
+      r.status_code == 200 and "secure" not in gesetzt, gesetzt[:200])
+
+# Basis-Adresse. Ein fehlendes Schema war der Grund, aus dem Passkeys
+# still mit 503 abgelehnt haben.
+from app.core import base_url as _base_url
+from app.routers.passkeys import passkeys_available
+
+_vorher = os.environ.get("SCOPEX_BASE_URL")
+try:
+    os.environ["SCOPEX_BASE_URL"] = "scopex.example.de/"
+    check("Fehlendes Schema wird zu https",
+          _base_url() == "https://scopex.example.de", _base_url())
+    check("Passkeys verfügbar trotz fehlendem Schema", passkeys_available())
+
+    os.environ["SCOPEX_BASE_URL"] = "http://scopex.example.de"
+    check("Passkeys abgeschaltet bei http", not passkeys_available())
+
+    os.environ.pop("SCOPEX_BASE_URL")
+    check("Leere Adresse bleibt leer", _base_url() == "")
+    check("Passkeys abgeschaltet ohne Adresse", not passkeys_available())
+finally:
+    if _vorher is None:
+        os.environ.pop("SCOPEX_BASE_URL", None)
+    else:
+        os.environ["SCOPEX_BASE_URL"] = _vorher
+
+# --- Härtung des Anmeldewegs ---------------------------------------------
+import app.gate as G
+from quality.nachweis import loese as _loese
+
+# Herkunft. Die Netzliste deckt Europa ohne Russland und ohne den Balkan
+# außerhalb der EU ab.
+_filter_vorher = os.environ.get("SCOPEX_LAENDERFILTER")
+_zusatz_vorher = os.environ.get("SCOPEX_ZUSATZNETZE")
+try:
+    os.environ["SCOPEX_LAENDERFILTER"] = "europa"
+    os.environ.pop("SCOPEX_ZUSATZNETZE", None)
+    check("Netzliste ausgeliefert", G.netzliste_vorhanden())
+    check("Deutsche Adresse zugelassen", G.herkunft_erlaubt("80.187.98.178"))
+    check("Adresse aus den USA abgewiesen", not G.herkunft_erlaubt("8.8.8.8"))
+    check("Russische Adresse abgewiesen", not G.herkunft_erlaubt("95.173.136.70"))
+    check("Serbische Adresse abgewiesen", not G.herkunft_erlaubt("188.246.226.1"))
+    check("Eigenes Netz nie betroffen", G.herkunft_erlaubt("172.30.33.12"))
+    check("Unbrauchbare Angabe sperrt niemanden aus", G.herkunft_erlaubt("keine-ip"))
+
+    os.environ["SCOPEX_ZUSATZNETZE"] = "8.8.8.0/24"
+    check("Zusatznetz hebt die Abweisung auf", G.herkunft_erlaubt("8.8.8.8"))
+    os.environ.pop("SCOPEX_ZUSATZNETZE")
+
+    os.environ["SCOPEX_LAENDERFILTER"] = "aus"
+    check("Abgeschaltet lässt alles durch", G.herkunft_erlaubt("95.173.136.70"))
+finally:
+    for name, wert in (("SCOPEX_LAENDERFILTER", _filter_vorher),
+                       ("SCOPEX_ZUSATZNETZE", _zusatz_vorher)):
+        if wert is None:
+            os.environ.pop(name, None)
+        else:
+            os.environ[name] = wert
+
+# Rechenaufgabe.
+_a = G.pow_aufgabe(G.POW_GRUNDSTUFE)
+_g = _loese(_a)
+check("Gelöste Aufgabe wird angenommen",
+      G.pow_pruefen(_a["aufgabe"], _a["stufe"], _a["ablauf"], _a["siegel"],
+                    _g["loesung"]))
+check("Dieselbe Lösung nicht zweimal",
+      not G.pow_pruefen(_a["aufgabe"], _a["stufe"], _a["ablauf"], _a["siegel"],
+                        _g["loesung"]))
+_b = G.pow_aufgabe(G.POW_GRUNDSTUFE)
+check("Falsche Lösung abgelehnt",
+      not G.pow_pruefen(_b["aufgabe"], _b["stufe"], _b["ablauf"], _b["siegel"], "1"))
+check("Gefälschtes Siegel abgelehnt",
+      not G.pow_pruefen(_b["aufgabe"], _b["stufe"], _b["ablauf"],
+                        "0" * 32, _g["loesung"]))
+check("Abgelaufene Aufgabe abgelehnt",
+      not G.pow_pruefen(_b["aufgabe"], _b["stufe"], 1, _b["siegel"], _g["loesung"]))
+check("Schwierigkeit steigt mit den Fehlversuchen",
+      G.pow_stufe(6) > G.pow_stufe(0) and G.pow_stufe(999) == G.POW_HOECHSTSTUFE)
+
+# Anmeldung ohne Nachweis muss scheitern, sonst wäre die Aufgabe Zierde.
+_roh = TestClient(app)
+r = _roh.request("POST", "/api/auth/login",
+                 json={"username": "nfs", "password": "einsatzprotokoll2026",
+                       "totp_code": _totp_at(secret, int(_t.time()) // 30)})
+check("Anmeldung ohne Arbeitsnachweis abgewiesen", r.status_code == 400,
+      r.status_code)
+
+# Drosselung und Abkühlung.
+G.zustand_zuruecksetzen()
+_max_vorher = os.environ.get("SCOPEX_ANFRAGEN_JE_FENSTER")
+try:
+    os.environ["SCOPEX_ANFRAGEN_JE_FENSTER"] = "10"
+    durch = sum(1 for _ in range(25) if G.fenster_frei("203.0.113.7"))
+    check("Fenster begrenzt Anfragen je Adresse", durch == 10, durch)
+    check("Andere Adresse davon unberührt", G.fenster_frei("203.0.113.8"))
+finally:
+    if _max_vorher is None:
+        os.environ.pop("SCOPEX_ANFRAGEN_JE_FENSTER", None)
+    else:
+        os.environ["SCOPEX_ANFRAGEN_JE_FENSTER"] = _max_vorher
+
+G.zustand_zuruecksetzen()
+G.abkuehlung_setzen("konto-1", "203.0.113.7", 6)
+check("Abkühlung bremst die Angreiferadresse",
+      G.abkuehlung_rest("konto-1", "203.0.113.7") > 0)
+check("Rechtmäßige Adresse bleibt unbehelligt",
+      G.abkuehlung_rest("konto-1", "80.187.98.178") == 0)
+check("Abkühlung wächst mit den Fehlversuchen",
+      (G.abkuehlung_setzen("konto-2", "203.0.113.7", 3),
+       G.abkuehlung_setzen("konto-3", "203.0.113.7", 9),
+       G.abkuehlung_rest("konto-3", "203.0.113.7")
+       > G.abkuehlung_rest("konto-2", "203.0.113.7"))[-1])
+G.abkuehlung_konto_freigeben("konto-1")
+check("Freigabe hebt die Abkühlung auf",
+      G.abkuehlung_rest("konto-1", "203.0.113.7") == 0)
+G.zustand_zuruecksetzen()
 
 print("\nAlle Prüfungen bestanden.")

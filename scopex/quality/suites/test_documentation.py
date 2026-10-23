@@ -11,6 +11,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.security import _totp_at
 
+# Haengt den Arbeitsnachweis an die geschuetzten Endpunkte. Muss vor
+# dem ersten TestClient-Aufruf stehen.
+from quality import nachweis  # noqa: F401,E402
+
 
 def check(n, c, e=""):
     print(("  OK   " if c else "  FAIL ") + n + (" :: "+str(e) if not c else ""))
@@ -136,7 +140,10 @@ r = dev.get("/api/auth/device")
 check("Gerätezustand mit Cookie", r.json()["known"] and
       r.json()["username"] == "chris", r.text[:120])
 
-# --- Sperrmail bei Fehlversuchen -----------------------------------------
+# --- Warnmail bei Fehlversuchen ------------------------------------------
+# Gezählt werden auch Versuche, die schon an der Abkühlung scheitern.
+# Sonst käme ein langsamer Angreifer nie bis zur Warnschwelle und der
+# Besitzer erführe von einem Angriff gar nichts.
 sent = {}
 import app.mailer as M
 
@@ -144,7 +151,21 @@ M.send = lambda to, s_, b: sent.update(to=to, body=b) or True
 bad = TestClient(app)
 for i in range(8):
     bad.post("/api/auth/login", json={"username":"chris","password":"falsch"})
-check("Sperrmail verschickt", sent.get("to") == "info@cd-faust.de", sent.get("to"))
+check("Warnmail verschickt", sent.get("to") == "info@cd-faust.de", sent.get("to"))
+check("Warnmail stellt klar, dass nicht gesperrt wird",
+      "nicht** gesperrt" in sent.get("body", ""), sent.get("body", "")[:120])
+
+# Das Konto bleibt trotz der Fehlversuche von einer anderen Adresse aus
+# benutzbar. Eine kontoweite Sperre wäre aus dem offenen Netz eine Waffe
+# gegen den Besitzer, nicht gegen den Angreifer.
+import app.gate as G
+
+G.abkuehlung_konto_freigeben(c.get("/api/auth/state").json()["user"]["id"])
+frisch = TestClient(app)
+r = frisch.post("/api/auth/login", json={"username":"chris",
+    "password":"einsatzprotokoll2026", "totp_code": code(sec)})
+check("Konto nach acht Fehlversuchen nicht gesperrt", r.status_code == 200,
+      r.text[:150])
 check("Mail nennt keine Herkunft",
       "IP" not in sent["body"] and "127.0.0.1" not in sent["body"])
 sent.clear()

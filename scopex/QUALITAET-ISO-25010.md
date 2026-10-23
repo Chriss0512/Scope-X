@@ -21,7 +21,7 @@ Wesentliche Änderungen: **Safety** kam als neunte Charakteristik hinzu,
 Scalability hinzu. Das Quality-in-Use-Modell ist in ISO/IEC 25019
 ausgelagert und in diesem Bericht nicht behandelt.
 
-Stand: SCOPE X 3.0.0.
+Stand: SCOPE X 4.2.0.
 
 ---
 
@@ -79,7 +79,8 @@ benennen die Ursache und den nächsten Schritt.
 Rollenbezeichnungen sind geschlechtsneutral formuliert. Formularfelder tragen
 erklärende Hinweise statt bloßer Beschriftungen.
 
-**Lücke:** Kein Screenreader-Test, keine formale WCAG-Prüfung. Die
+**Lücke:** Kein Screenreader-Test mit echten Hilfsmitteln. Die
+automatisierte WCAG-Prüfung über axe-core läuft bei jedem Durchlauf. Die
 Signalfarbe der Wortmarke unterschreitet den Kontrastwert für Fließtext;
 sie wird ausschließlich als Markenelement eingesetzt, wo WCAG das zulässt.
 Ein Audit mit assistiven Technologien steht aus.
@@ -99,8 +100,10 @@ der seit Version 1 bestand: der Zähler für Fehlanmeldungen wurde innerhalb
 derselben Transaktion hochgezählt, in der anschließend eine Exception flog,
 und dadurch stets zurückgerollt. Die Kontosperre hat nie ausgelöst.
 
-**Lücke:** Keine Überwachung im Betrieb, keine Alarmierung bei Fehlern.
-Erkennbar ist ein Ausfall nur über das Add-on-Protokoll.
+**Lücke:** Keine Alarmierung bei Fehlern. `/api/health` erlaubt seit 4.2.0
+eine Verfügbarkeitsüberwachung über einen REST-Sensor in Home Assistant,
+siehe README; eine inhaltliche Überwachung, etwa auf auflaufende
+Fehlversuche, gibt es nicht.
 
 ## 6. Security
 
@@ -122,28 +125,61 @@ Erkennbar ist ein Ausfall nur über das Add-on-Protokoll.
 - *Resistance* (neu in 2023): Rate Limit und Kontosperre nach acht
   Fehlversuchen mit Benachrichtigung, Leerlaufabmeldung, Einmal-Token für
   Zurücksetzung, Content-Security-Policy ohne externe Quellen,
-  ausschließlich parametrisierte Abfragen.
+  ausschließlich parametrisierte Abfragen. Passkeys nach WebAuthn mit
+  Nutzerverifikation und Klonerkennung über `sign_count`.
+  Weiterleitungs-Header werden nur Netzen aus `trusted_proxies` geglaubt:
+  bis 4.1.0 lief uvicorn mit `--forwarded-allow-ips='*'`, und zwei Stellen
+  lasen den Rohheader zusätzlich selbst, sodass ein Client am Reverse Proxy
+  vorbei das Secure-Flag der Sitzungscookies steuern und seine
+  protokollierte Herkunft erfinden konnte.
+
+  Seit 4.2.0 staffelt sich der Anmeldeweg in vier Schichten, weil SCOPE X
+  bewusst ohne Access List aus dem offenen Netz erreichbar bleibt:
+  Herkunftsprüfung gegen eine mitgelieferte Netzliste, gleitendes
+  Zeitfenster je Adresse, Arbeitsnachweis mit wachsender Schwierigkeit und
+  eine exponentielle Abkühlung je Adresse und Konto. Antwortzeit und
+  Statuscode sind für alle Abweisungen gleich, sodass sich über das
+  Anmeldeformular nicht mehr herausfinden lässt, welche Konten existieren.
+
+  *Bewusst entfernt:* die automatische kontoweite Sperre nach acht
+  Fehlversuchen. Sie war im eigenen Netz harmlos und wird im offenen Netz
+  zur Waffe gegen den Besitzer — ein Fremder konnte damit jeden Nutzer
+  aussperren. Eine Schutzmaßnahme, die der Angreifer gegen den zu
+  Schützenden richten kann, ist keine. Die Benachrichtigung ab acht
+  Fehlversuchen bleibt, eine Sperre von Hand ebenfalls.
 
 **Lücke:** Keine Verschlüsselung im Ruhezustand. Home Assistant OS bietet
 keine Verschlüsselung einzelner Add-on-Volumes; ein Schlüssel müsste auf
 derselben Maschine liegen und würde nur gegen einen entwendeten Datenträger
-schützen. Kein externes Penetrationstest-Ergebnis. Keine Passkeys.
+schützen. Kein externes Penetrationstest-Ergebnis.
+
+Betrieblich offen, nicht im Code: Port 8099 ist auf dem Host
+veröffentlicht, damit Nginx Proxy Manager die Anwendung über die HA-IP
+erreicht. Auf diesem Weg greifen Access List, Zertifikatszwang und die
+Exploit-Filter des Proxys nicht. Die Vertrauensgrenze oben begrenzt den
+Schaden, beseitigt die Erreichbarkeit aber nicht.
 
 ## 7. Maintainability
 
 **Umgesetzt.** Modularer Aufbau mit getrennten Zuständigkeiten: Datenzugriff,
 Sicherheit, Auswertung, PDF, Mail, Router je Themenbereich. Versionierte,
-idempotente Migrationen. Testbarkeit über drei Suiten mit 151 Prüfungen.
-Wiederverwendbarkeit: die Auswertung wird von Dashboard und PDF geteilt, ein
-Auseinanderlaufen ist dadurch ausgeschlossen. Analysierbarkeit über
-Änderungsprotokoll und Add-on-Protokoll.
+idempotente Migrationen. Testbarkeit über drei Suiten mit 220 Prüfungen bei
+80,7 Prozent gemessener Abdeckung. Wiederverwendbarkeit: die Auswertung wird
+von Dashboard und PDF geteilt, ein Auseinanderlaufen ist dadurch
+ausgeschlossen. Analysierbarkeit über Änderungsprotokoll und
+Add-on-Protokoll. Die Prüfschleife läuft bei jedem Push und jedem Pull
+Request über GitHub Actions und beendet sich mit einem Fehler, sobald eine
+Prüfung fehlschlägt.
 
 **Modifizierbarkeit:** Stammdaten sind zur Laufzeit erweiterbar, ohne
 historische Einträge zu verändern, weil Bezeichnungen beim Speichern in den
 Datensatz kopiert werden.
 
-**Lücke:** Keine Typprüfung im Frontend, keine automatisierte
-Testabdeckungsmessung, keine CI-Pipeline.
+**Lücke:** Keine Typprüfung im Frontend. Angaben, die an zwei Stellen
+stehen, laufen ohne Abgleich auseinander: die Versionsnummer in
+`app/main.py` stand von 1.0.0 bis 4.2.0 unbemerkt auf dem Erstwert, weil
+nichts sie mit `config.yaml` verglich. Die Prüfschleife tut das jetzt, aber
+nur für diese eine Angabe.
 
 ## 8. Flexibility
 
@@ -200,9 +236,9 @@ einsetzen wollte, müsste diese Bewertung eigenständig führen.
 | Performance Efficiency | keine Lasttests, keine Antwortzeitziele |
 | Compatibility | keine medizinische Fachschnittstelle |
 | Interaction Capability | kein Screenreader- und WCAG-Audit |
-| Reliability | keine Betriebsüberwachung |
-| Security | keine Verschlüsselung im Ruhezustand, kein Pentest, keine Passkeys |
-| Maintainability | keine CI, keine Abdeckungsmessung, keine Typprüfung |
+| Reliability | keine Alarmierung, nur Verfügbarkeitsprüfung |
+| Security | keine Verschlüsselung im Ruhezustand, kein Pentest, Port 8099 auf dem Host erreichbar |
+| Maintainability | keine Typprüfung im Frontend, Abgleich doppelt geführter Angaben nur für die Version |
 | Flexibility | nicht horizontal skalierbar |
 | Safety | keine Risikoanalyse nach ISO 14971 |
 

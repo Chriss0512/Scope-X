@@ -15,6 +15,8 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
 
+from .core import base_url
+
 log = logging.getLogger("scopex.mail")
 
 
@@ -26,7 +28,7 @@ def config() -> dict:
         "user": os.environ.get("SCOPEX_SMTP_USER", "").strip(),
         "password": os.environ.get("SCOPEX_SMTP_PASSWORD", ""),
         "sender": os.environ.get("SCOPEX_SMTP_FROM", "").strip(),
-        "base_url": os.environ.get("SCOPEX_BASE_URL", "").strip().rstrip("/"),
+        "base_url": base_url(),
     }
 
 
