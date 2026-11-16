@@ -390,13 +390,17 @@ table.data td > .status { margin: -.1rem 0; }
   body.auth #app { overflow-y: auto; }
 }
 
+/* Flex statt starrem Fünferraster: der Verwaltungspunkt existiert nur für
+   Administrator*innen, und die Leiste soll sich in beiden Fällen gleichmäßig
+   aufteilen, ohne eine leere Spalte zu lassen. */
 nav.tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: flex; align-items: stretch;
   background: var(--nav); border-top: 1px solid var(--nav-line);
   padding-bottom: env(safe-area-inset-bottom);
 }
 nav.tabbar a {
+  flex: 1 1 0; min-width: 0;
   text-decoration: none; color: var(--nav-ink); font-size: .69rem;
   font-weight: 500; padding: .55rem .2rem .6rem; text-align: center;
   line-height: 1.25; display: flex; flex-direction: column;
@@ -411,19 +415,61 @@ nav.tabbar a[aria-current="page"]::before {
 }
 nav.tabbar .brand { display: none; }
 
+/* Der mittlere Punkt: Neue Dokumentation. Als angehobene Scheibe in Petrol,
+   damit die wichtigste Handlung der Anwendung auch optisch die wichtigste
+   ist — Hierarchie über Größe und Stellung, nicht über Signalfarbe. Lime
+   bleibt tabu, das gehört dem X. */
+nav.tabbar .tab-new {
+  flex: 1 1 0; min-width: 0;
+  background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  gap: .25rem; padding: 0 .2rem .6rem; position: relative;
+  color: var(--nav-ink); font-size: .69rem; font-weight: 500;
+  font-family: inherit; line-height: 1.25;
+}
+nav.tabbar .tab-new .disc {
+  width: 46px; height: 46px; margin-top: -14px;
+  border-radius: 50%;
+  background: var(--accent); color: var(--on-accent);
+  border: 3px solid var(--nav);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 37, 51, .35);
+}
+nav.tabbar .tab-new .disc svg { width: 22px; height: 22px; }
+nav.tabbar .tab-new:active .disc { transform: scale(.94); }
+nav.tabbar .tab-new:focus-visible .disc {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+nav.tabbar .tab-new .cap { display: block; }
+
 @media (min-width: 900px) {
   body { padding-bottom: 0; padding-left: 232px; }
   nav.tabbar {
     top: 0; right: auto; width: 232px; bottom: 0;
-    grid-template-columns: 1fr; grid-auto-rows: max-content;
-    align-content: start; gap: .1rem; padding: 1.5rem .75rem;
+    flex-direction: column; align-items: stretch; justify-content: flex-start;
+    gap: .1rem; padding: 1.5rem .75rem;
     border-top: none; border-right: 1px solid var(--nav-line);
   }
   nav.tabbar a {
+    flex: 0 0 auto;
     flex-direction: row; justify-content: flex-start; gap: .7rem;
     font-size: .9rem; padding: .65rem .75rem; border-radius: var(--radius-sm);
     text-align: left;
   }
+  /* In der Seitenleiste wird aus der Scheibe eine normale Zeile mit
+     betonter Fläche, an derselben Stelle in der Reihenfolge. */
+  nav.tabbar .tab-new {
+    flex: 0 0 auto;
+    flex-direction: row; justify-content: flex-start; gap: .7rem;
+    font-size: .9rem; padding: .5rem .75rem; margin: .2rem 0;
+    border-radius: var(--radius-sm);
+  }
+  nav.tabbar .tab-new .disc {
+    width: 30px; height: 30px; margin-top: 0; border-width: 0;
+    box-shadow: none;
+  }
+  nav.tabbar .tab-new .disc svg { width: 17px; height: 17px; }
+  nav.tabbar .tab-new .cap { font-weight: 600; color: var(--nav-ink-strong); }
   nav.tabbar a[aria-current="page"] { background: rgba(255, 255, 255, .07); }
   nav.tabbar a[aria-current="page"]::before {
     top: 22%; bottom: 22%; left: 0; right: auto; height: auto; width: 2px;
@@ -899,3 +945,130 @@ body.auth .to-top { display: none; }
 .donut-7 { stroke: #c48b32; background: #c48b32; }
 
 @media (min-width: 520px) { .donut svg { width: 150px; height: 150px; } }
+
+/* ===================================================================
+   Struktur 4.3.0 — Feed, Profilkopf, Segmente, Kachel-Katalog
+   Radien folgen der konzentrischen Regel: Außenradius = Innenradius
+   plus Abstand. Karte 14px, inneres Element 9px bei ~5px Abstand.
+   =================================================================== */
+
+/* Chips ohne Knopfrolle: gleiche Form, aber keine Interaktionssignale. */
+.chip.static {
+  pointer-events: none; border-color: var(--line);
+  background: var(--surface-inset); color: var(--ink);
+}
+
+/* ------------------------------------------------------------ Beiträge */
+
+.post {
+  display: block; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .9rem 1rem 1rem;
+}
+.post + .post { margin-top: .65rem; }
+.post .post-head { display: flex; align-items: center; gap: .65rem; }
+.post .post-mark { flex: 0 0 auto; width: 34px; height: 34px; display: block; }
+.post .post-mark svg { width: 100%; height: 100%; display: block; }
+.post .post-body { margin-top: .7rem; }
+.post:hover { border-color: var(--line-strong); }
+
+/* ---------------------------------------------------------- Profilkopf */
+
+.profile-head {
+  display: flex; align-items: center; gap: 1rem;
+  padding: .4rem 0 1rem;
+}
+.profile-head .who h1 { margin: 0; }
+.avatar-ring {
+  position: relative; flex: 0 0 auto; width: 76px; height: 76px;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.avatar-ring .ini {
+  font-size: 1.45rem; font-weight: 700; letter-spacing: .02em;
+  color: var(--ink-strong); font-variant-numeric: tabular-nums;
+}
+
+.stats-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .75rem .4rem;
+}
+.stats-row .stat {
+  display: flex; flex-direction: column; align-items: center; gap: .1rem;
+  min-width: 0;
+}
+.stats-row .stat strong {
+  font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink-strong);
+}
+.stats-row .stat span { font-size: .72rem; color: var(--muted); }
+
+/* ----------------------------------------------------- Segmentschalter */
+
+.seg {
+  display: flex; gap: 4px; margin: 1rem 0 .9rem;
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  padding: 4px; border: 1px solid var(--line);
+}
+.seg .seg-item {
+  flex: 1 1 0; min-width: 0; min-height: 40px;
+  border: none; background: none; border-radius: 6px;
+  font-size: .85rem; font-weight: 500; color: var(--muted);
+  padding: .45rem .3rem;
+}
+.seg .seg-item[aria-selected="true"] {
+  background: var(--surface); color: var(--ink-strong); font-weight: 650;
+  box-shadow: 0 1px 2px rgba(16, 37, 51, .12);
+}
+
+/* Nur die Karten der gewählten Gruppe sind sichtbar. Karten ohne
+   Gruppenangabe (Hinweise, Abmelden) bleiben immer stehen. */
+#app[data-profil-gruppe="konto"] .card[data-gruppe]:not([data-gruppe="konto"]),
+#app[data-profil-gruppe="sicherheit"] .card[data-gruppe]:not([data-gruppe="sicherheit"]),
+#app[data-profil-gruppe="erfassung"] .card[data-gruppe]:not([data-gruppe="erfassung"]),
+#app[data-profil-gruppe="daten"] .card[data-gruppe]:not([data-gruppe="daten"]) {
+  display: none;
+}
+
+/* -------------------------------------------------------- Kachelwahl */
+
+.pick-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem;
+  max-height: 46vh; overflow-y: auto; padding: 2px;
+}
+@media (min-width: 640px) { .pick-grid { grid-template-columns: repeat(3, 1fr); } }
+.picktile {
+  position: relative; display: flex; flex-direction: column;
+  align-items: flex-start; gap: .4rem; text-align: left;
+  min-height: 76px; padding: .6rem .7rem .65rem .85rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); overflow: hidden;
+}
+/* Der Seitenstreifen gehört nur auf Kacheln mit Kategorie. Auf
+   Medikamenten-Kacheln trägt das Etikettenband die Farbe, ein grauer
+   Reststreifen daneben wäre Dekoration ohne Aussage. */
+.picktile[data-cat]::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--cat, var(--line-strong));
+}
+.picktile:hover { border-color: var(--line-strong); background: var(--surface-inset); }
+.picktile .t-name {
+  font-size: .86rem; font-weight: 600; line-height: 1.25;
+  color: var(--ink-strong); hyphens: auto; overflow-wrap: anywhere;
+}
+.picktile .t-sub { font-size: .7rem; color: var(--muted); }
+.picktile .star {
+  position: absolute; right: .35rem; top: .2rem;
+  color: var(--line-strong); font-size: 1rem; padding: .15rem .3rem;
+}
+.picktile .star.on { color: #96b01f; }
+[data-theme="dark"] .picktile .star.on { color: var(--lime); }
+
+/* Medikamentenkacheln tragen das DIVI-Etikett als Kopfband, wie es auf
+   der Spritze klebt — Wiedererkennung vor Ästhetik. */
+.picktile .t-divi {
+  align-self: stretch; margin: -.6rem -.7rem .1rem -.85rem;
+  padding: .28rem .85rem;
+  font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+}
+.picktile .t-divi { background: var(--label-bg, var(--surface-2)); color: var(--label-fg, var(--ink)); }

@@ -406,6 +406,10 @@ async function passkeyRegister(label) {
 function setShell(authenticated) {
   document.body.classList.toggle("auth", !authenticated);
   document.getElementById("nav").hidden = !authenticated;
+  // Der Verwaltungspunkt existiert nur, wenn er auch benutzbar ist. Ein
+  // sichtbarer, aber abgewiesener Punkt wäre eine Einladung zum Rätseln.
+  const adminTab = document.getElementById("tab-admin");
+  if (adminTab) adminTab.hidden = !(authenticated && isAdmin());
 }
 
 function authShell(title, inner) {
@@ -714,13 +718,15 @@ function viewResetPassword(token) {
 // ---------------------------------------------------------------- Router
 
 const routes = {
-  "/": viewHome,
+  "/": viewFeed,
   "/rechtliches": viewLegal,
   "/protokoll": viewAuditLog,
-  "/neu": viewEncounters,
+  // Alte Lesezeichen auf die frühere Erfassen-Seite laufen im Feed auf.
+  "/neu": viewFeed,
   "/dashboard": viewDashboard,
   "/nachweise": viewProofs,
   "/profil": viewProfile,
+  "/verwaltung": viewAdmin,
 };
 
 function currentRoute() {
@@ -752,7 +758,7 @@ async function render() {
   });
   try {
     if (path === "/einsatz" && params[0]) return await viewEncounter(params[0]);
-    const view = routes[path] || viewHome;
+    const view = routes[path] || viewFeed;
     await view();
   } catch (err) {
     app().innerHTML = `<div class="empty"><strong>Das hat nicht geklappt.</strong>
@@ -763,6 +769,17 @@ async function render() {
 window.addEventListener("hashchange", () => {
   if (!state.auth || !state.auth.authenticated) { boot(); return; }
   render();
+});
+
+// Der mittlere Punkt der Leiste. Er navigiert nirgendwohin, er beginnt
+// die Dokumentation — von jeder Seite aus, mit einem Tipp.
+document.getElementById("tab-new").addEventListener("click", () => {
+  if (!state.auth || !state.auth.authenticated) return;
+  if (!canWrite()) {
+    toast("Dieses Konto hat Lesezugriff.");
+    return;
+  }
+  newEncounterSheet();
 });
 
 // ---------------------------------------------------------- Rechtliches
@@ -893,9 +910,9 @@ async function viewLegal() {
 
 // ------------------------------------------------------------- Startseite
 
-async function viewHome() {
-  const o = await api("/api/overview");
-  const name = (state.auth.profile && state.auth.profile.first_name) || "";
+async function viewFeed() {
+  const data = await api("/api/encounters?limit=50");
+
   app().innerHTML = `
     <div class="page-head">
       ${wordmark()}
@@ -903,96 +920,58 @@ async function viewHome() {
         Emergency eXperience</p>
     </div>
 
-    ${canWrite() ? `<button class="btn-start has-ring" id="new-doc">
-      ${ringBg()}<span class="txt">Neue Dokumentation</span>
-    </button>` : `<div class="notice plain">Dieses Konto hat Lesezugriff.
-      Neue Dokumentationen kann ein Administrator freischalten.</div>`}
+    ${canWrite() ? "" : `<div class="notice plain">Dieses Konto hat
+      Lesezugriff. Neue Dokumentationen kann ein Administrator freischalten.</div>`}
 
-    <div class="tiles" data-s="mt-lg">
-      <div class="tile"><div class="value">${o.attempts}</div>
-        <div class="label">Maßnahmen insgesamt</div></div>
-      <div class="tile"><div class="value">${o.attempts_year}</div>
-        <div class="label">Maßnahmen ${o.year}</div></div>
-      <div class="tile"><div class="value">${o.encounters}</div>
-        <div class="label">Einsätze</div></div>
-      <div class="tile"><div class="value">${o.medications}</div>
-        <div class="label">Medikamentengaben</div></div>
-      <div class="tile"><div class="value">${o.complications}</div>
-        <div class="label">ZEK</div></div>
-    </div>
-
-    <h2 data-s="my-xl">Zuletzt dokumentiert</h2>
-    <div class="stack" id="recent"></div>
-
+    <div class="stack" id="feed"></div>
     ${pageFoot()}`;
 
-  const newDoc = $("#new-doc");
-  if (newDoc) newDoc.addEventListener("click", newEncounterSheet);
-
-  const recent = $("#recent");
-  if (!o.recent.length) {
-    recent.innerHTML = `<div class="empty">${markSvg("mark")}
-      <strong>Noch nichts dokumentiert.</strong>
-      Der erste Eintrag ist zwei Fingertipps entfernt.</div>`;
-    return;
-  }
-  recent.innerHTML = o.recent.map((r) => `
-    <a class="entry" data-cat="${esc(r.measure_category)}" data-s="link-block"
-       href="#/einsatz/${esc(r.encounter_id)}">
-      <div class="spread">
-        <div class="grow">
-          <div class="row" data-s="gap-sm">
-            <span class="cat-badge">${esc(r.measure_category)}</span>
-            <strong>${esc(r.measure_name)}</strong>
-          </div>
-          <div class="row wrap" data-s="mt-sm gap-sm">
-            ${statusBadge(r.outcome)}
-            ${r.naca ? `<span class="tiny muted">NACA ${esc(r.naca)}</span>` : ""}
-          </div>
-        </div>
-        <span class="small muted">${esc(fmtDate(r.performed_at))}</span>
-      </div>
-    </a>`).join("");
-}
-
-// -------------------------------------------------------- Einsatzuebersicht
-
-async function viewEncounters() {
-  const data = await api("/api/encounters?limit=50");
-  app().innerHTML = `
-    <div class="page-head spread">
-      <div><h1>Erfassen</h1>
-        <p class="muted small">Einsätze und ihre dokumentierten Einträge</p></div>
-    </div>
-    ${canWrite() ? `<button class="btn-start has-ring" id="new-doc">
-      ${ringBg()}<span class="txt">Neue Dokumentation</span>
-    </button>` : ""}
-    <div class="stack" data-s="mt-lg" id="list"></div>
-    ${pageFoot()}`;
-  const nd = $("#new-doc");
-  if (nd) nd.addEventListener("click", newEncounterSheet);
-
-  const list = $("#list");
+  const feed = $("#feed");
   if (!data.encounters.length) {
-    list.innerHTML = `<div class="empty">${markSvg("mark")}
-      <strong>Keine Einsätze erfasst.</strong>
-      Lege den ersten an, um Maßnahmen zu dokumentieren.</div>`;
+    feed.innerHTML = `
+      ${canWrite() ? `<button class="btn-start has-ring" id="new-doc">
+        ${ringBg()}<span class="txt">Neue Dokumentation</span>
+      </button>` : ""}
+      <div class="empty" data-s="mt-lg">${markSvg("mark")}
+        <strong>Noch nichts dokumentiert.</strong>
+        Der erste Eintrag ist zwei Fingertipps entfernt — unten in der
+        Mitte.</div>`;
+    const nd = $("#new-doc");
+    if (nd) nd.addEventListener("click", newEncounterSheet);
     return;
   }
-  list.innerHTML = data.encounters.map((e) => `
-    <a class="card" href="#/einsatz/${esc(e.id)}" data-s="link-block">
-      <div class="spread">
+
+  /* Jeder Einsatz ein Beitrag: Kopf mit Ringmarke, Zeitpunkt und
+     Einsatzkontext, darunter der Inhalt als Chips, unten die Frist. Die
+     Reihenfolge entspricht dem, was beim Überfliegen zählt: wann, was,
+     wie lange noch änderbar. */
+  feed.innerHTML = data.encounters.map((e) => {
+    const kontext = [
+      e.shift_code ? esc(e.shift_code) : "",
+      e.vehicle_id ? esc(e.vehicle_id) : "",
+      e.mission_number ? "Nr. " + esc(e.mission_number) : "",
+    ].filter(Boolean).join(" · ");
+    return `
+    <a class="post" href="#/einsatz/${esc(e.id)}" data-s="link-block">
+      <div class="post-head">
+        <span class="post-mark" aria-hidden="true">${markSvg("mark")}</span>
         <div class="grow">
           <strong>${esc(fmtDate(e.enc_date))}, ${esc(e.enc_time)}</strong>
-          <div class="small muted" data-s="mt-xs">
-            ${e.naca ? "NACA " + esc(e.naca) : "ohne NACA"}
-            ${e.mission_number ? " · " + esc(e.mission_number) : ""}
-            · ${e.attempt_count} Maßnahmen · ${e.medication_count} Medikamente
-          </div>
+          <div class="tiny muted">${kontext || "ohne Einsatzkontext"}</div>
         </div>
         ${lockChip(e.lock)}
       </div>
-    </a>`).join("");
+      <div class="post-body row wrap" data-s="gap-sm">
+        ${e.naca ? `<span class="chip static">NACA ${esc(e.naca)}</span>` : ""}
+        ${e.attempt_count ? `<span class="chip static">${e.attempt_count} ${
+          e.attempt_count === 1 ? "Maßnahme" : "Maßnahmen"}</span>` : ""}
+        ${e.medication_count ? `<span class="chip static">${e.medication_count} ${
+          e.medication_count === 1 ? "Medikament" : "Medikamente"}</span>` : ""}
+        ${!e.attempt_count && !e.medication_count
+          ? `<span class="tiny muted">noch ohne Einträge</span>` : ""}
+      </div>
+    </a>`;
+  }).join("");
 }
 
 function newEncounterSheet() {
@@ -1460,7 +1439,7 @@ function measurePicker(enc) {
         aria-pressed="false" title="${esc(c.label)}">${esc(c.key)}</button>`).join("")}
       <button class="chip" data-cat="all" aria-pressed="false">Alle</button>
     </div>
-    <div class="pick-list" id="m-list"></div>`, (body) => {
+    <div class="pick-grid" id="m-list"></div>`, (body) => {
     let filter = "recent";
     const search = $("#m-search", body);
     const list = $("#m-list", body);
@@ -1485,9 +1464,9 @@ function measurePicker(enc) {
         return;
       }
       list.innerHTML = items.map((m) => `
-        <button class="pick" data-measure="${esc(m.id)}" data-cat="${esc(m.category)}">
-          <span class="cat-badge">${esc(m.category)}</span>
-          <span class="grow" data-s="text-left">${esc(m.name)}</span>
+        <button class="picktile" data-measure="${esc(m.id)}" data-cat="${esc(m.category)}">
+          <span class="t-sub"><span class="cat-badge">${esc(m.category)}</span></span>
+          <span class="t-name">${esc(m.name)}</span>
           <span class="star ${m.favorite ? "on" : ""}" data-fav="${esc(m.id)}"
             role="button" title="Favorit">${m.favorite ? "★" : "☆"}</span>
         </button>`).join("");
@@ -1750,7 +1729,7 @@ function medicationPicker(enc) {
   sheet("Medikament wählen", `
     <div class="field"><input id="med-search" type="text" placeholder="Wirkstoff suchen"
       autocomplete="off" aria-label="Wirkstoff suchen"></div>
-    <div class="pick-list" data-s="mt-md" id="med-list"></div>`, (body) => {
+    <div class="pick-grid" data-s="mt-md" id="med-list"></div>`, (body) => {
     const search = $("#med-search", body);
     const list = $("#med-list", body);
     function draw() {
@@ -1762,11 +1741,15 @@ function medicationPicker(enc) {
             .filter(Boolean).concat(state.medications).slice(0, 400));
       const seen = new Set();
       items = items.filter((m) => !seen.has(m.id) && seen.add(m.id));
-      list.innerHTML = items.map((m) => `
-        <button class="pick" data-med="${esc(m.id)}">
-          ${diviLabel(m)}
-          <span class="grow" data-s="text-left">${esc(m.name)}</span>
-        </button>`).join("") ||
+      list.innerHTML = items.map((m) => {
+        const stil = (state.constants.divi_labels || {})[m.divi_group];
+        return `
+        <button class="picktile" data-med="${esc(m.id)}"
+          ${stil ? `data-divi="${esc(stil.slug)}"` : ""}>
+          <span class="t-divi">${esc(m.divi_group || "ohne Etikettengruppe")}</span>
+          <span class="t-name">${esc(m.name)}</span>
+        </button>`;
+      }).join("") ||
         `<div class="empty small">Kein Treffer. Neue Wirkstoffe legst du unter
           Profil und Einstellungen an.</div>`;
       list.querySelectorAll("[data-med]").forEach((b) =>
@@ -1999,8 +1982,11 @@ async function viewDashboard() {
     .join("");
 
   app().innerHTML = `
-    <div class="page-head"><h1>Dashboard</h1>
-      <p class="muted small">Alle Kennzahlen aus den lokal gespeicherten Daten</p></div>
+    <div class="page-head spread">
+      <div><h1>Auswertung</h1>
+        <p class="muted small">Alle Kennzahlen aus den lokal gespeicherten Daten</p></div>
+      <a class="btn link-plain" href="#/nachweise">PDF-Nachweise</a>
+    </div>
 
     <div class="chipset">${PERIODS.map(([k, label]) =>
       `<button class="chip accent" data-period="${k}"
@@ -2337,14 +2323,66 @@ async function viewAuditLog() {
 
 // ------------------------------------------------------------------ Profil
 
+async function viewAdmin() {
+  /* Eigene Seite statt Anhängsel des Profils. Die Rollenprüfung hier ist
+     Bedienkomfort, keine Sicherheit — jede Verwaltungsroute prüft
+     serverseitig selbst und verlangt für Eingriffe einen frischen Code. */
+  if (!isAdmin()) { location.hash = "#/"; return; }
+  app().innerHTML = `
+    <div class="page-head"><h1>Verwaltung</h1>
+      <p class="muted small">Konten, Einladungen und Betrieb. Jeder Eingriff
+      verlangt einen aktuellen Code aus der Authenticator-App und landet im
+      Änderungsprotokoll.</p></div>
+    <div id="admin-area"></div>
+    <div class="card pad-lg" data-s="mt-md">
+      <h2>Änderungsprotokoll</h2>
+      <p class="small muted" data-s="mt-xs">Administrative Vorgänge mit
+      Zeitpunkt, altem und neuem Wert. Nur lesbar.</p>
+      <a class="btn link-plain" href="#/protokoll" data-s="mt-md">Protokoll öffnen</a>
+    </div>
+    ${pageFoot()}`;
+  renderAdmin();
+}
+
+let profilGruppe = "konto";
+
 async function viewProfile() {
-  const [p, settings, recovery] = await Promise.all([
+  const [p, settings, recovery, o] = await Promise.all([
     api("/api/profile"), api("/api/settings"), api("/api/auth/recovery/status"),
+    api("/api/overview"),
   ]);
   const prof = p.profile || {};
+  const initialen = ((prof.first_name || p.username || "?").slice(0, 1)
+    + (prof.last_name || "").slice(0, 1)).toUpperCase();
+  const anzeigename = [prof.first_name, prof.last_name]
+    .filter(Boolean).join(" ") || p.username;
 
   app().innerHTML = `
-    <div class="page-head"><h1>Profil &amp; Einstellungen</h1></div>
+    <div class="profile-head">
+      <span class="avatar-ring" aria-hidden="true">
+        ${markSvg("ring")}<span class="ini">${esc(initialen)}</span>
+      </span>
+      <div class="who">
+        <h1>${esc(anzeigename)}</h1>
+        <div class="row wrap" data-s="mt-xs gap-sm">
+          ${prof.qualification ? `<span class="chip static">${esc(prof.qualification)}</span>` : ""}
+          ${prof.specialty ? `<span class="chip static">${esc(prof.specialty)}</span>` : ""}
+        </div>
+      </div>
+    </div>
+    <div class="stats-row" role="group" aria-label="Kennzahlen">
+      <div class="stat"><strong>${o.encounters}</strong><span>Einsätze</span></div>
+      <div class="stat"><strong>${o.attempts}</strong><span>Maßnahmen</span></div>
+      <div class="stat"><strong>${o.medications}</strong><span>Medikamente</span></div>
+      <div class="stat"><strong>${o.complications}</strong><span>ZEK</span></div>
+    </div>
+
+    <div class="seg" role="tablist" aria-label="Profilbereiche" id="prof-seg">
+      <button class="seg-item" role="tab" data-gruppe="konto">Konto</button>
+      <button class="seg-item" role="tab" data-gruppe="sicherheit">Sicherheit</button>
+      <button class="seg-item" role="tab" data-gruppe="erfassung">Erfassung</button>
+      <button class="seg-item" role="tab" data-gruppe="daten">Daten</button>
+    </div>
 
     <div class="card pad-lg">
       <h2>Anmeldedaten</h2>
@@ -2519,8 +2557,6 @@ async function viewProfile() {
       Zwei-Faktor-Geheimnis sind nicht enthalten: sie sind keine Auskunft,
       und ein Export in falschen Händen wäre sonst ein Kontozugriff.</p>
     </div>
-
-    <div id="admin-area"></div>
 
     <button class="btn-quiet btn-lg" id="logout" data-s="mt-lg">Abmelden</button>
 
@@ -2742,7 +2778,33 @@ async function viewProfile() {
   });
 
   renderPasskeys();
-  if ((state.auth.user.role || "user") === "admin") renderAdmin();
+
+  /* Die Karten tragen ihre Gruppe nach Überschrift, nicht nach Position:
+     eine eingeschobene Karte sortiert sich über ihre Überschrift richtig
+     ein, statt alle Nachbarn zu verschieben. */
+  const zuordnung = {
+    "Anmeldedaten": "konto", "Profil": "konto",
+    "Sicherheit": "sicherheit", "Passkeys": "sicherheit",
+    "Vertraute Geräte": "sicherheit",
+    "Erfassung": "erfassung", "Stammdaten": "erfassung",
+    "Rechtliche Angaben": "erfassung",
+    "Backup": "daten", "Änderungsprotokoll": "daten", "Deine Daten": "daten",
+  };
+  app().querySelectorAll(".card > h2").forEach((h) => {
+    const gruppe = zuordnung[h.textContent.trim()];
+    if (gruppe) h.closest(".card").dataset.gruppe = gruppe;
+  });
+  const seg = $("#prof-seg");
+  function zeigeGruppe(gruppe) {
+    profilGruppe = gruppe;
+    app().dataset.profilGruppe = gruppe;
+    seg.querySelectorAll(".seg-item").forEach((b) => {
+      b.setAttribute("aria-selected", b.dataset.gruppe === gruppe ? "true" : "false");
+    });
+  }
+  seg.querySelectorAll(".seg-item").forEach((b) =>
+    b.addEventListener("click", () => zeigeGruppe(b.dataset.gruppe)));
+  zeigeGruppe(profilGruppe);
 
   $("#my-data").addEventListener("click", () => {
     location.href = "/api/exports/my-data";
