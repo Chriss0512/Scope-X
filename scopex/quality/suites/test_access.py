@@ -11,6 +11,10 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.security import _hash_password_scrypt, _totp_at, verify_password
 
+# Haengt den Arbeitsnachweis an die geschuetzten Endpunkte. Muss vor
+# dem ersten TestClient-Aufruf stehen.
+from quality import nachweis  # noqa: F401,E402
+
 
 def check(n, cond, extra=""):
     print(("  OK   " if cond else "  FAIL ") + n + (" :: " + str(extra) if not cond else ""))
@@ -139,7 +143,14 @@ r = user.get("/api/overview")
 check("Sitzung des gesperrten Kontos sofort beendet", r.status_code == 401, r.status_code)
 r = user.post("/api/auth/login", json={"username": "kollege",
     "password": "einsatzprotokoll2026", "totp_code": code(usec)})
-check("Gesperrtes Konto kann sich nicht anmelden", r.status_code == 403, r.status_code)
+# 401 und nicht 403: nach außen sieht eine Stilllegung aus wie ein
+# falsches Passwort. Ein eigener Statuscode hätte einem Fremden bestätigt,
+# dass es dieses Konto gibt — und dass es sich lohnt, es im Auge zu
+# behalten. Der wirkliche Grund steht im Änderungsprotokoll.
+check("Gesperrtes Konto kann sich nicht anmelden", r.status_code == 401, r.status_code)
+check("Stilllegung ist von falschem Passwort nicht unterscheidbar",
+      r.json().get("detail") == "Benutzername, Passwort oder Code stimmt nicht.",
+      r.json())
 admin.patch(f"/api/admin/users/{st['user']['id']}",
             json={"disabled": False, "totp_code": code(sec)})
 

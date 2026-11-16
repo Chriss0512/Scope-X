@@ -1,12 +1,43 @@
 """Querschnittsfunktionen: Anmeldung, Einstellungen, Audit, Sperrfrist."""
 from __future__ import annotations
 
+import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 
 from .db import conn, new_id, now_iso, q, row
 from .security import SESSION_COOKIE, resolve_session
+
+log = logging.getLogger("scopex")
+
+# --------------------------------------------------------------------------
+# Basis-Adresse
+# --------------------------------------------------------------------------
+
+
+def base_url() -> str:
+    """Liefert die oeffentliche Adresse der Anwendung, normalisiert.
+
+    Eine Adresse ohne Schema ist der haeufigste Konfigurationsfehler, und
+    er faellt nicht auf: 'scopex.example.de' ergibt in urlparse weder
+    Schema noch Host. Passkeys scheitern dann mit 503 und die Links in
+    den Mails sind nicht anklickbar, ohne dass irgendwo ein Fehler steht.
+    Deshalb wird ein fehlendes Schema auf https ergaenzt statt den Wert
+    unbrauchbar weiterzugeben.
+
+    Leer bleibt leer: daraus etwas zu raten wuerde Passkeys erzeugen, die
+    an eine falsche Domain gebunden sind und sich nie wieder verwenden
+    lassen.
+    """
+    raw = os.environ.get("SCOPEX_BASE_URL", "").strip()
+    if not raw:
+        return ""
+    if "://" not in raw:
+        raw = f"https://{raw}"
+    return raw.rstrip("/")
+
 
 # --------------------------------------------------------------------------
 # Anmeldung

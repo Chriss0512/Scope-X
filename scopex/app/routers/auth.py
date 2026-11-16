@@ -1,13 +1,14 @@
 """Anmeldung und Zwei-Faktor-Authentifizierung."""
 from __future__ import annotations
 
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from .. import mailer
+from .. import gate, mailer
 from ..core import ROLE_LABELS, audit, current_user, optional_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..security import (
@@ -33,14 +34,93 @@ from ..security import (
     token_hash,
     totp_uri,
     trusted_device_valid,
+    verify_leerlauf,
     verify_password,
     verify_totp,
 )
 
+log = logging.getLogger("scopex.auth")
+
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# Nach außen gibt es genau eine Antwort auf jede misslungene Anmeldung.
+# Welcher Grund dahintersteckt — falsches Passwort, unbekanntes Konto,
+# laufende Abkühlung, gesperrtes oder stillgelegtes Konto — steht
+# ausschließlich im Änderungsprotokoll.
+ABWEISUNG = "Benutzername, Passwort oder Code stimmt nicht."
+
+# Ab dieser Zahl von Fehlversuchen geht eine Nachricht an den Besitzer.
+# Gesperrt wird das Konto dabei nicht, siehe _fehlversuch_merken.
 MAX_FAILED = 8
-LOCKOUT_MINUTES = 15
+
+
+def client_ip(request: Request) -> str | None:
+    """Die echte Gegenstelle.
+
+    Verlässlich ist das erst, seit uvicorn die Weiterleitungs-Header nur
+    noch Netzen aus `trusted_proxies` glaubt. Vorher durfte jeder Client
+    seine Herkunft selbst behaupten — eine Herkunftsprüfung darauf zu
+    stützen wäre sinnlos gewesen.
+    """
+    return request.client.host if request.client else None
+
+
+def _tor_oeffnen(request: Request, nachweis: dict | None,
+                 kennung: str = "") -> None:
+    """Herkunft, Drosselung und Rechenaufgabe, bevor etwas geprüft wird.
+
+    Die Reihenfolge ist Absicht: erst das Billigste, dann das Teuerste.
+    Eine abgewiesene Herkunft kostet einen Vergleich, kein Argon2.
+    """
+    adresse = client_ip(request)
+
+    if not gate.herkunft_erlaubt(adresse):
+        log.info("Anmeldeversuch aus nicht freigegebenem Netz abgewiesen: %s",
+                 adresse)
+        raise HTTPException(
+            403, "Aus diesem Netz sind keine Anmeldungen freigegeben.")
+
+    if not gate.fenster_frei(adresse):
+        raise HTTPException(
+            429, "Zu viele Anfragen. Bitte später erneut versuchen.")
+
+    nachweis = nachweis or {}
+    if not gate.pow_pruefen(nachweis.get("aufgabe", ""),
+                            nachweis.get("stufe", 0),
+                            nachweis.get("ablauf", 0),
+                            nachweis.get("siegel", ""),
+                            str(nachweis.get("loesung", ""))):
+        raise HTTPException(
+            400, "Die Sicherheitsprüfung ist abgelaufen. Bitte erneut "
+                 "versuchen.")
+
+
+def _melde_neues_geraet(user: dict, request: Request) -> None:
+    """Meldet eine gelungene Anmeldung von einem unbekannten Gerät.
+
+    Bisher wurde nur die Sperre gemeldet, also ausschließlich der
+    **gescheiterte** Angriff. Der gelungene blieb still. Diese Nachricht
+    nennt bewusst weder Adresse noch Ort: sie soll den Besitzer warnen,
+    nicht einem Angreifer bestätigen, welche Spur er hinterlässt.
+    """
+    if not user.get("email"):
+        return
+    try:
+        mailer.send(user["email"], "SCOPE X: Anmeldung von einem neuen Gerät",
+                    """\
+In deinem SCOPE-X-Konto hat sich gerade jemand von einem Gerät angemeldet,
+das bisher nicht als vertrauenswürdig hinterlegt war.
+
+Warst du das selbst, kannst du diese Nachricht übergehen.
+
+Warst du es nicht, ändere dein Passwort und entziehe im Profil allen
+Geräten das Vertrauen. Beides beendet sofort alle offenen Sitzungen.
+""")
+    except Exception as fehler:  # noqa: BLE001
+        # Ein stockender Mailversand darf eine gültige Anmeldung nicht
+        # scheitern lassen.
+        log.warning("Benachrichtigung über neues Gerät nicht zustellbar: %s",
+                    fehler)
 
 
 def _norm(value: str | None) -> str:
@@ -57,8 +137,17 @@ def find_login(c, identifier: str) -> dict | None:
 
 
 def _is_secure(request: Request) -> bool:
-    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip()
-    return (proto or request.url.scheme) == "https"
+    """Entscheidet ueber das Secure-Flag der Cookies.
+
+    Grundlage ist ausschliesslich request.url.scheme. uvicorn leitet das
+    aus X-Forwarded-Proto ab, aber nur fuer Gegenstellen aus
+    --forwarded-allow-ips. Den Header selbst zu lesen hiesse, die
+    Entscheidung dem Client zu ueberlassen: wer den Container direkt
+    erreicht, koennte das Secure-Flag nach Belieben setzen oder
+    unterdruecken, und ohne Flag kann ein Sitzungscookie ueber eine
+    unverschluesselte Verbindung zum selben Host abfliessen.
+    """
+    return request.url.scheme == "https"
 
 
 def _set_device_cookie(response: Response, request: Request, token: str) -> None:
@@ -86,6 +175,7 @@ class RegisterIn(BaseModel):
     last_name: str = ""
     qualification: str = ""
     invite_code: str | None = None
+    pow: dict | None = None
 
 
 def _find_invitation(c, code: str | None) -> dict | None:
@@ -106,6 +196,8 @@ class LoginIn(BaseModel):
     totp_code: str | None = None
     recovery_code: str | None = None
     remember_device: bool = False
+    # Die geloeste Rechenaufgabe aus GET /api/auth/challenge.
+    pow: dict | None = None
 
 
 class CodeIn(BaseModel):
@@ -151,6 +243,33 @@ def device_state(request: Request):
     return {"known": True, "username": u["username"]}
 
 
+@router.get("/challenge")
+def challenge(request: Request, kennung: str = ""):
+    """Gibt die Rechenaufgabe aus, die jede Anmeldung begleiten muss.
+
+    Die Schwierigkeit richtet sich nach den bisherigen Fehlversuchen des
+    angefragten Kontos. Dass hier eine Kennung übergeben wird, verrät
+    nichts: ein unbekanntes Konto bekommt dieselbe Grundstufe wie ein
+    bekanntes ohne Fehlversuche, und geantwortet wird immer.
+    """
+    adresse = client_ip(request)
+    if not gate.herkunft_erlaubt(adresse):
+        log.info("Aufgabe für nicht freigegebenes Netz verweigert: %s", adresse)
+        raise HTTPException(
+            403, "Aus diesem Netz sind keine Anmeldungen freigegeben.")
+    if not gate.fenster_frei(adresse):
+        raise HTTPException(
+            429, "Zu viele Anfragen. Bitte später erneut versuchen.")
+
+    fehlversuche = 0
+    if kennung:
+        with conn() as c:
+            user = find_login(c, kennung)
+        if user:
+            fehlversuche = user["failed_logins"] or 0
+    return gate.pow_aufgabe(gate.pow_stufe(fehlversuche))
+
+
 @router.get("/state")
 def auth_state(request: Request):
     with conn() as c:
@@ -176,7 +295,9 @@ def auth_state(request: Request):
 
 @router.post("/register")
 def register(data: RegisterIn, request: Request, response: Response):
-    problems = password_problems(data.password)
+    _tor_oeffnen(request, data.pow, kennung=_norm(data.username))
+    problems = password_problems(
+        data.password, kennungen=(data.username, data.email or ""))
     if problems:
         raise HTTPException(400, " ".join(problems))
     with conn() as c:
@@ -292,21 +413,64 @@ def recovery_status(request: Request):
     return {"total": total, "unused": unused}
 
 
+def _fehlversuch_merken(user: dict, adresse: str | None) -> dict:
+    """Bereitet den Fehlversuch auf und verlängert die Abkühlung.
+
+    Die Abkühlung bremst **diese Adresse** bei diesem Konto, exponentiell
+    bis fünfzehn Minuten. Sie ersetzt die frühere kontoweite Sperre nach
+    acht Fehlversuchen.
+
+    Warum die Sperre weichen musste: solange SCOPE X nur im eigenen Netz
+    erreichbar war, war sie harmlos. Aus dem offenen Netz ist eine Sperre,
+    die jeder Fremde mit acht falschen Passwörtern auslöst, keine
+    Schutzmaßnahme, sondern eine Waffe — ein Skript hätte alle Nutzer
+    dauerhaft aussperren können, mitten im Dienst. Eine Maßnahme, die der
+    Angreifer gegen den Besitzer richten kann, schützt niemanden.
+
+    Geblieben ist, was wirklich schützt: der Versuch wird teurer, und zwar
+    nur für den, der ihn unternimmt. Geblieben ist auch die
+    Benachrichtigung — der Besitzer erfährt weiterhin, dass jemand an
+    seinem Konto arbeitet.
+    """
+    failed = (user["failed_logins"] or 0) + 1
+    gate.abkuehlung_setzen(user["id"], adresse, failed)
+    return {"user_id": user["id"], "email": user["email"], "failed": failed,
+            # Benachrichtigt wird genau beim Überschreiten der Schwelle,
+            # nicht bei jedem weiteren Versuch. Sonst ließe sich über das
+            # Anmeldeformular ein fremdes Postfach fluten.
+            "notify": failed == MAX_FAILED}
+
+
+def _zaehle_fehlversuch(user: dict, adresse: str | None) -> None:
+    _register_failed_login(_fehlversuch_merken(user, adresse))
+
+
 def _register_failed_login(failure: dict) -> None:
-    """Schreibt den Fehlversuch in einer eigenen Transaktion und
-    benachrichtigt bei einer Sperre."""
+    """Schreibt den Fehlversuch in einer eigenen Transaktion.
+
+    Eigene Transaktion, weil der Zähler sonst zusammen mit der gleich
+    folgenden HTTPException zurückgerollt würde. Genau daran ist die
+    Kontosperre von Version 1.0.0 bis 3.0.0 wirkungslos geblieben.
+    """
     with conn() as c:
-        q(c, "UPDATE users SET failed_logins = :f, lock_until = :l WHERE id = :i",
-          f=failure["failed"], l=failure["lock_until"], i=failure["user_id"])
+        q(c, "UPDATE users SET failed_logins = :f WHERE id = :i",
+          f=failure["failed"], i=failure["user_id"])
         audit(c, failure["user_id"], "users", failure["user_id"],
-              "login_locked" if failure["lock_until"] else "login_failed")
+              "login_failed")
     if failure["notify"] and failure["email"]:
-        mailer.send(failure["email"], "SCOPE X: Konto vorübergehend gesperrt",
+        mailer.send(failure["email"], "SCOPE X: Fehlgeschlagene Anmeldeversuche",
             f"""\
 Für dein SCOPE-X-Konto wurden {MAX_FAILED} fehlgeschlagene Anmeldeversuche
-gezählt. Das Konto ist deshalb {LOCKOUT_MINUTES} Minuten gesperrt.
+gezählt.
 
-Warst du das selbst, warte einfach ab oder setze dein Passwort zurück.
+Dein Konto ist **nicht** gesperrt und bleibt von deinen eigenen Geräten
+aus normal benutzbar. Stattdessen wird jeder weitere Versuch von der
+Gegenstelle, die es probiert, zunehmend ausgebremst. Eine Sperre des
+Kontos selbst gibt es bewusst nicht: sie ließe sich von außen auslösen und
+würde dich aussperren, nicht den Angreifer.
+
+Warst du das selbst, melde dich einfach erneut an oder setze dein Passwort
+zurück.
 
 Warst du es nicht, kennt jemand deinen Benutzernamen oder deine
 E-Mail-Adresse. Dein Passwort und dein zweiter Faktor sind davon nicht
@@ -320,15 +484,37 @@ der Versuche.
 
 @router.post("/login")
 def login(data: LoginIn, request: Request, response: Response):
+    adresse = client_ip(request)
+    _tor_oeffnen(request, data.pow, kennung=_norm(data.username))
+
     failure = None
     with conn() as c:
         user = find_login(c, data.username)
         if not user:
-            raise HTTPException(401, "Benutzername, Passwort oder Code stimmt nicht.")
+            # Gleicher Aufwand wie bei einem vorhandenen Konto. Ohne diesen
+            # Leerlauf verriete allein die Antwortzeit, welche Namen und
+            # Adressen registriert sind.
+            verify_leerlauf(data.password)
+            raise HTTPException(401, ABWEISUNG)
+
+        # Abkühlung und Sperre gelten nach außen als dieselbe Abweisung wie
+        # ein falsches Passwort. Ein abweichender Statuscode hätte sonst
+        # verraten, dass es das Konto gibt — und obendrein, dass gerade
+        # jemand anderes daran arbeitet.
+        if gate.abkuehlung_rest(user["id"], adresse):
+            # Der Versuch wird trotzdem gezählt. Sonst käme ein langsamer
+            # Angreifer nie bis zur Warnschwelle, und der Besitzer erführe
+            # von einem Angriff gar nichts — gezählt wird hier nur, das
+            # teure Argon2 bleibt ausgespart.
+            verify_leerlauf(data.password)
+            _zaehle_fehlversuch(user, adresse)
+            raise HTTPException(401, ABWEISUNG)
         if user["lock_until"] and user["lock_until"] > now_iso():
-            raise HTTPException(429, "Zu viele Fehlversuche. Später erneut versuchen.")
+            verify_leerlauf(data.password)
+            raise HTTPException(401, ABWEISUNG)
         if user.get("disabled_at"):
-            raise HTTPException(403, "Dieses Konto ist gesperrt.")
+            verify_leerlauf(data.password)
+            raise HTTPException(401, ABWEISUNG)
 
         ok = verify_password(data.password, user["password_hash"])
         totp = row(c, "SELECT * FROM auth_totp WHERE user_id = :u", u=user["id"])
@@ -350,21 +536,7 @@ def login(data: LoginIn, request: Request, response: Response):
             # werden, in der anschließend eine HTTPException fliegt: die
             # Exception rollt die Transaktion zurück und die Sperre käme nie
             # zustande. Deshalb hier nur merken, geschrieben wird außerhalb.
-            failed = (user["failed_logins"] or 0) + 1
-            lock_until = None
-            notify = False
-            if failed >= MAX_FAILED:
-                lock_until = (datetime.now(timezone.utc)
-                              + timedelta(minutes=LOCKOUT_MINUTES)
-                              ).replace(microsecond=0).isoformat()
-                failed = 0
-                # Benachrichtigt wird erst bei der Sperre, nicht bei jedem
-                # Fehlversuch. Sonst ließe sich über das Anmeldeformular ein
-                # fremdes Postfach fluten.
-                notify = True
-            failure = {"user_id": user["id"], "email": user["email"],
-                       "failed": failed, "lock_until": lock_until,
-                       "notify": notify}
+            failure = _fehlversuch_merken(user, adresse)
         else:
             # Bestehende scrypt-Hashes werden hier still auf Argon2id gehoben.
             if needs_rehash(user["password_hash"]):
@@ -378,14 +550,17 @@ def login(data: LoginIn, request: Request, response: Response):
 
     if failure:
         _register_failed_login(failure)
-        raise HTTPException(401, "Benutzername, Passwort oder Code stimmt nicht.")
+        raise HTTPException(401, ABWEISUNG)
 
+    gate.abkuehlung_loeschen(user["id"], adresse)
     token = create_session(user["id"])
     _set_cookie(response, request, token)
     if data.remember_device and totp_confirmed and not device_known:
         label = (request.headers.get("user-agent") or "")[:80]
         _set_device_cookie(response, request,
                            create_trusted_device(user["id"], label))
+    if not device_known:
+        _melde_neues_geraet(user, request)
     return {"ok": True, "totp_confirmed": totp_confirmed,
             "device_known": device_known}
 
@@ -435,7 +610,9 @@ class PasswordChangeIn(BaseModel):
 @router.post("/password")
 def change_password(data: PasswordChangeIn, request: Request):
     user = current_user(request)
-    problems = password_problems(data.new_password)
+    problems = password_problems(
+        data.new_password,
+        kennungen=(user["username"], user.get("email") or ""))
     if problems:
         raise HTTPException(400, " ".join(problems))
     with conn() as c:
@@ -496,6 +673,7 @@ RESET_MINUTES = 30
 
 class ResetRequestIn(BaseModel):
     identifier: str
+    pow: dict | None = None
 
 
 class ResetConfirmIn(BaseModel):
@@ -513,7 +691,8 @@ def request_reset(data: ResetRequestIn, request: Request):
     ließe sich über dieses Formular herausfinden, welche Adressen registriert
     sind.
     """
-    ip_hash = hash_ip(request.client.host if request.client else None)
+    _tor_oeffnen(request, data.pow, kennung=_norm(data.identifier))
+    ip_hash = hash_ip(client_ip(request))
     with conn() as c:
         user = find_login(c, data.identifier)
         if user and user["email"] and not user.get("disabled_at"):
@@ -541,9 +720,6 @@ def request_reset(data: ResetRequestIn, request: Request):
 
 @router.post("/password-reset/confirm")
 def confirm_reset(data: ResetConfirmIn, request: Request):
-    problems = password_problems(data.new_password)
-    if problems:
-        raise HTTPException(400, " ".join(problems))
     with conn() as c:
         rec = row(c, "SELECT * FROM password_resets WHERE token_hash = :h",
                   h=token_hash(data.token))
@@ -552,6 +728,15 @@ def confirm_reset(data: ResetConfirmIn, request: Request):
         user = row(c, "SELECT * FROM users WHERE id = :u", u=rec["user_id"])
         if not user or user.get("disabled_at"):
             raise HTTPException(400, "Dieser Link ist ungültig oder abgelaufen.")
+
+        # Erst hier, weil die Pruefung den Benutzernamen braucht: ein
+        # Passwort, das den eigenen Namen enthaelt, ist fuer jemanden,
+        # der ihn kennt, kein Passwort.
+        problems = password_problems(
+            data.new_password,
+            kennungen=(user["username"], user.get("email") or ""))
+        if problems:
+            raise HTTPException(400, " ".join(problems))
 
         t = row(c, "SELECT * FROM auth_totp WHERE user_id = :u", u=user["id"])
         if t and t["confirmed_at"]:
@@ -577,4 +762,8 @@ def confirm_reset(data: ResetConfirmIn, request: Request):
     # Nach einer Zurücksetzung gilt kein Gerät mehr als vertrauenswürdig.
     destroy_all_sessions(user["id"])
     forget_all_devices(user["id"])
+    # Und die Abkühlung fällt weg. Sonst bliebe genau die Person draußen,
+    # die ein Fremder mit Fehlversuchen ausgebremst hat — also der Fall,
+    # für den die Zurücksetzung gedacht ist.
+    gate.abkuehlung_konto_freigeben(user["id"])
     return {"ok": True}

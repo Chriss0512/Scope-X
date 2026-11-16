@@ -48,6 +48,113 @@ async function api(path, options = {}) {
   return data;
 }
 
+/* --------------------------------------------------------------------
+   Arbeitsnachweis
+   --------------------------------------------------------------------
+   Anmeldung, Registrierung und Passwort-Zurücksetzung tragen eine kleine
+   Rechenaufgabe: finde eine Zahl, deren SHA-256 mit genug Nullbits
+   beginnt. Für einen Menschen sind das Millisekunden, für ein Skript,
+   das Passwörter durchprobiert, vervielfacht es die Kosten.
+
+   SHA-256 steht hier ausgeschrieben, weil crypto.subtle.digest nur
+   asynchron arbeitet. In einer Suchschleife mit zehntausenden Versuchen
+   kostet der Promise-Umweg ein Vielfaches der Rechnung selbst. Die
+   Umsetzung ist gegen die Standardbibliothek von Python geprüft,
+   einschließlich der Blockgrenzen bei 55, 56 und 64 Byte.
+   -------------------------------------------------------------------- */
+const SHA_K = new Uint32Array([
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+  0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+  0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+  0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+  0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+  0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+  0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+  0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+  0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]);
+const SHA_W = new Uint32Array(64);
+
+function sha256(bytes) {
+  const len = bytes.length;
+  const gepolstert = (((len + 9) + 63) >> 6) << 6;
+  const m = new Uint8Array(gepolstert);
+  m.set(bytes);
+  m[len] = 0x80;
+  const dv = new DataView(m.buffer);
+  dv.setUint32(gepolstert - 4, (len * 8) >>> 0, false);
+  dv.setUint32(gepolstert - 8, Math.floor(len * 8 / 4294967296), false);
+  let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+  let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+  const w = SHA_W;
+  for (let i = 0; i < gepolstert; i += 64) {
+    for (let t = 0; t < 16; t++) w[t] = dv.getUint32(i + t * 4, false);
+    for (let t = 16; t < 64; t++) {
+      const x = w[t - 15], y = w[t - 2];
+      const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+    }
+    let a = h0, b = h1, c = h2, d = h3, e = h4, f = h5, g = h6, h = h7;
+    for (let t = 0; t < 64; t++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + SHA_K[t] + w[t]) >>> 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0;
+      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    h0 = (h0 + a) >>> 0; h1 = (h1 + b) >>> 0; h2 = (h2 + c) >>> 0; h3 = (h3 + d) >>> 0;
+    h4 = (h4 + e) >>> 0; h5 = (h5 + f) >>> 0; h6 = (h6 + g) >>> 0; h7 = (h7 + h) >>> 0;
+  }
+  const out = new Uint8Array(32);
+  const odv = new DataView(out.buffer);
+  const hs = [h0, h1, h2, h3, h4, h5, h6, h7];
+  for (let i = 0; i < 8; i++) odv.setUint32(i * 4, hs[i], false);
+  return out;
+}
+
+function fuehrendeNullbits(bytes) {
+  let n = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    if (b === 0) { n += 8; continue; }
+    n += 8 - (32 - Math.clz32(b));
+    break;
+  }
+  return n;
+}
+
+/* Holt eine Aufgabe und löst sie. Die Schleife gibt zwischendurch den
+   Hauptfaden frei, damit die Oberfläche nicht einfriert — auf einem
+   älteren Telefon dauert die höchste Stufe rund eine Sekunde. */
+async function arbeitsnachweis(kennung) {
+  const aufgabe = await api("/api/auth/challenge?kennung="
+                            + encodeURIComponent(kennung || ""));
+  const kodierer = new TextEncoder();
+  const kopf = kodierer.encode(aufgabe.aufgabe + ":");
+  const puffer = new Uint8Array(kopf.length + 24);
+  puffer.set(kopf);
+  let n = 0;
+  let letzteAtempause = Date.now();
+  for (;;) {
+    const ziffern = String(n);
+    for (let i = 0; i < ziffern.length; i++) {
+      puffer[kopf.length + i] = ziffern.charCodeAt(i);
+    }
+    const sicht = puffer.subarray(0, kopf.length + ziffern.length);
+    if (fuehrendeNullbits(sha256(sicht)) >= aufgabe.stufe) {
+      return { ...aufgabe, loesung: ziffern };
+    }
+    n++;
+    if ((n & 8191) === 0 && Date.now() - letzteAtempause > 120) {
+      await new Promise((r) => setTimeout(r, 0));
+      letzteAtempause = Date.now();
+    }
+  }
+}
+
 let toastTimer = null;
 function toast(message) {
   const root = document.getElementById("toast-root");
@@ -321,6 +428,7 @@ function authShell(title, inner) {
 
 function viewLogin() {
   authShell("Anmelden", `
+    <div id="passkey-login"></div>
     <form id="login-form" class="stack">
       <div class="field"><label for="lu">Benutzername oder E-Mail-Adresse</label>
         <input id="lu" name="username" autocomplete="username"
@@ -335,11 +443,10 @@ function viewLogin() {
       <div class="row gap-md align-start" data-s="gap-md align-start">
         <input id="remember" type="checkbox" data-s="checkbox">
         <label for="remember" data-s="m-0">Auf diesem Gerät merken
-          <span class="muted">– dann entfällt der Code für 90 Tage. Nicht auf
+          <span class="muted">– dann entfällt der Code für 30 Tage. Nicht auf
           fremden oder geteilten Geräten verwenden.</span></label>
       </div>
       <button class="btn-primary btn-lg" type="submit">Anmelden</button>
-      <div id="passkey-login"></div>
       <button class="btn-quiet small" type="button" id="use-recovery">Stattdessen Wiederherstellungscode verwenden</button>
       <a class="btn-quiet small link-plain" href="#/passwort-vergessen"
          data-s="center link-plain">Passwort vergessen</a>
@@ -360,11 +467,18 @@ function viewLogin() {
   }).catch(() => $("#totp-field").classList.remove("hidden"));
 
   if (passkeysSupported()) {
+    /* Passkeys stehen oben, weil sie der einzige Weg sind, der sich
+       weder abfischen noch durchprobieren lässt: der Schlüssel verlässt
+       das Gerät nie und ist an genau diese Domain gebunden. Das Passwort
+       bleibt darunter als zweiter Weg erhalten. */
     $("#passkey-login").innerHTML = `
-      <button type="button" class="btn-lg" id="pk-login" data-s="mt-sm">
+      <button type="button" class="btn-primary btn-lg" id="pk-login">
         Mit Passkey anmelden</button>
       <p class="tiny muted" data-s="mt-xs center">Entsperrt über Face ID,
-      Touch ID, Windows Hello oder die Geräte-PIN. Ersetzt Passwort und Code.</p>`;
+      Touch ID, Windows Hello oder die Geräte-PIN. Ersetzt Passwort und Code.</p>
+      <p class="tiny muted" data-s="mt-md center">oder mit Passwort</p>`;
+    $("#login-form").querySelector("button[type=submit]")
+      .classList.replace("btn-primary", "btn-lg");
     $("#pk-login").addEventListener("click", async () => {
       try {
         await passkeyLogin();
@@ -394,6 +508,17 @@ function viewLogin() {
     const fd = new FormData(e.target);
     const code = String(fd.get("totp_code") || "").trim();
     try {
+      const knopf = e.target.querySelector("button[type=submit]");
+      const beschriftung = knopf.textContent;
+      knopf.disabled = true;
+      knopf.textContent = "Wird geprüft …";
+      let nachweis;
+      try {
+        nachweis = await arbeitsnachweis(fd.get("username"));
+      } finally {
+        knopf.disabled = false;
+        knopf.textContent = beschriftung;
+      }
       await api("/api/auth/login", {
         method: "POST",
         body: {
@@ -402,6 +527,7 @@ function viewLogin() {
           totp_code: recoveryMode ? null : code,
           recovery_code: recoveryMode ? code : null,
           remember_device: $("#remember").checked,
+          pow: nachweis,
         },
       });
       await boot();
@@ -471,6 +597,7 @@ function viewRegister(inviteCode, invite) {
     const fd = Object.fromEntries(new FormData(e.target));
     if (inviteCode) fd.invite_code = inviteCode;
     try {
+      fd.pow = await arbeitsnachweis(fd.username);
       const res = await api("/api/auth/register", { method: "POST", body: fd });
       viewTotpSetup(res.totp);
     } catch (err) { $("#reg-error").textContent = err.message; }
@@ -540,7 +667,9 @@ function viewForgotPassword() {
   $("#fp-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     await api("/api/auth/password-reset/request", {
-      method: "POST", body: { identifier: $("#fpi").value } });
+      method: "POST",
+      body: { identifier: $("#fpi").value,
+              pow: await arbeitsnachweis($("#fpi").value) } });
     /* Die Antwort ist immer gleich. Sonst ließe sich über dieses Formular
        herausfinden, welche Adressen registriert sind. */
     $("#fp-form").innerHTML = `<div class="notice">Wenn zu dieser Angabe ein

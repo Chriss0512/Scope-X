@@ -67,19 +67,37 @@ Neuer **Proxy Host**, Reiter *Details*:
 |---|---|
 | Domain Names | `scopex.deine-domain.de` (vollqualifiziert, kein bloßes `scopex`) |
 | Scheme | `http` |
-| Forward Hostname / IP | `local-scopex` |
+| Forward Hostname / IP | Hostname des Containers, siehe unten |
 | Forward Port | `8099` |
 | Access List | eigene Liste, nicht „Publicly Accessible" |
 | Websockets Support | an |
 | Block Common Exploits | an |
 
-`local-scopex` ist der Container des Add-ons. Nicht `homeassistant` eintragen,
-das ist der Home-Assistant-Core-Container, dort lauscht auf 8099 nichts. Den
-tatsächlichen Hostnamen bestätigt das Terminal-Add-on:
+Der Hostname richtet sich danach, woher das Add-on installiert wurde. Bei
+einer lokalen Installation aus `/addons/scopex` lautet er `local-scopex`,
+bei der Installation über dieses Repository trägt er das Repository-Präfix,
+etwa `1e724329-scopex`. Nicht `homeassistant` eintragen, das ist der
+Home-Assistant-Core-Container, dort lauscht auf 8099 nichts. Den
+tatsächlichen Wert nennt das Terminal-Add-on, mit dem eigenen Slug aus der
+Add-on-Übersicht:
 
 ```sh
-ha addons info local_scopex | grep -i hostname
+ha addons info <slug> | grep -i hostname
 ```
+
+**Host-IP statt Hostname.** Port 8099 ist auf dem Host veröffentlicht, NPM
+erreicht SCOPE X also auch über die HA-IP. Das funktioniert, hat aber einen
+Preis: über denselben Port erreicht jedes Gerät im LAN die Anwendung direkt,
+unverschlüsselt und an NPM vorbei — Access List, *Block Common Exploits* und
+*Force SSL* greifen auf diesem Weg nicht. Wer das nicht will, trägt in NPM
+den Container-Hostnamen ein und leert anschließend im Add-on unter
+*Netzwerk* das Feld für Port 8099. **In dieser Reihenfolge**, sonst ist die
+Seite bis zur Korrektur nicht erreichbar.
+
+Unabhängig davon glaubt SCOPE X die Weiterleitungs-Header nur noch den
+Netzen aus der Option `trusted_proxies`, Vorgabe `172.30.32.0/23`. Ein
+Gerät, das den Host-Port direkt anspricht, fällt nicht darunter: seine
+Header werden verworfen und seine echte Adresse protokolliert.
 
 Reiter *SSL*: Zertifikat anfordern, dazu **Force SSL**, **HTTP/2 Support** und
 **HSTS Enabled**.
@@ -119,9 +137,95 @@ trotzdem einen echten Namen. Mit einer Domain bei Cloudflare geht das über
 erreichbar sein muss. Dazu in NPM eine *Access List* mit deinem LAN und dem
 Tailscale-Bereich anlegen und dem Proxy Host zuweisen.
 
+## 3a. Anmeldung und Herkunft
+
+SCOPE X ist auf den Betrieb im offenen Netz ausgelegt, ohne Access List
+im Reverse Proxy. Die gesamte Last trägt deshalb der Anmeldeweg, und der
+ist in vier Schichten gestaffelt. Jede Anfrage durchläuft sie in dieser
+Reihenfolge, vom Billigsten zum Teuersten:
+
+1. **Herkunft.** Option `laenderfilter`, Vorgabe `europa`: die 27
+   EU-Staaten, die EFTA, das Vereinigte Königreich mit den
+   Kronbesitzungen, die europäischen Kleinstaaten sowie Gibraltar,
+   Färöer, Grönland und Åland. Nicht enthalten sind Russland und
+   Belarus, der Balkan außerhalb der EU, die Ukraine, Moldau und die
+   Türkei. Grundlage ist eine Netzliste im Image, erzeugt aus den
+   Delegationsdateien von RIPE NCC und ARIN. Zur Laufzeit wird nichts
+   nachgeladen.
+2. **Drosselung.** Höchstens 30 Anmeldeanfragen je Adresse in zehn
+   Minuten, einstellbar über `anfragen_je_fenster`.
+3. **Rechenaufgabe.** Ein Arbeitsnachweis, dessen Schwierigkeit mit den
+   Fehlversuchen des Kontos wächst.
+4. **Abkühlung je Adresse.** Nach Fehlversuchen wird genau die Adresse
+   ausgebremst, die sie verursacht hat, exponentiell bis fünfzehn
+   Minuten.
+
+**Im Urlaub außerhalb Europas.** Trage das Netz deines Aufenthaltsorts
+unter `zusatznetze` ein (CIDR, mehrere mit Komma) oder setze
+`laenderfilter` vorübergehend auf `aus`. Welche Adresse abgewiesen wurde,
+steht im Add-on-Protokoll — die Zeile nennt sie im Klartext, damit die
+Korrektur eine Minute dauert und nicht einen Abend.
+
+**Keine automatische Kontosperre.** Acht falsche Passwörter sperren das
+Konto *nicht*. Eine kontoweite Sperre wäre aus dem offenen Netz eine
+Waffe gegen den Besitzer: ein Fremder könnte jeden Nutzer nach Belieben
+aussperren, mitten im Dienst. Gebremst wird deshalb die Adresse, nicht
+das Konto. Ab acht Fehlversuchen geht eine Nachricht an den Besitzer,
+damit er von dem Angriff überhaupt erfährt. Eine Sperre von Hand bleibt
+über die Verwaltung und das Wiederherstellungswerkzeug möglich.
+
+## 3b. Wenn niemand mehr hereinkommt
+
+Wer Authenticator **und** Wiederherstellungscodes verliert, kommt nicht
+mehr in sein Konto — auch „Passwort vergessen" hilft nicht, denn auch die
+Zurücksetzung verlangt den zweiten Faktor. Dafür gibt es ein Werkzeug auf
+dem Server. Im Terminal-Add-on:
+
+```sh
+docker exec -it addon_<slug>_scopex python -m app.wiederherstellung --liste
+
+docker exec -it addon_<slug>_scopex \
+    python -m app.wiederherstellung --konto chris --totp-zuruecksetzen
+
+docker exec -it addon_<slug>_scopex \
+    python -m app.wiederherstellung --konto chris --entsperren --passwort
+```
+
+Den Slug zeigt `ha addons info` oder die Add-on-Übersicht. Das
+Terminal-Add-on braucht dafür den unprotected mode, weil `docker` sonst
+nicht verfügbar ist.
+
+Jeder Eingriff landet im Änderungsprotokoll, und nach einem Eingriff in
+die Anmeldedaten werden alle Sitzungen beendet und alle Geräte vergessen.
+
+Bewusst gibt es **keinen** Notzugang über das Netz. Ein Endpunkt, der den
+zweiten Faktor aushebeln kann, wäre auf einem öffentlich erreichbaren
+Dienst genau die Hintertür, gegen die der ganze Rest gebaut ist.
+
+## 3c. Betriebsüberwachung
+
+`/api/health` antwortet ohne Anmeldung mit Status und Version und verrät
+nichts über den Datenbestand. Als Sensor in `configuration.yaml`:
+
+```yaml
+binary_sensor:
+  - platform: rest
+    name: SCOPE X erreichbar
+    resource: http://<HA-IP>:8099/api/health
+    value_template: "{{ value_json.status == 'ok' }}"
+    scan_interval: 300
+```
+
 ## 4. Erste Anmeldung
 
-Beim ersten Aufruf legst du das Konto an. Anmelden kannst du dich danach
+Beim ersten Aufruf legst du das Konto an. Danach steht die
+**Passkey-Anmeldung** an erster Stelle: Face ID, Touch ID, Windows Hello
+oder die Geräte-PIN, ohne Passwort und ohne Code. Sie ist der einzige Weg,
+der sich weder abfischen noch durchprobieren lässt, weil der Schlüssel das
+Gerät nie verlässt und an genau diese Domain gebunden ist. Dafür muss
+`base_url` vollständig mit `https://` eingetragen sein.
+
+Das Passwort bleibt als zweiter Weg. Anmelden kannst du dich damit
 wahlweise mit dem Benutzernamen oder, falls hinterlegt, mit der
 E-Mail-Adresse. Groß- und Kleinschreibung spielt dabei keine Rolle. Beide
 Angaben stehen jederzeit unter Profil und Einstellungen im Abschnitt
@@ -220,8 +324,8 @@ deines Arbeitgebers.
 ## 10. Technische Eckpunkte
 
 Python 3.12, FastAPI, SQLite über SQLAlchemy Core, Frontend ohne Framework
-und ohne Build-Schritt. Passwort-Hashing mit `hashlib.scrypt` aus der
-Standardbibliothek, TOTP nach RFC 6238 selbst implementiert, QR-Codes über
+und ohne Build-Schritt. Kein Node, kein npm, keine `package.json`.
+Passwort-Hashing mit Argon2id, Altbestand aus `hashlib.scrypt`, TOTP nach RFC 6238 selbst implementiert, QR-Codes über
 `segno`, PDF über `fpdf2`. Zur Laufzeit gibt es keine externen Aufrufe: die
 Content-Security-Policy erlaubt ausschließlich `'self'`, es gibt kein CDN,
 kein Tracking, keine Telemetrie.

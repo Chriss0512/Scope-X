@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import mailer
+from .. import gate, mailer
 from ..core import (
     ROLE_LABELS,
     ROLES,
@@ -124,6 +124,15 @@ def update_user(user_id: str, data: UserPatch, admin=Depends(require_admin)):
             if bool(target.get("disabled_at")) != data.disabled:
                 q(c, "UPDATE users SET disabled_at = :d WHERE id = :i",
                   d=stamp, i=user_id)
+                if not data.disabled:
+                    # Wer ein Konto wieder freigibt, erwartet, dass es
+                    # danach auch benutzbar ist. Fehlversuchszähler,
+                    # Sperrfrist und Abkühlung gehören deshalb mit
+                    # zurückgesetzt, sonst bleibt die Person trotz
+                    # Freigabe ausgesperrt.
+                    q(c, "UPDATE users SET failed_logins = 0, "
+                         "lock_until = NULL WHERE id = :i", i=user_id)
+                    gate.abkuehlung_konto_freigeben(user_id)
                 audit(c, admin["id"], "users", user_id,
                       "disable" if data.disabled else "enable")
         updated = row(c, "SELECT * FROM users WHERE id = :i", i=user_id)

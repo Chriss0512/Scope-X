@@ -16,7 +16,6 @@ Proxy Manager mit Zertifikat ist das erfüllt.
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
@@ -37,7 +36,7 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
-from ..core import audit, current_user
+from ..core import audit, base_url, current_user
 from ..db import conn, new_id, now_iso, q, row, rows
 from ..security import SESSION_COOKIE, create_session
 
@@ -54,7 +53,7 @@ def relying_party() -> tuple[str, str, str]:
     Wert würde Schlüssel erzeugen, die sich später nicht mehr verwenden
     lassen.
     """
-    base = os.environ.get("SCOPEX_BASE_URL", "").strip().rstrip("/")
+    base = base_url()
     if not base:
         raise HTTPException(
             503, "Für Passkeys muss in der Add-on-Konfiguration eine "
@@ -65,6 +64,21 @@ def relying_party() -> tuple[str, str, str]:
             503, "Passkeys setzen HTTPS voraus. Richte im Reverse Proxy ein "
                  "Zertifikat ein.")
     return parsed.hostname, base, "SCOPE X"
+
+
+def passkeys_available() -> bool:
+    """Sagt, ob Passkeys wirklich nutzbar sind.
+
+    Frueher meldete die Oberflaeche 'verfuegbar', sobald die Variable
+    irgendeinen Wert hatte, waehrend der eigentliche Endpunkt mit 503
+    ablehnte. Der Ausfall war dadurch unsichtbar. Diese Funktion stellt
+    genau dieselbe Pruefung an wie der Endpunkt.
+    """
+    try:
+        relying_party()
+    except HTTPException:
+        return False
+    return True
 
 
 def _store_challenge(user_id: str | None, kind: str, challenge: bytes,
@@ -249,7 +263,7 @@ def list_passkeys(request: Request):
         items = rows(c, "SELECT id, label, created_at, last_used_at "
                         "FROM passkeys WHERE user_id = :u ORDER BY created_at",
                      u=user["id"])
-    return {"passkeys": items, "available": bool(os.environ.get("SCOPEX_BASE_URL"))}
+    return {"passkeys": items, "available": passkeys_available()}
 
 
 @router.delete("/{passkey_id}")

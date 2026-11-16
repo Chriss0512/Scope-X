@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 10.09.2026 um 08:23 Uhr für SCOPE X.
+Erzeugt am 16.11.2026 um 12:11 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 208 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 251 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | JS 137 KB, CSS 34 KB, Schrift 343 KB, gesamt 515 KB von 700 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | JS 143 KB, CSS 34 KB, Schrift 343 KB, gesamt 521 KB von 700 KB |
 
 ## Compatibility
 
@@ -60,16 +60,16 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 80.5 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.1.0, 7 Fassungen dokumentiert |
-| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 63 Pfade, 0 neu, Sicherungsformat 1 |
+| Testabdeckung mindestens 70 Prozent | bestanden | 78.6 Prozent |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.2.0, 8 Fassungen dokumentiert |
+| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 64 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.1.0, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.2.0, Änderungsprotokoll vorhanden |
 
 ## Safety
 
