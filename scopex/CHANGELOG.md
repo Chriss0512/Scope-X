@@ -3,6 +3,45 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.3.0
+
+MINOR: deutliche Erweiterung der Oberfläche ohne Änderung an Endpunkten,
+Sicherungsformat oder Migrationspfad. Keine Migration, keine neuen
+Optionen. Die Oberfläche gehört laut `VERSIONIERUNG.md` nicht zur
+öffentlichen Schnittstelle; ein Umbau dieser Größe ist dennoch mehr als
+ein PATCH, weil sich die Bedienung spürbar ändert.
+
+**Neuer Aufbau.** Struktur nach dem Feed-Muster, Ruhe und Kacheln nach
+dem Vorbild von Notfallguru, Hierarchie, Tiefe und konzentrische Radien
+nach den Apple-Prinzipien — bei unveränderter SCOPE-X-Farbwelt. Die
+Herkunft der Prinzipien und alle Werte stehen in der neuen `DESIGN.md`.
+
+- **Tab-Leiste**: Einsätze · Auswertung · **Neu** (mittig als angehobene
+  Scheibe, beginnt die Dokumentation von jeder Seite aus) · Profil ·
+  Verwaltung. Der Verwaltungspunkt existiert nur für Administrator*innen.
+- **Einsätze-Feed** als Startseite: jeder Einsatz eine Beitragskarte mit
+  Ringmarke, Zeitpunkt, Schicht und Fahrzeug, Frist-Chip und
+  Inhalts-Chips. Null-Werte erscheinen nicht. Die frühere getrennte
+  Erfassen-Seite entfällt, alte Lesezeichen auf `#/neu` laufen im Feed
+  auf.
+- **Eigene Profilseite**: Kopf mit Initialen im Scope-Ring,
+  Qualifikation, Kennzahlenzeile; darunter Segmentschalter Konto ·
+  Sicherheit · Erfassung · Daten. Die Karten tragen ihre Gruppe über die
+  Überschrift, nicht über ihre Position — eine eingeschobene Karte
+  sortiert sich selbst richtig ein.
+- **Eigene Verwaltungsseite** unter `#/verwaltung` statt als Anhängsel
+  des Profils: Konten, Einladungen, Betrieb, Zugang zum
+  Änderungsprotokoll. Die Rollenprüfung der Seite ist Bedienkomfort;
+  jede Verwaltungsroute prüft serverseitig selbst.
+- **Kachel-Katalog beim Erfassen**: Maßnahmen als Kacheln mit
+  Kategorie-Seitenlinie und Suchfeld, Medikamente mit dem
+  DIVI-Etikettenband als Kachelkopf — die Auswahl in der App sieht aus
+  wie die Spritze in der Hand. Favoriten und Zuletzt bleiben erhalten.
+- Dashboard heißt in der Oberfläche **Auswertung**; die PDF-Nachweise
+  sind von dort verlinkt statt eines eigenen Leistenpunkts.
+- Barrierefreiheits-Audit läuft jetzt zusätzlich über die
+  Verwaltungsseite.
+
 ## 4.2.0
 
 MINOR: neue Add-on-Optionen mit Vorgabewerten und ein neuer Endpunkt.
