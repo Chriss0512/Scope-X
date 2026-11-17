@@ -3,6 +3,34 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.3.1
+
+PATCH: Fehlerbehebung ohne neue Felder, Endpunkte oder Optionen.
+
+**Seitenende auf Mobilgeräten nicht erreichbar.** Auf Telefonbreite lag
+der Inhalt unter der Navigationsleiste; selbst bei maximaler Scrolltiefe
+blieben die letzten 29 bis 37 Pixel verdeckt — auf jeder Seite,
+gemessen in Feed, Auswertung, Profil, Verwaltung und Rechtlichem.
+
+Ursache war die Reihenfolge im Stylesheet, nicht die Leiste selbst. Der
+mobile Block setzte die Leiste auf `position: relative`, damit sie als
+Teil der Flex-Spalte unter dem Inhalt liegt. Die Grundregel mit
+`position: fixed` stand aber **danach**, bei gleicher Spezifität — und
+die spätere Regel gewinnt. Die Leiste schwebte damit über dem
+Inhaltsbereich statt unter ihm. Der Fehler bestand seit 4.1.0; die
+Flex-Spalte, die damals die überlagerte Leiste beheben sollte, hat nie
+gegriffen. Mit der höheren Leiste aus 4.3.0 wurde er erst richtig
+sichtbar.
+
+- Der mobile Block steht jetzt hinter den Grundregeln, mit einem Hinweis
+  im Stylesheet, warum er dort stehen muss.
+- Die Prüfschleife misst bei jedem Lauf auf Telefonbreite, ob das Ende
+  jeder Seite oberhalb der Leiste liegt. Mit der alten Reihenfolge schlägt
+  sie auf allen fünf Seiten an.
+- Der Knopf zum Seitenanfang ist jetzt rund und ohne Text. Als
+  Textpille hatte er Tabellenwerte in der Auswertung verdeckt; die
+  Beschriftung trägt weiterhin `aria-label`.
+
 ## 4.3.0
 
 MINOR: deutliche Erweiterung der Oberfläche ohne Änderung an Endpunkten,

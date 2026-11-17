@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 16.11.2026 um 13:37 Uhr für SCOPE X.
+Erzeugt am 17.11.2026 um 22:48 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | JS 146 KB, CSS 41 KB, Schrift 343 KB, gesamt 531 KB von 700 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | JS 146 KB, CSS 41 KB, Schrift 343 KB, gesamt 532 KB von 700 KB |
 
 ## Compatibility
 
@@ -61,7 +61,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
 | Testabdeckung mindestens 70 Prozent | bestanden | 78.6 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.3.0, 9 Fassungen dokumentiert |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.3.1, 10 Fassungen dokumentiert |
 | Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 64 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
@@ -69,7 +69,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.3.0, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.3.1, Änderungsprotokoll vorhanden |
 
 ## Safety
 

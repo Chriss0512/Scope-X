@@ -73,6 +73,28 @@ def audit() -> list[str]:
                         if v["impact"] in SEVERITIES:
                             problems.append(f"{route} {v['id']} "
                                             f"({len(v['nodes'])}x)")
+
+                    # Erreichbarkeit des Seitenendes. Von 4.1.0 bis 4.3.0
+                    # lag der Inhalt auf Mobilgeräten unter der Leiste und
+                    # das Ende ließ sich nicht erreichen — kein axe-Befund,
+                    # aber für die Bedienung ein Totalausfall. Gemessen bei
+                    # maximaler Scrolltiefe: das letzte sichtbare Element
+                    # muss oberhalb der Leiste enden.
+                    verdeckt = page.evaluate("""() => {
+                      const app = document.getElementById('app');
+                      const nav = document.getElementById('nav');
+                      if (!nav || nav.hidden) return 0;
+                      app.scrollTop = app.scrollHeight;
+                      let unten = 0;
+                      for (const e of app.querySelectorAll('*')) {
+                        if (!e.offsetParent) continue;
+                        unten = Math.max(unten, e.getBoundingClientRect().bottom);
+                      }
+                      return Math.round(unten - nav.getBoundingClientRect().top);
+                    }""")
+                    if verdeckt > 0:
+                        problems.append(f"{route} Seitenende {verdeckt}px "
+                                        "unter der Navigationsleiste")
                 browser.close()
         finally:
             server.should_exit = True
