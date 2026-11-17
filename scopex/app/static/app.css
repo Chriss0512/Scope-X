@@ -350,45 +350,7 @@ table.data td > .status { margin: -.1rem 0; }
 
 /* ------------------------------------------------------------ Navigation */
 
-/* Auf iOS ist eine per position:fixed am unteren Rand verankerte Leiste
-   unzuverlässig: die ein- und ausfahrende Adressleiste verschiebt den
-   Viewport, und die Leiste wandert mit. Deshalb liegt das Layout auf
-   Mobilgeräten in einer Flex-Spalte mit fester Höhe, gescrollt wird der
-   Inhaltsbereich. Die Leiste ist dann ein normales Flex-Element und kann
-   gar nicht erst verrutschen. */
-@media (max-width: 899px) {
-  html { height: 100%; }
-  body {
-    /* --app-height wird aus visualViewport gesetzt und ist der einzige
-       Wert, der auf iOS bei geöffneter Tastatur stimmt. dvh dient als
-       Rückfallebene für Browser ohne visualViewport. */
-    height: 100vh; height: 100dvh; height: var(--app-height, 100dvh);
-    display: flex; flex-direction: column;
-    padding-bottom: 0; overflow: hidden;
-  }
-  #app {
-    order: 1; flex: 1 1 auto; min-height: 0;
-    /* Das auto-Randmaß aus der Grundregel hebt in einer Flex-Spalte das
-       Strecken auf, dadurch bemisst sich die Breite am Inhalt und die
-       Seite läuft rechts über. width und min-width binden sie wieder an
-       den Viewport. */
-    width: 100%; min-width: 0; max-width: 100%;
-    overflow-y: auto; overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 1.5rem;
-  }
-  nav.tabbar {
-    order: 2; position: relative; flex: 0 0 auto;
-    left: auto; right: auto; bottom: auto;
-  }
-  /* Auf den Anmeldeseiten bleibt die Spalte bestehen, nur die Leiste ist
-     ausgeblendet. Früher wurde hier auf display:block umgestellt; damit
-     verlor die Leiste ihre Reihenfolge, rutschte an den Seitenanfang und
-     überlagerte den Inhalt. */
-  body.auth { overflow: hidden; }
-  body.auth nav.tabbar { display: none; }
-  body.auth #app { overflow-y: auto; }
-}
+
 
 /* Flex statt starrem Fünferraster: der Verwaltungspunkt existiert nur für
    Administrator*innen, und die Leiste soll sich in beiden Fällen gleichmäßig
@@ -441,6 +403,52 @@ nav.tabbar .tab-new:focus-visible .disc {
   outline: 2px solid var(--focus); outline-offset: 2px;
 }
 nav.tabbar .tab-new .cap { display: block; }
+
+/* WICHTIG: Dieser Block muss HINTER den Grundregeln von nav.tabbar
+   stehen. Beide haben dieselbe Spezifität, also gewinnt die spätere
+   Regel. Von 4.1.0 bis 4.3.0 stand er davor — die Grundregel setzte die
+   Leiste auf Mobilgeräten wieder auf position:fixed, der Inhaltsbereich
+   lief unter sie, und das Seitenende ließ sich nie erreichen. Die
+   Prüfschleife misst das seither bei jedem Lauf. */
+/* Auf iOS ist eine per position:fixed am unteren Rand verankerte Leiste
+   unzuverlässig: die ein- und ausfahrende Adressleiste verschiebt den
+   Viewport, und die Leiste wandert mit. Deshalb liegt das Layout auf
+   Mobilgeräten in einer Flex-Spalte mit fester Höhe, gescrollt wird der
+   Inhaltsbereich. Die Leiste ist dann ein normales Flex-Element und kann
+   gar nicht erst verrutschen. */
+@media (max-width: 899px) {
+  html { height: 100%; }
+  body {
+    /* --app-height wird aus visualViewport gesetzt und ist der einzige
+       Wert, der auf iOS bei geöffneter Tastatur stimmt. dvh dient als
+       Rückfallebene für Browser ohne visualViewport. */
+    height: 100vh; height: 100dvh; height: var(--app-height, 100dvh);
+    display: flex; flex-direction: column;
+    padding-bottom: 0; overflow: hidden;
+  }
+  #app {
+    order: 1; flex: 1 1 auto; min-height: 0;
+    /* Das auto-Randmaß aus der Grundregel hebt in einer Flex-Spalte das
+       Strecken auf, dadurch bemisst sich die Breite am Inhalt und die
+       Seite läuft rechts über. width und min-width binden sie wieder an
+       den Viewport. */
+    width: 100%; min-width: 0; max-width: 100%;
+    overflow-y: auto; overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1.5rem;
+  }
+  nav.tabbar {
+    order: 2; position: relative; flex: 0 0 auto;
+    left: auto; right: auto; bottom: auto;
+  }
+  /* Auf den Anmeldeseiten bleibt die Spalte bestehen, nur die Leiste ist
+     ausgeblendet. Früher wurde hier auf display:block umgestellt; damit
+     verlor die Leiste ihre Reihenfolge, rutschte an den Seitenanfang und
+     überlagerte den Inhalt. */
+  body.auth { overflow: hidden; }
+  body.auth nav.tabbar { display: none; }
+  body.auth #app { overflow-y: auto; }
+}
 
 @media (min-width: 900px) {
   body { padding-bottom: 0; padding-left: 232px; }
@@ -798,15 +806,17 @@ body.auth nav.tabbar { display: none; }
 /* -------------------------------------------------- Sprung zum Seitenanfang */
 
 .to-top {
-  position: fixed; right: 1rem; z-index: 45;
-  bottom: calc(84px + 1rem + env(safe-area-inset-bottom));
-  min-height: 40px; padding: .35rem .8rem; font-size: .8rem;
-  border-radius: var(--radius-pill); background: var(--surface);
+  position: fixed; right: .85rem; z-index: 45;
+  bottom: calc(84px + .75rem + env(safe-area-inset-bottom));
+  width: 44px; height: 44px; min-height: 44px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--surface); color: var(--ink-strong);
   border: 1px solid var(--line-strong); box-shadow: var(--shadow);
   opacity: 0; pointer-events: none; transform: translateY(6px);
   transition: opacity .15s ease, transform .15s ease;
 }
 .to-top.visible { opacity: 1; pointer-events: auto; transform: none; }
+.to-top svg { width: 20px; height: 20px; }
 @media (min-width: 900px) { .to-top { bottom: 1.5rem; right: 1.5rem; } }
 body.auth .to-top { display: none; }
 
