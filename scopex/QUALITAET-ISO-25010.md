@@ -123,7 +123,10 @@ Fehlversuche, gibt es nicht.
   eines Einsatzes mit einem Markierwert und durchsucht jede Antwort an
   Kontakte danach; ein probeweise in die Feldliste aufgenommenes
   Notizfeld lässt die Reihe genau an dieser Stelle scheitern. Bilder
-  werden neu codiert, Metadaten verworfen.
+  und Videos werden neu codiert, Metadaten verworfen; die Reihe prüft
+  das an einem Foto mit GPS-Daten und einem Video mit Ortsangabe.
+  Private Konten, Blockieren und Direktnachrichten haben eigene
+  Prüfungen, jeweils mit 404 statt 403 für Unsichtbares.
 - *Integrity:* Bearbeitungsfrist, danach Sperre. Änderungen innerhalb der
   Frist feldweise im Änderungsprotokoll. Gesperrte Einträge nur mit
   Pflichtbegründung stilllegbar, nie physisch gelöscht.

@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 17.11.2026 um 23:27 Uhr für SCOPE X.
+Erzeugt am 18.11.2026 um 00:24 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 370 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 500 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | JS 198 KB, CSS 51 KB, Schrift 343 KB, gesamt 593 KB von 700 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | JS 250 KB, CSS 72 KB, Schrift 343 KB, gesamt 667 KB von 700 KB |
 
 ## Compatibility
 
@@ -60,9 +60,9 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 80.3 Prozent |
+| Testabdeckung mindestens 70 Prozent | bestanden | 79.8 Prozent |
 | Version folgt SemVer und ist dokumentiert | bestanden | 4.4.0, 11 Fassungen dokumentiert |
-| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 85 Pfade, 0 neu, Sicherungsformat 1 |
+| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 108 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
 

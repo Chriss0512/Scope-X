@@ -722,15 +722,17 @@ const routes = {
   // Einsätze hat eine eigene Adresse; alte Lesezeichen auf "#/neu" landen
   // dort, wo sie vorher gelandet sind.
   "/": viewNetz,
-  "/einsaetze": viewEinsaetze,
-  "/kontakte": viewKontakte,
+  "/entdecken": viewEntdecken,
+  "/nachrichten": () => viewNachrichten(),
   "/mitteilungen": viewMitteilungen,
+  "/einsaetze": viewEinsaetze,
+  "/einstellungen": viewEinstellungen,
   "/rechtliches": viewLegal,
   "/protokoll": viewAuditLog,
   "/neu": viewEinsaetze,
   "/dashboard": viewDashboard,
   "/nachweise": viewProofs,
-  "/profil": viewProfile,
+  "/profil": viewEigenesProfil,
   "/verwaltung": viewAdmin,
 };
 
@@ -760,17 +762,29 @@ async function render() {
   // Ein einzelner Einsatz gehört zur Einsatzliste, eine Person und ein
   // einzelner Beitrag zum Feed — so bleibt in der Leiste markiert, wo man
   // herkommt.
-  const markiert = { "/einsatz": "/einsaetze", "/neu": "/einsaetze",
-    "/person": "/", "/beitrag": "/" }[path] || path;
+  const breit = window.matchMedia("(min-width: 900px)").matches;
+  const markiert = {
+    "/einsatz": "/einsaetze", "/neu": "/einsaetze", "/nachweise": "/einsaetze",
+    "/dashboard": breit ? "/dashboard" : "/einsaetze",
+    "/beitrag": "/", "/tag": "/entdecken", "/einstellungen": "/profil",
+    "/person": params[0] && params[0] === (state.auth.user || {}).id ? "/profil" : "/entdecken",
+    "/protokoll": "/verwaltung",
+  }[path] || path;
   document.querySelectorAll("nav.tabbar a").forEach((a) => {
     if (a.dataset.route === markiert) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   });
+  netzAufraeumen();
   mitteilungsZaehler();
   try {
     if (path === "/einsatz" && params[0]) return await viewEncounter(params[0]);
     if (path === "/person" && params[0]) return await viewPerson(params[0]);
     if (path === "/beitrag" && params[0]) return await viewBeitrag(params[0]);
+    if (path === "/tag" && params[0]) return await viewTag(decodeURIComponent(params[0]));
+    if (path === "/nachrichten" && params[0]) {
+      return params[0] === "an" ? await viewNachrichten(null, params[1])
+        : await viewNachrichten(params[0]);
+    }
     const view = routes[path] || viewNetz;
     await view();
   } catch (err) {
@@ -877,36 +891,52 @@ async function viewLegal() {
       <h2>Kompetenznetz</h2>
       <p class="small">Das Kompetenznetz ist ausgeschaltet, bis du es selbst
       einschaltest, und lässt sich jederzeit wieder ausschalten. Dein
-      Logbuch funktioniert ohne es vollständig.</p>
-      <p class="small"><strong>Wer was sieht.</strong> Name, Profilbild und
-      Kurzbeschreibung sehen alle Mitglieder mit eingeschaltetem Netz, damit
-      eine Kontaktanfrage zuzuordnen ist. Kopfbild, Vorstellung,
-      freigegebene Kompetenzen, Beiträge, Anerkennungen und Kommentare sehen
-      nur Kontakte, die eine Anfrage gegenseitig bestätigt haben.
-      Benutzername und E-Mail-Adresse sehen andere Mitglieder nie.</p>
+      Logbuch funktioniert ohne es vollständig. Nichts davon ist ohne
+      Anmeldung erreichbar.</p>
+      <p class="small"><strong>Wer was sieht.</strong> Name, Profilbild,
+      Kurzbeschreibung, „Über mich“ und die Anzahl von Beiträgen und
+      Followern sehen alle angemeldeten Mitglieder mit eingeschaltetem Netz.
+      Beiträge, Chronik, Titelbild, freigegebene Kompetenzen und die Angaben
+      unter „Info“ sehen bei einem öffentlichen Konto ebenfalls alle
+      Mitglieder, bei einem privaten Konto nur Follower, die du bestätigt
+      hast. Benutzername und E-Mail-Adresse sehen andere nie. Wer blockiert
+      ist, sieht nichts davon.</p>
       <p class="small"><strong>Was nie geteilt wird.</strong> Datum und
       Uhrzeit eines Einsatzes, Einsatznummer, Fahrzeug, Schicht,
       Dosierungen, Notizen und Angaben zu einem Patientenschaden. Ein
-      Kompetenzbeitrag übernimmt aus dem Logbuch nur Bezeichnung, Kategorie,
-      Ergebnis und Rolle einer Maßnahme, bei Medikamenten Wirkstoff,
-      Etikettengruppe, Applikationsweg und Ergebnis. ZEK-Bezeichnungen und
-      NACA-Wert nur, wenn du sie einzeln freigibst. Der Beitrag ist eine
-      Kopie: er verweist nicht auf den Einsatz.</p>
-      <p class="small"><strong>Bilder.</strong> Hochgeladene Bilder werden
+      Kompetenz- oder Fallbeitrag übernimmt aus dem Logbuch nur Bezeichnung,
+      Kategorie, Ergebnis und Rolle einer Maßnahme, bei Medikamenten
+      Wirkstoff, Etikettengruppe, Applikationsweg und Ergebnis.
+      ZEK-Bezeichnungen und NACA-Wert nur, wenn du sie einzeln freigibst.
+      Der Beitrag ist eine Kopie und verweist nicht auf den Einsatz.</p>
+      <p class="small"><strong>Bilder und Videos.</strong> Jede Datei wird
       neu berechnet. Aufnahmeort, Kameradaten und alle anderen Metadaten
-      werden dabei entfernt.</p>
+      gehen dabei verloren. Bevor du Medien teilst, bestätigst du, dass
+      keine Patient*innen, Kennzeichen, Einsatzorte oder Monitorwerte mit
+      Personenbezug zu erkennen sind. Die Schweigepflicht nach § 203 StGB
+      gilt auch hier.</p>
+      <p class="small"><strong>Feed-Algorithmus.</strong> „Für dich“ ordnet
+      Beiträge nach Aktualität, Resonanz, Nähe zur Person, Art des Beitrags
+      und Relevanz für dein Lernen. Dafür wird gezählt, wie oft du welche
+      Maßnahme dokumentiert hast; das Ergebnis beeinflusst nur deine
+      eigene Reihenfolge und wird niemandem angezeigt. An jedem Beitrag
+      steht, warum er erscheint. „Folge ich“ zeigt alles chronologisch.</p>
       <p class="small"><strong>Zeitangabe.</strong> Beiträge tragen den
-      Zeitpunkt ihrer Veröffentlichung, angezeigt als relative Angabe. Wer
-      direkt nach einem Einsatz teilt, legt damit den Zeitraum nahe. Teile
-      deshalb mit etwas Abstand.</p>
+      Zeitpunkt ihrer Veröffentlichung, angezeigt als relative Angabe.
+      Fallberichte erscheinen auf Wunsch verzögert, voreingestellt nach
+      sieben Tagen.</p>
+      <p class="small"><strong>Nachrichten.</strong> Direktnachrichten liegen
+      unverschlüsselt in der Datenbank dieser Installation, wie alle übrigen
+      Daten. Die Administration könnte sie technisch lesen. Eigene
+      Einsatznummern werden auch in Nachrichten abgelehnt.</p>
       <p class="small"><strong>Meldungen.</strong> Ein gemeldeter Beitrag
       wird der Administration zur Prüfung angezeigt. Entfernt sie ihn,
       erfährst du den Grund; der Vorgang steht im Änderungsprotokoll.</p>
       <p class="small"><strong>Löschung.</strong> Eigene Beiträge,
-      Kommentare und Bestätigungen löschst du jederzeit selbst. Mit dem Konto
-      werden auch alle Beiträge, Kommentare, Reaktionen, Bestätigungen,
-      Kontakte, Mitteilungen und Bilder gelöscht. Die Auskunft unter
-      Profil enthält die Netzdaten vollständig.</p>
+      Kommentare, Nachrichten und Bestätigungen löschst du jederzeit selbst.
+      Mit dem Konto werden alle Netzdaten gelöscht, auch Gespräche beim
+      Gegenüber. Die Auskunft unter Einstellungen enthält die Netzdaten
+      vollständig, einschließlich Bildern und Nachrichten.</p>
 
       <h2>Cookies</h2>
       <p class="small">SCOPE X setzt ausschließlich technisch notwendige
@@ -957,19 +987,28 @@ async function viewLegal() {
 
 // ------------------------------------------------------------ Einsatzliste
 
+/* Logbuch: Einsätze, Auswertung und Nachweise unter einem Reiter. Auf
+   dem Telefon ist das der Weg zur Auswertung; sie verschwindet nicht,
+   sie sitzt eine Ebene tiefer. */
+function logbuchKopf(aktiv) {
+  const punkte = [["/einsaetze", "Einsätze"], ["/dashboard", "Auswertung"],
+    ["/nachweise", "Nachweise"]];
+  return `<nav class="seg seg-links" aria-label="Logbuch">${punkte.map(([r, t]) =>
+    `<a class="seg-item link-plain" href="#${r}"${r === aktiv
+      ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>`;
+}
+
 async function viewEinsaetze() {
   const data = await api("/api/encounters?limit=50");
 
   app().innerHTML = `
     <div class="page-head">
-      <h1>Einsätze</h1>
-      <p class="muted small">Dein Logbuch. Einsatznummer, Fahrzeug, Schicht
-      und Zeitpunkt sieht niemand außer dir — auch nicht, wenn du daraus
-      eine Kompetenz teilst.</p>
-      <div class="row wrap" data-s="gap-sm mt-sm">
-        <a class="btn small link-plain" href="#/nachweise">Nachweise</a>
-      </div>
+      <h1>Logbuch</h1>
+      <p class="muted small">Nur für dich. Einsatznummer, Fahrzeug, Schicht
+      und Zeitpunkt sieht niemand außer dir, auch nicht, wenn du daraus
+      etwas teilst.</p>
     </div>
+    ${logbuchKopf("/einsaetze")}
 
     ${canWrite() ? "" : `<div class="notice plain">Dieses Konto hat
       Lesezugriff. Neue Dokumentationen kann ein Administrator freischalten.</div>`}
@@ -2043,11 +2082,11 @@ async function viewDashboard() {
     .join("");
 
   app().innerHTML = `
-    <div class="page-head spread">
-      <div><h1>Auswertung</h1>
-        <p class="muted small">Alle Kennzahlen aus den lokal gespeicherten Daten</p></div>
-      <a class="btn link-plain" href="#/nachweise">PDF-Nachweise</a>
+    <div class="page-head">
+      <h1>Auswertung</h1>
+        <p class="muted small">Alle Kennzahlen aus deinem Logbuch</p>
     </div>
+    ${logbuchKopf("/dashboard")}
 
     <div class="chipset">${PERIODS.map(([k, label]) =>
       `<button class="chip accent" data-period="${k}"
@@ -2226,6 +2265,7 @@ async function viewProofs() {
   app().innerHTML = `
     <div class="page-head"><h1>Nachweise</h1>
       <p class="muted small">Persönlicher Tätigkeits- und Kompetenznachweis als PDF</p></div>
+    ${logbuchKopf("/nachweise")}
 
     <div class="card pad-lg stack">
       <div class="field"><label>Zeitraum</label>
@@ -2517,44 +2557,34 @@ function bindeAdminWerkzeuge() {
   });
 }
 
-let profilGruppe = "konto";
+let profilGruppe = "netz";
 
-async function viewProfile() {
+/* Einstellungen: früher die Profilseite. Das Profil ist seit 4.4.0 die
+   öffentliche Seite im Kompetenznetz; hier liegt alles, was man an Konto,
+   Netz, Sicherheit und Erfassung einstellt. */
+async function viewEinstellungen() {
   const [p, settings, recovery, o, np] = await Promise.all([
     api("/api/profile"), api("/api/settings"), api("/api/auth/recovery/status"),
     api("/api/overview"), netzProfil(true),
   ]);
   const prof = p.profile || {};
-  const initialen = ((prof.first_name || p.username || "?").slice(0, 1)
-    + (prof.last_name || "").slice(0, 1)).toUpperCase();
   const anzeigename = [prof.first_name, prof.last_name]
     .filter(Boolean).join(" ") || p.username;
 
   app().innerHTML = `
-    <div class="profile-head">
-      <span class="avatar-ring" aria-hidden="true">
-        ${markSvg("ring")}${np.avatar_id
-          ? `<img class="av av-ring" src="/api/netz/medien/${esc(np.avatar_id)}" alt="">`
-          : `<span class="ini">${esc(initialen)}</span>`}
-      </span>
-      <div class="who">
-        <h1>${esc(anzeigename)}</h1>
-        <div class="row wrap" data-s="mt-xs gap-sm">
-          ${prof.qualification ? `<span class="chip static">${esc(prof.qualification)}</span>` : ""}
-          ${prof.specialty ? `<span class="chip static">${esc(prof.specialty)}</span>` : ""}
-        </div>
-      </div>
+    <div class="page-head">
+      <a class="small muted link-plain back-btn" href="#/profil">Profil</a>
+      <h1>Einstellungen</h1>
+      <p class="muted small">${esc(anzeigename)} · ${o.encounters} Einsätze ·
+        ${o.attempts} Maßnahmen im Logbuch</p>
     </div>
-    <div class="stats-row" role="group" aria-label="Kennzahlen">
-      <div class="stat"><strong>${o.encounters}</strong><span>Einsätze</span></div>
-      <div class="stat"><strong>${o.attempts}</strong><span>Maßnahmen</span></div>
-      <div class="stat"><strong>${o.medications}</strong><span>Medikamente</span></div>
-      <div class="stat"><strong>${o.complications}</strong><span>ZEK</span></div>
-    </div>
+    ${isAdmin() ? `<a class="settings-link link-plain" href="#/verwaltung">
+      <strong>Verwaltung</strong><span class="tiny muted">Konten, Einladungen, Stammdaten,
+      Sicherung</span></a>` : ""}
 
-    <div class="seg" role="tablist" aria-label="Profilbereiche" id="prof-seg">
-      <button class="seg-item" role="tab" data-gruppe="konto">Konto</button>
+    <div class="seg" role="tablist" aria-label="Einstellungsbereiche" id="prof-seg">
       <button class="seg-item" role="tab" data-gruppe="netz">Netzwerk</button>
+      <button class="seg-item" role="tab" data-gruppe="konto">Konto</button>
       <button class="seg-item" role="tab" data-gruppe="sicherheit">Sicherheit</button>
       <button class="seg-item" role="tab" data-gruppe="erfassung">Erfassung</button>
       <button class="seg-item" role="tab" data-gruppe="daten">Daten</button>
@@ -2851,7 +2881,7 @@ async function viewProfile() {
   });
 
   renderPasskeys();
-  bindeNetzProfil(np);
+  bindeNetzProfil();
 
   /* Die Karten tragen ihre Gruppe nach Überschrift, nicht nach Position:
      eine eingeschobene Karte sortiert sich über ihre Überschrift richtig
@@ -2863,7 +2893,8 @@ async function viewProfile() {
     "Erfassung": "erfassung",
     "Änderungsprotokoll": "daten", "Deine Daten": "daten",
     "Kompetenznetz": "netz", "Profilbilder": "netz", "Vorstellung": "netz",
-    "Kompetenzen freigeben": "netz",
+    "Kompetenzen freigeben": "netz", "Werdegang und Zertifikate": "netz",
+    "Blockiert": "netz",
   };
   app().querySelectorAll(".card > h2").forEach((h) => {
     const gruppe = zuordnung[h.textContent.trim()];
@@ -3284,6 +3315,9 @@ function publicRoute() {
 }
 
 async function boot() {
+  NETZ.profil = null;
+  NETZ.stand = 0;
+  netzAufraeumen();
   const auth = await api("/api/auth/state");
   state.auth = auth;
   if (!auth.authenticated && publicRoute()) return;

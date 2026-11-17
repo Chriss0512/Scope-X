@@ -60,9 +60,10 @@ def audit() -> list[str]:
                 page = page_ctx.new_page()
                 # Seit 4.4.0 ist "#/" der Kompetenzfeed; die Einsatzliste
                 # hat eine eigene Adresse, dazu Kontakte und Mitteilungen.
-                for route in ["#/", "#/einsaetze", "#/kontakte",
-                              "#/mitteilungen", "#/dashboard", "#/nachweise",
-                              "#/profil", "#/verwaltung", "#/rechtliches"]:
+                for route in ["#/", "#/entdecken", "#/nachrichten",
+                              "#/mitteilungen", "#/einsaetze", "#/dashboard",
+                              "#/nachweise", "#/profil", "#/einstellungen",
+                              "#/verwaltung", "#/rechtliches"]:
                     page.goto(f"http://127.0.0.1:8199/{route}",
                               wait_until="networkidle")
                     page.wait_for_timeout(900)

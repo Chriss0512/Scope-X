@@ -30,15 +30,23 @@ Löschung aller Netzwerkdaten,dsgvo,must,no,yes,Art. 17
 Datenschutzerklärung erweitert,dsgvo,must,no,yes,
 Teilen-Knopf an jeder Maßnahme,einsatz,should,no,yes,
 Relativer Zeitpunkt am Beitrag,feed,should,yes,yes,bewusst wie Instagram; Hinweis im Composer
-Hashtags,feed,could,yes,no,nicht in 4.4.0
-Beiträge anderer erneut teilen,feed,could,yes,no,nicht in 4.4.0
+Hashtags,feed,could,yes,yes,
+Beiträge anderer erneut teilen,feed,should,yes,yes,"Repost, nicht für private Konten"
 Beitrag bearbeiten,feed,could,yes,no,nicht in 4.4.0
-Direktnachrichten,nachrichten,could,yes,skip,eigenes Thema mit eigenen Datenschutzfragen
+Direktnachrichten,nachrichten,must,yes,yes,Anfragen-Ordner; nur Einsatznummer gesperrt
 Stellenanzeigen,jobs,could,yes,skip,nicht Zweck von SCOPE X
 Unternehmensseiten,seiten,could,yes,skip,"keine Organisationen im Modell, nur Personen"
 Gruppen,gruppen,could,yes,skip,"kleiner Kreis, Kontakte genügen"
-Video und Live,medien,could,yes,skip,Speicher und Datenschutz; Bilder nur für Profil
+Video und Live,medien,should,yes,partial,"Video ja, Live nein"
 Premium und Werbung,monetarisierung,could,yes,skip,"privates, nicht kommerzielles Projekt"
-Algorithmischer Feed,feed,could,yes,skip,chronologisch; keine Optimierung auf Verweildauer
+Algorithmischer Feed,feed,must,yes,yes,"nachvollziehbar, auf Lernen gewichtet, mit Begründung"
 Linkvorschau mit Abruf,feed,could,yes,skip,externer Aufruf zur Laufzeit und SSRF-Risiko
-Öffentliche Profile im Netz,profil,could,yes,skip,nur angemeldete Mitglieder
+Öffentliche Profile im Netz,profil,should,yes,yes,"öffentlich innerhalb der Installation, privates Konto möglich"
+Folgen mit privatem Konto,kontakte,must,yes,yes,Instagram-Modell
+Blockieren,kontakte,must,yes,yes,
+Chronik,profil,must,yes,yes,Beiträge und Lebensstationen
+Werdegang Ausbildung Zertifikate,profil,should,yes,yes,
+Entdecken-Raster,feed,must,yes,yes,
+Fallbericht seltene Situation und Komplikation,feed,must,no,yes,verzögerte Veröffentlichung
+Algorithmus mit Pflichtquelle,feed,must,no,yes,Hinweis auf SOP des ÄLRD
+Bilder und Videos im Beitrag,feed,must,yes,yes,"Metadaten entfernt, Bestätigung Personenbezug"

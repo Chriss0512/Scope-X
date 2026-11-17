@@ -38,36 +38,71 @@ Im selben Zug:
 
 ### Kompetenznetz
 
-Ein Lernfeed unter bestätigten Kontakten, nach dem Muster beruflicher
-Netzwerke. Abgeschaltet, bis ein Mitglied es selbst einschaltet; das
-Logbuch funktioniert ohne es unverändert.
+Ein soziales Netz für beruflichen Support in der Notfallmedizin, nach dem
+Muster großer Bild- und Berufsnetzwerke. Abgeschaltet, bis ein
+Mitglied es selbst einschaltet; das Logbuch funktioniert ohne es
+unverändert.
 
-- **Startseite ist der Feed.** Die Einsatzliste liegt unter
-  `#/einsaetze`, alte Lesezeichen auf `#/neu` landen dort.
-- **Leiste**: Feed · Einsätze · **Neu** · Auswertung · Profil. Der
-  mittlere Punkt fragt jetzt, was entstehen soll: Einsatz dokumentieren
-  oder Beitrag teilen. Auf breiten Bildschirmen zusätzlich Kontakte und
-  Mitteilungen mit Zähler; auf Telefonen stehen beide im Kopf des Feeds.
-- **Beiträge** in drei Arten: Gedanke (Text), Wissen (Studie, Leitlinie,
-  Fachartikel mit Link, Titel und Art der Quelle) und Kompetenz (Einträge
-  aus genau einem eigenen Einsatz). Anerkennung als *Stark*,
-  *Lehrreich* oder *Danke*, Kommentare, Löschen, Melden.
-- **Profile** mit Profilbild, Kopfbild, Kurzbeschreibung und
-  Vorstellung. Kompetenzen am Profil sind durch das Logbuch belegt —
-  Anzahl und Erfolge, kein Datum — und je Maßnahme einzeln freizugeben.
-- **Kontakte** nach dem Bestätigungsmodell: Anfrage, Annehmen, Ablehnen,
-  Lösen. Eine Gegenanfrage gilt als Annahme.
-- **Kompetenz bestätigen** durch Kontakte, kollegial oder als
-  Praxisanleitung, mit Namen am Profil. Zurückziehen kann, wer bestätigt
-  hat, und wer bestätigt wurde.
-- **Mitteilungen** zu Anfragen, Anerkennung, Kommentaren, Bestätigungen,
-  Meldungen und Moderation.
-- **Moderation**: Administrator*innen sehen gemeldete Beiträge und
-  können sie mit Begründung entfernen. Die Verfasserin oder der Verfasser
-  erfährt den Grund, der Vorgang steht im Änderungsprotokoll.
-- **Teilen aus dem Einsatz**: „Als Kompetenz teilen" im Einsatzkopf und
-  „Teilen" an jedem Eintrag. Vorschau und Auswahl zeigen genau, was
-  hinausgeht.
+- **Feed** mit zwei Reitern: **Für dich**, sortiert von einem
+  nachvollziehbaren Algorithmus, und **Folge ich**, chronologisch. An
+  jedem Beitrag steht unter „Warum sehe ich das?“, warum er erscheint.
+- **Algorithmus** (`app/algorithmus.py`): gewichtete Summe aus
+  Aktualität, Resonanz, Nähe zur Person, Art des Beitrags und Relevanz für
+  das eigene Lernen. Fallberichte zu seltenen Situationen und
+  Komplikationen sowie Maßnahmen, die man selbst selten oder nie
+  dokumentiert hat (Lernlücke), steigen. Danach Vielfalt: jeder weitere
+  Beitrag derselben Person zählt weniger. „Nicht interessiert“ blendet
+  einen Beitrag aus.
+- **Beitragsarten**: Beitrag (Text, bis zu zehn Bilder oder Videos),
+  **Fallbericht** (seltene Situation, Komplikation, Lernfall; was war
+  besonders, was lief gut, was würde ich anders machen; optional Einträge
+  aus dem Logbuch), **Algorithmus** (SOP oder Ablaufschema mit
+  Pflichtquelle, Stand und Geltungsbereich), Wissen (Studie, Leitlinie),
+  Kompetenz (Einträge aus einem eigenen Einsatz) und Repost.
+- **Reaktionen** wie in Bildnetzwerken: Gefällt mir, Kommentieren, Repost,
+  Senden.
+- **Folgen** wie in Bildnetzwerken: öffentliche Konten (innerhalb der
+  Installation) oder private Konten mit Folgeanfrage. Dazu
+  **Blockieren**: keine Sicht, kein Folgen, keine Nachricht in beide
+  Richtungen.
+- **Profil** mit Titelbild, Profilbild, Zahlen, Kurzbeschreibung und
+  Reitern Beiträge (Raster), **Chronik** (Beiträge und Lebensstationen
+  in einer Zeitleiste), Kompetenzen (belegt durch das Logbuch,
+  bestätigbar bei gegenseitigem Folgen) und **Info** (persönliche
+  Angaben, Werdegang, Ausbildung, Zertifikate mit Gültigkeit, Sprachen).
+- **Entdecken**: Raster aus dem ganzen Netz, Suche nach Personen, Wachen
+  und #Hashtags, eigene Seiten je Hashtag.
+- **Nachrichten**: Direktnachrichten mit Text, Bildern und gesendeten
+  Beiträgen, Ordner „Anfragen“ für Personen, die einem nicht folgen,
+  „gesehen“, Zurücknehmen, Ausblenden. Am Rechner zweispaltig.
+- **Mitteilungen** mit Folgeanfragen, gruppiert nach Heute, Woche, Monat.
+- **Medien**: Bilder werden mit Pillow neu codiert (Beitragsbilder 4:5
+  bis 1,91:1), Videos mit ffmpeg aus `imageio-ffmpeg` (H.264/AAC,
+  höchstens 90 Sekunden, Metadaten und Daten- und Untertitelspuren
+  verworfen). Videos werden im Hintergrund verarbeitet; ein Neustart
+  markiert unterbrochene Verarbeitungen als fehlgeschlagen. ffmpeg nimmt
+  nur die Containerformate von Telefonen und Kameras an (MP4, MOV, 3GP,
+  Matroska, WebM) und nur lokale Dateien: eine als Video getarnte
+  Wiedergabeliste kann keine Serverdateien einlesen. Dateien liegen
+  unter `/data/media` und damit im Add-on-Backup.
+- **Moderation**: gemeldete Beiträge sehen Administrator*innen und können
+  sie mit Begründung entfernen; der Vorgang steht im Änderungsprotokoll.
+
+### Neuer Aufbau und Gestaltung
+
+- **Leiste** auf dem Telefon: Feed · Entdecken · Neu · Logbuch · Profil.
+  Mitteilungen und Nachrichten oben rechts im Feed. Am Rechner eine
+  helle Seitenleiste mit allen Punkten einschließlich Auswertung und
+  Verwaltung.
+- **Logbuch** fasst Einsätze, Auswertung und Nachweise unter einem Reiter
+  zusammen. Die Auswertung bleibt vollständig erhalten.
+- **Neu** fragt, was entstehen soll: Beitrag, Fallbericht, Algorithmus,
+  Studie, Kompetenz oder Einsatz dokumentieren.
+- Beiträge randlos und ohne Kartenrahmen, Aktionen als Symbole, Feed am
+  Rechner als schmale Spalte mit Vorschlägen rechts. Weniger Rahmen und
+  Schatten insgesamt, Einstellungen mit Schaltern im iOS-Stil.
+- Die frühere Profilseite heißt jetzt **Einstellungen**; das Profil ist
+  die Seite im Netz.
 
 ### Datenschutzgrenze
 
@@ -75,46 +110,47 @@ Einsatznummer, Fahrzeug, Schicht, Datum und Uhrzeit eines Einsatzes,
 Dosierungen, Notizen und Patientenschaden verlassen das eigene Logbuch
 nie. Durchgesetzt im Server, nicht in der Oberfläche:
 
-- Ein Kompetenzbeitrag ist eine **Kopie aus einer Allowlist** —
-  Bezeichnung, Kategorie, Ergebnis, Rolle; bei Medikamenten Wirkstoff,
-  Etikettengruppe, Weg, Ergebnis. ZEK-Bezeichnungen und NACA nur einzeln
-  freigegeben. Die Tabelle `net_posts` hat keine Spalte, die auf einen
-  Einsatz verweist.
-- **Freitext wird geprüft**: Beiträge, Kommentare, Link-Titel und
-  Kurzbeschreibung mit einer eigenen Einsatznummer, einem eigenen
-  Fahrzeug, einem eigenen Einsatztag oder einer Uhrzeit werden
-  abgelehnt. Verdünnungen (1:10) und Reanimationsverhältnisse (30:2)
-  fallen nicht darunter.
-- **Sichtbarkeit**: Name, Profilbild und Kurzbeschreibung sehen alle
-  Mitglieder mit eingeschaltetem Netz; alles andere nur bestätigte
-  Kontakte. Benutzername und E-Mail-Adresse anderer werden nie
-  ausgegeben. Nicht sichtbare Objekte antworten mit 404.
-- **Bilder** werden dekodiert, beschnitten und neu als JPEG codiert.
-  EXIF, GPS, XMP, Farbprofile und angehängte Daten gehen dabei verloren.
-  Dekompressionsbomben werden abgewiesen.
-- Die Testreihe `test_netz.py` (113 Prüfungen) legt einen Einsatz mit
-  eindeutigen Markierwerten in jedem privaten Feld an und durchsucht jede
-  Antwort an Kontakte nach diesen Werten.
-- Zeitangaben im Feed sind relativ („vor 2 Std."), ab fünf Wochen nur
-  Monat und Jahr. Der Hinweis „mit Abstand zum Einsatz posten" steht an
-  jedem Eingabefeld.
+- Kompetenz- und Fallbeiträge übernehmen Logbuchdaten nur als Kopie aus
+  einer Allowlist; `net_posts` hat keine Spalte, die auf einen Einsatz
+  verweist.
+- Beiträge, Falldetails, Kommentare, Link-Titel, Profiltexte und
+  Werdegang mit eigener Einsatznummer, eigenem Fahrzeug, eigenem
+  Einsatztag oder einer Uhrzeit werden abgelehnt. In Direktnachrichten
+  nur die Einsatznummer, sonst wäre keine Terminabsprache möglich.
+- Vor dem Teilen von Bildern oder Videos muss bestätigt werden, dass
+  keine Patient*innen, Kennzeichen, Einsatzorte oder Monitorwerte mit
+  Personenbezug zu erkennen sind.
+- Fallberichte erscheinen voreingestellt erst nach sieben Tagen.
+- Benutzername und E-Mail-Adresse anderer werden nie ausgegeben; nicht
+  sichtbare Objekte antworten mit 404.
+- Die Testreihe `test_netz.py` legt einen Einsatz mit eindeutigen
+  Markierwerten in jedem privaten Feld an und durchsucht Feed, Entdecken,
+  Profil, Chronik, Beitrag, Hashtag-Seite, Nachrichten und Mitteilungen
+  danach. Sie prüft außerdem private Konten, Blockieren, Nachrichten,
+  das Entfernen von EXIF- und GPS-Daten aus Bildern sowie von Orts- und
+  Titelangaben aus Videos.
 
 ### Sonst
 
-- Stammdaten, rechtliche Angaben und Sicherung sind aus dem Profil in die
-  Verwaltung gewandert. Im Profil wurden sie allen angezeigt, benutzen
-  durfte sie nur die Administration.
-- Neue Profilgruppe **Netzwerk**: Ein- und Ausschalten, Bilder,
-  Vorstellung, Freigabe der Kompetenzen.
-- Auskunft (Art. 15 DSGVO) enthält die Netzdaten einschließlich Bildern;
-  Kontolöschung entfernt sie vollständig.
-- Datenschutzerklärung um einen Abschnitt zum Kompetenznetz ergänzt.
-- Die Netzdaten gehören bewusst nicht in die Sicherung: sie verknüpfen die
-  Daten mehrerer Mitglieder. Das Add-on-Backup von Home Assistant enthält
-  sie weiterhin.
+- Stammdaten, rechtliche Angaben und Sicherung sind in die Verwaltung
+  gewandert. Im Profil wurden sie allen angezeigt, benutzen durfte sie nur
+  die Administration.
+- Auskunft (Art. 15 DSGVO) enthält alle Netzdaten einschließlich Bildern,
+  Videos und Nachrichten; Kontolöschung entfernt sie vollständig, auch
+  Gespräche beim Gegenüber.
+- Datenschutzerklärung um das Kompetenznetz ergänzt, einschließlich
+  Algorithmus und unverschlüsselter Nachrichten.
+- Die Netzdaten gehören nicht in die eigene Sicherung; sie verknüpfen
+  die Daten mehrerer Mitglieder. Das Add-on-Backup von Home Assistant
+  enthält Datenbank und Mediendateien.
+- **Nginx Proxy Manager**: für Videos muss `client_max_body_size` auf
+  mindestens `210m` stehen (bisher `25m`), siehe README.
+- Neue Abhängigkeit `imageio-ffmpeg` 0.7.0 (statisches ffmpeg für amd64
+  und aarch64, keine apt-Pakete nötig).
 - Neue Oberflächendatei `netz.js`, vor `app.js` geladen. Die
   Prüfschleife zählt beide gegen das Größenbudget und prüft Feed,
-  Einsätze, Kontakte und Mitteilungen auf Barrierefreiheit.
+  Entdecken, Nachrichten, Mitteilungen, Logbuch und Einstellungen auf
+  Barrierefreiheit.
 
 ## 4.3.1
 

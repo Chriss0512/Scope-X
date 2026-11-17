@@ -15,12 +15,14 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 
 from .core import base_url, sweep_locks
-from .db import conn, migrate, normalize_legacy_outcomes
+from .db import conn, migrate, normalize_legacy_outcomes, q
 from .routers import (
     admin,
     auth,
+    beitraege,
     catalog,
     exports,
+    nachrichten,
     netz,
     passkeys,
     profile,
@@ -50,6 +52,11 @@ async def lifespan(_: FastAPI):
     with conn() as c:
         if seed_if_empty(c):
             log.info("Stammdaten eingespielt.")
+        # Videos, deren Verarbeitung ein Neustart unterbrochen hat, kommen
+        # nie mehr fertig; ohne diesen Schritt bliebe der Upload ewig
+        # „in Verarbeitung“.
+        q(c, "UPDATE net_media SET status = 'fehler:Verarbeitung durch Neustart "
+             "unterbrochen.' WHERE status = 'verarbeitung'")
         locked = sweep_locks(c)
         if locked:
             log.info("%s Einträge nach Ablauf der Frist gesperrt.", locked)
@@ -100,6 +107,8 @@ app.include_router(stats.router)
 app.include_router(profile.router)
 app.include_router(exports.router)
 app.include_router(netz.router)
+app.include_router(beitraege.router)
+app.include_router(nachrichten.router)
 
 
 @app.get("/api/health")

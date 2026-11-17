@@ -8,3 +8,4 @@ fpdf2==2.8.9
 argon2-cffi==23.1.0
 webauthn==3.0.0
 pillow==13.0.0
+imageio-ffmpeg==0.7.0
