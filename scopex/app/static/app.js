@@ -718,11 +718,16 @@ function viewResetPassword(token) {
 // ---------------------------------------------------------------- Router
 
 const routes = {
-  "/": viewFeed,
+  // Seit 4.4.0 ist die Startseite der Kompetenzfeed. Die Liste der eigenen
+  // Einsätze hat eine eigene Adresse; alte Lesezeichen auf "#/neu" landen
+  // dort, wo sie vorher gelandet sind.
+  "/": viewNetz,
+  "/einsaetze": viewEinsaetze,
+  "/kontakte": viewKontakte,
+  "/mitteilungen": viewMitteilungen,
   "/rechtliches": viewLegal,
   "/protokoll": viewAuditLog,
-  // Alte Lesezeichen auf die frühere Erfassen-Seite laufen im Feed auf.
-  "/neu": viewFeed,
+  "/neu": viewEinsaetze,
   "/dashboard": viewDashboard,
   "/nachweise": viewProofs,
   "/profil": viewProfile,
@@ -752,13 +757,21 @@ async function render() {
   scrollAppTop(false);
   mountScrollTop();
   const { path, params } = currentRoute();
+  // Ein einzelner Einsatz gehört zur Einsatzliste, eine Person und ein
+  // einzelner Beitrag zum Feed — so bleibt in der Leiste markiert, wo man
+  // herkommt.
+  const markiert = { "/einsatz": "/einsaetze", "/neu": "/einsaetze",
+    "/person": "/", "/beitrag": "/" }[path] || path;
   document.querySelectorAll("nav.tabbar a").forEach((a) => {
-    if (a.dataset.route === path) a.setAttribute("aria-current", "page");
+    if (a.dataset.route === markiert) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   });
+  mitteilungsZaehler();
   try {
     if (path === "/einsatz" && params[0]) return await viewEncounter(params[0]);
-    const view = routes[path] || viewFeed;
+    if (path === "/person" && params[0]) return await viewPerson(params[0]);
+    if (path === "/beitrag" && params[0]) return await viewBeitrag(params[0]);
+    const view = routes[path] || viewNetz;
     await view();
   } catch (err) {
     app().innerHTML = `<div class="empty"><strong>Das hat nicht geklappt.</strong>
@@ -772,14 +785,14 @@ window.addEventListener("hashchange", () => {
 });
 
 // Der mittlere Punkt der Leiste. Er navigiert nirgendwohin, er beginnt
-// die Dokumentation — von jeder Seite aus, mit einem Tipp.
+// etwas Neues — von jeder Seite aus: einen Einsatz oder einen Beitrag.
 document.getElementById("tab-new").addEventListener("click", () => {
   if (!state.auth || !state.auth.authenticated) return;
   if (!canWrite()) {
     toast("Dieses Konto hat Lesezugriff.");
     return;
   }
-  newEncounterSheet();
+  neuAuswahlSheet();
 });
 
 // ---------------------------------------------------------- Rechtliches
@@ -861,6 +874,40 @@ async function viewLegal() {
       einer Aufsichtsbehörde. Einen vollständigen Export deiner Daten
       erzeugst du selbst unter Profil und Einstellungen.</p>
 
+      <h2>Kompetenznetz</h2>
+      <p class="small">Das Kompetenznetz ist ausgeschaltet, bis du es selbst
+      einschaltest, und lässt sich jederzeit wieder ausschalten. Dein
+      Logbuch funktioniert ohne es vollständig.</p>
+      <p class="small"><strong>Wer was sieht.</strong> Name, Profilbild und
+      Kurzbeschreibung sehen alle Mitglieder mit eingeschaltetem Netz, damit
+      eine Kontaktanfrage zuzuordnen ist. Kopfbild, Vorstellung,
+      freigegebene Kompetenzen, Beiträge, Anerkennungen und Kommentare sehen
+      nur Kontakte, die eine Anfrage gegenseitig bestätigt haben.
+      Benutzername und E-Mail-Adresse sehen andere Mitglieder nie.</p>
+      <p class="small"><strong>Was nie geteilt wird.</strong> Datum und
+      Uhrzeit eines Einsatzes, Einsatznummer, Fahrzeug, Schicht,
+      Dosierungen, Notizen und Angaben zu einem Patientenschaden. Ein
+      Kompetenzbeitrag übernimmt aus dem Logbuch nur Bezeichnung, Kategorie,
+      Ergebnis und Rolle einer Maßnahme, bei Medikamenten Wirkstoff,
+      Etikettengruppe, Applikationsweg und Ergebnis. ZEK-Bezeichnungen und
+      NACA-Wert nur, wenn du sie einzeln freigibst. Der Beitrag ist eine
+      Kopie: er verweist nicht auf den Einsatz.</p>
+      <p class="small"><strong>Bilder.</strong> Hochgeladene Bilder werden
+      neu berechnet. Aufnahmeort, Kameradaten und alle anderen Metadaten
+      werden dabei entfernt.</p>
+      <p class="small"><strong>Zeitangabe.</strong> Beiträge tragen den
+      Zeitpunkt ihrer Veröffentlichung, angezeigt als relative Angabe. Wer
+      direkt nach einem Einsatz teilt, legt damit den Zeitraum nahe. Teile
+      deshalb mit etwas Abstand.</p>
+      <p class="small"><strong>Meldungen.</strong> Ein gemeldeter Beitrag
+      wird der Administration zur Prüfung angezeigt. Entfernt sie ihn,
+      erfährst du den Grund; der Vorgang steht im Änderungsprotokoll.</p>
+      <p class="small"><strong>Löschung.</strong> Eigene Beiträge,
+      Kommentare und Bestätigungen löschst du jederzeit selbst. Mit dem Konto
+      werden auch alle Beiträge, Kommentare, Reaktionen, Bestätigungen,
+      Kontakte, Mitteilungen und Bilder gelöscht. Die Auskunft unter
+      Profil enthält die Netzdaten vollständig.</p>
+
       <h2>Cookies</h2>
       <p class="small">SCOPE X setzt ausschließlich technisch notwendige
       Cookies: eines für die Sitzung, optional eines für ein als
@@ -908,16 +955,20 @@ async function viewLegal() {
   $("#back").addEventListener("click", () => history.back());
 }
 
-// ------------------------------------------------------------- Startseite
+// ------------------------------------------------------------ Einsatzliste
 
-async function viewFeed() {
+async function viewEinsaetze() {
   const data = await api("/api/encounters?limit=50");
 
   app().innerHTML = `
     <div class="page-head">
-      ${wordmark()}
-      <p class="claim">Skills · Competencies · Outcomes · Procedures ·
-        Emergency eXperience</p>
+      <h1>Einsätze</h1>
+      <p class="muted small">Dein Logbuch. Einsatznummer, Fahrzeug, Schicht
+      und Zeitpunkt sieht niemand außer dir — auch nicht, wenn du daraus
+      eine Kompetenz teilst.</p>
+      <div class="row wrap" data-s="gap-sm mt-sm">
+        <a class="btn small link-plain" href="#/nachweise">Nachweise</a>
+      </div>
     </div>
 
     ${canWrite() ? "" : `<div class="notice plain">Dieses Konto hat
@@ -1045,7 +1096,7 @@ async function viewEncounter(id) {
 
   app().innerHTML = `
     <div class="page-head">
-      <a class="small muted" href="#/neu" data-s="link-plain">Zurück zur Übersicht</a>
+      <a class="small muted" href="#/einsaetze" data-s="link-plain">Zurück zu den Einsätzen</a>
       <div class="spread" data-s="mt-sm">
         <h1>${esc(fmtDate(enc.enc_date))}, ${esc(enc.enc_time)}</h1>
         ${lockChip(enc.lock)}
@@ -1062,10 +1113,13 @@ async function viewEncounter(id) {
       ${enc.complications && enc.complications.length
         ? `<div class="zek-line" data-s="mt-sm"><span>Einsatz-ZEK: ${
             zekSummary(enc.complications)}</span></div>` : ""}
-      ${editable ? `<div class="row wrap" data-s="mt-sm gap-sm">
+      <div class="row wrap" data-s="mt-sm gap-sm">
+        ${editable ? `
         <button class="btn-quiet small" id="edit-enc">Einsatzdaten ändern</button>
-        <button class="btn-quiet small" id="enc-zek">ZEK zum Einsatz</button>
-      </div>` : ""}
+        <button class="btn-quiet small" id="enc-zek">ZEK zum Einsatz</button>` : ""}
+        ${canWrite() && items.length ? `
+        <button class="btn-quiet small" id="share-enc">Als Kompetenz teilen</button>` : ""}
+      </div>
     </div>
 
     <div class="stack" id="entries"></div>
@@ -1096,19 +1150,24 @@ async function viewEncounter(id) {
   if (editable) {
     $("#add-measure").addEventListener("click", () => measurePicker(enc));
     $("#add-med").addEventListener("click", () => medicationPicker(enc));
-    $("#finish").addEventListener("click", () => { location.hash = "#/"; });
+    $("#finish").addEventListener("click", () => { location.hash = "#/einsaetze"; });
     const editEnc = $("#edit-enc");
     if (editEnc) editEnc.addEventListener("click", () => editEncounterSheet(enc));
     const encZek = $("#enc-zek");
     if (encZek) encZek.addEventListener("click", () => encounterZekSheet(enc));
   }
 
+  const shareEnc = $("#share-enc");
+  if (shareEnc) shareEnc.addEventListener("click", () => teilenAusEinsatz(enc, null));
+  entries.querySelectorAll("[data-share]").forEach((b) =>
+    b.addEventListener("click", () => teilenAusEinsatz(enc, b.dataset.share)));
+
   const wdEnc = $("#withdraw-enc");
   if (wdEnc) wdEnc.addEventListener("click", () =>
     withdrawSheet("Einsatz entfernen",
       `/api/encounters/${enc.id}/withdraw`,
       "Der Einsatz und alle zugehörigen Einträge werden stillgelegt.",
-      () => { location.hash = "#/neu"; }));
+      () => { location.hash = "#/einsaetze"; }));
 
   entries.querySelectorAll("[data-edit-attempt]").forEach((b) =>
     b.addEventListener("click", () => editAttemptSheet(
@@ -1165,6 +1224,7 @@ function attemptCard(a, editable) {
           ${a.note ? `<div class="small muted" data-s="mt-xs">${esc(a.note)}</div>` : ""}
         </div>
         <div class="stack right" data-s="shrink-0">
+          ${canWrite() ? `<button class="btn-quiet small" data-share="${esc(a.id)}">Teilen</button>` : ""}
           ${a.lock.locked
             ? `<button class="btn-quiet small btn-danger" data-wd-attempt="${esc(a.id)}">Entfernen</button>`
             : `<button class="btn-quiet small" data-edit-attempt="${esc(a.id)}">Bearbeiten</button>
@@ -1201,6 +1261,7 @@ function medCard(m, editable) {
           ${m.note ? `<div class="small muted" data-s="mt-xs">${esc(m.note)}</div>` : ""}
         </div>
         <div class="stack right" data-s="shrink-0">
+          ${canWrite() ? `<button class="btn-quiet small" data-share="${esc(m.id)}">Teilen</button>` : ""}
           ${m.lock.locked
             ? `<button class="btn-quiet small btn-danger" data-wd-med="${esc(m.id)}">Entfernen</button>`
             : `<button class="btn-quiet small" data-edit-med="${esc(m.id)}">Bearbeiten</button>
@@ -1249,7 +1310,7 @@ function editEncounterSheet(enc) {
     $("#del-enc", body).addEventListener("click", async () => {
       if (!confirm("Den gesamten Einsatz mit allen Einträgen löschen?")) return;
       await api("/api/encounters/" + enc.id, { method: "DELETE" });
-      closeSheet(); toast("Einsatz gelöscht."); location.hash = "#/neu";
+      closeSheet(); toast("Einsatz gelöscht."); location.hash = "#/einsaetze";
     });
     $("#ee-form", body).addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -2335,21 +2396,133 @@ async function viewAdmin() {
       Änderungsprotokoll.</p></div>
     <div id="admin-area"></div>
     <div class="card pad-lg" data-s="mt-md">
+      <h2>Stammdaten</h2>
+      <p class="small muted" data-s="mt-sm">Änderungen wirken nur auf neue
+      Einträge. Bereits dokumentierte Maßnahmen und Medikamente behalten ihre
+      ursprüngliche Bezeichnung.</p>
+      <div class="sheet-actions two">
+        <button id="edit-measures">Maßnahmenkatalog</button>
+        <button id="edit-meds">Medikamente</button>
+      </div>
+    </div>
+    <div class="card pad-lg" data-s="mt-md">
+      <h2>Rechtliche Angaben</h2>
+      <p class="small muted" data-s="mt-xs">Diese Angaben erscheinen auf der
+      Seite Impressum und Datenschutz, die auch ohne Anmeldung erreichbar ist.
+      Die E-Mail-Adresse ist nach § 5 Abs. 1 DDG Pflichtangabe.</p>
+      <form id="legal-form" class="stack" data-s="mt-md">
+        <div class="field"><label for="ln">Name</label><input id="ln"></div>
+        <div class="field"><label for="la">Anschrift</label><input id="la"></div>
+        <div class="field"><label for="le">E-Mail-Adresse</label>
+          <input id="le" type="email" autocomplete="email"></div>
+        <div class="field"><label for="lp">Telefonnummer</label>
+          <input id="lp" type="tel" autocomplete="tel"></div>
+        <div class="field"><label for="lb">Berufsbezeichnung (optional)</label>
+          <input id="lb" placeholder="z. B. Notfallsanitäter"></div>
+        <div class="field"><label for="lz">Zuständige Stelle (optional)</label>
+          <input id="lz"></div>
+        <div class="field"><label for="lr">Berufsrechtliche Regelung (optional)</label>
+          <input id="lr" placeholder="z. B. NotSanG"></div>
+        <button class="btn-primary" type="submit">Angaben speichern</button>
+      </form>
+      <a href="#/rechtliches" class="small" data-s="mt-md link-plain">Seite ansehen</a>
+    </div>
+    <div class="card pad-lg" data-s="mt-md">
+      <h2>Backup</h2>
+      <p class="small muted" data-s="mt-sm">Die Sicherung umfasst die
+      gesamte Installation, also die Logbücher aller Mitglieder, und ist
+      deshalb der Administration vorbehalten. Sie enthält Stammdaten,
+      Profil, Einsätze, Maßnahmen, Medikamentengaben, ZEK-Verknüpfungen, Einstellungen
+      und das Änderungsprotokoll. Zugangsdaten und das TOTP-Geheimnis sind
+      bewusst nicht enthalten.</p>
+      <div class="sheet-actions two">
+        <button id="backup">Sicherung herunterladen</button>
+        <button class="btn-danger" id="restore">Sicherung einspielen</button>
+      </div>
+    </div>
+    <div class="card pad-lg" data-s="mt-md">
       <h2>Änderungsprotokoll</h2>
       <p class="small muted" data-s="mt-xs">Administrative Vorgänge mit
       Zeitpunkt, altem und neuem Wert. Nur lesbar.</p>
       <a class="btn link-plain" href="#/protokoll" data-s="mt-md">Protokoll öffnen</a>
     </div>
     ${pageFoot()}`;
+  bindeAdminWerkzeuge();
   renderAdmin();
+}
+
+/* Stammdaten, rechtliche Angaben und Sicherung standen bis 4.3 im Profil
+   jedes Mitglieds, obwohl nur die Administration sie benutzen durfte. */
+function bindeAdminWerkzeuge() {
+  $("#edit-measures").addEventListener("click", measureAdmin);
+  $("#edit-meds").addEventListener("click", medicationAdmin);
+
+  $("#backup").addEventListener("click", () => {
+    location.href = "/api/exports/backup";
+  });
+
+  $("#restore").addEventListener("click", () => sheet("Sicherung einspielen", `
+    <div class="notice">Die Wiederherstellung ersetzt sämtliche vorhandenen Daten
+    dieser Installation. Bereits gesperrte Einträge des aktuellen Bestands gehen
+    dabei verloren. Lade vorher eine aktuelle Sicherung herunter.</div>
+    <form id="rs-form" class="stack" data-s="mt-lg">
+      <div class="field"><label for="rf">Sicherungsdatei</label>
+        <input id="rf" type="file" accept="application/json,.json" required></div>
+      <div class="field"><label for="rp2">Passwort</label>
+        <input id="rp2" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="rt">Code aus der Authenticator-App</label>
+        <input id="rt" inputmode="numeric" maxlength="6" pattern="[0-9]*" required></div>
+      <button class="btn-primary btn-lg" type="submit">Daten ersetzen</button>
+      <p class="tiny muted" id="rs-err"></p>
+    </form>`, (body) => {
+    $("#rs-form", body).addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = $("#rf", body).files[0];
+      if (!file) return;
+      if (!confirm("Alle vorhandenen Daten werden ersetzt. Fortfahren?")) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      const qs = new URLSearchParams({
+        password: $("#rp2", body).value, totp_code: $("#rt", body).value,
+      });
+      try {
+        await api("/api/exports/restore?" + qs.toString(), { method: "POST", body: fd });
+        closeSheet();
+        await loadCatalogs(true);
+        toast("Sicherung eingespielt.");
+        location.hash = "#/";
+        render();
+      } catch (err) { $("#rs-err", body).textContent = err.message; }
+    });
+  }));
+
+  api("/api/legal").then((l) => {
+    if (!$("#ln")) return;
+    $("#ln").value = l.name || "";
+    $("#la").value = l.address || "";
+    $("#le").value = l.email || "";
+    $("#lp").value = l.phone || "";
+    $("#lb").value = l.profession || "";
+    $("#lz").value = l.authority || "";
+    $("#lr").value = l.law || "";
+  });
+  $("#legal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await api("/api/legal", { method: "PUT", body: {
+      imprint_name: $("#ln").value, imprint_address: $("#la").value,
+      imprint_email: $("#le").value, imprint_phone: $("#lp").value,
+      imprint_profession: $("#lb").value, imprint_authority: $("#lz").value,
+      imprint_law: $("#lr").value } });
+    toast("Rechtliche Angaben gespeichert.");
+  });
 }
 
 let profilGruppe = "konto";
 
 async function viewProfile() {
-  const [p, settings, recovery, o] = await Promise.all([
+  const [p, settings, recovery, o, np] = await Promise.all([
     api("/api/profile"), api("/api/settings"), api("/api/auth/recovery/status"),
-    api("/api/overview"),
+    api("/api/overview"), netzProfil(true),
   ]);
   const prof = p.profile || {};
   const initialen = ((prof.first_name || p.username || "?").slice(0, 1)
@@ -2360,7 +2533,9 @@ async function viewProfile() {
   app().innerHTML = `
     <div class="profile-head">
       <span class="avatar-ring" aria-hidden="true">
-        ${markSvg("ring")}<span class="ini">${esc(initialen)}</span>
+        ${markSvg("ring")}${np.avatar_id
+          ? `<img class="av av-ring" src="/api/netz/medien/${esc(np.avatar_id)}" alt="">`
+          : `<span class="ini">${esc(initialen)}</span>`}
       </span>
       <div class="who">
         <h1>${esc(anzeigename)}</h1>
@@ -2379,6 +2554,7 @@ async function viewProfile() {
 
     <div class="seg" role="tablist" aria-label="Profilbereiche" id="prof-seg">
       <button class="seg-item" role="tab" data-gruppe="konto">Konto</button>
+      <button class="seg-item" role="tab" data-gruppe="netz">Netzwerk</button>
       <button class="seg-item" role="tab" data-gruppe="sicherheit">Sicherheit</button>
       <button class="seg-item" role="tab" data-gruppe="erfassung">Erfassung</button>
       <button class="seg-item" role="tab" data-gruppe="daten">Daten</button>
@@ -2430,6 +2606,8 @@ async function viewProfile() {
       </form>
     </div>
 
+    ${netzProfilKarten(np)}
+
     <div class="card pad-lg" data-s="mt-md">
       <h2>Erfassung</h2>
       <form id="set-form" class="stack" data-s="mt-md">
@@ -2468,28 +2646,7 @@ async function viewProfile() {
       </div>
     </div>
 
-    <div class="card pad-lg" data-s="mt-md">
-      <h2>Stammdaten</h2>
-      <p class="small muted" data-s="mt-sm">Änderungen wirken nur auf neue
-      Einträge. Bereits dokumentierte Maßnahmen und Medikamente behalten ihre
-      ursprüngliche Bezeichnung.</p>
-      <div class="sheet-actions two">
-        <button id="edit-measures">Maßnahmenkatalog</button>
-        <button id="edit-meds">Medikamente</button>
-      </div>
-    </div>
 
-    <div class="card pad-lg" data-s="mt-md">
-      <h2>Backup</h2>
-      <p class="small muted" data-s="mt-sm">Die Sicherung enthält Stammdaten,
-      Profil, Einsätze, Maßnahmen, Medikamentengaben, ZEK-Verknüpfungen, Einstellungen
-      und das Änderungsprotokoll. Zugangsdaten und das TOTP-Geheimnis sind
-      bewusst nicht enthalten.</p>
-      <div class="sheet-actions two">
-        <button id="backup">Sicherung herunterladen</button>
-        <button class="btn-danger" id="restore">Sicherung einspielen</button>
-      </div>
-    </div>
 
     <div class="card pad-lg" data-s="mt-md">
       <h2>Änderungsprotokoll</h2>
@@ -2499,28 +2656,6 @@ async function viewProfile() {
       <a class="btn link-plain" href="#/protokoll" data-s="mt-md">Protokoll öffnen</a>
     </div>
 
-    <div class="card pad-lg" data-s="mt-md">
-      <h2>Rechtliche Angaben</h2>
-      <p class="small muted" data-s="mt-xs">Diese Angaben erscheinen auf der
-      Seite Impressum und Datenschutz, die auch ohne Anmeldung erreichbar ist.
-      Die E-Mail-Adresse ist nach § 5 Abs. 1 DDG Pflichtangabe.</p>
-      <form id="legal-form" class="stack" data-s="mt-md">
-        <div class="field"><label for="ln">Name</label><input id="ln"></div>
-        <div class="field"><label for="la">Anschrift</label><input id="la"></div>
-        <div class="field"><label for="le">E-Mail-Adresse</label>
-          <input id="le" type="email" autocomplete="email"></div>
-        <div class="field"><label for="lp">Telefonnummer</label>
-          <input id="lp" type="tel" autocomplete="tel"></div>
-        <div class="field"><label for="lb">Berufsbezeichnung (optional)</label>
-          <input id="lb" placeholder="z. B. Notfallsanitäter"></div>
-        <div class="field"><label for="lz">Zuständige Stelle (optional)</label>
-          <input id="lz"></div>
-        <div class="field"><label for="lr">Berufsrechtliche Regelung (optional)</label>
-          <input id="lr" placeholder="z. B. NotSanG"></div>
-        <button class="btn-primary" type="submit">Angaben speichern</button>
-      </form>
-      <a href="#/rechtliches" class="small" data-s="mt-md link-plain">Seite ansehen</a>
-    </div>
 
     <div class="card pad-lg" data-s="mt-md">
       <h2>Vertraute Geräte</h2>
@@ -2696,68 +2831,6 @@ async function viewProfile() {
     });
   }));
 
-  $("#edit-measures").addEventListener("click", measureAdmin);
-  $("#edit-meds").addEventListener("click", medicationAdmin);
-
-  $("#backup").addEventListener("click", () => {
-    location.href = "/api/exports/backup";
-  });
-
-  $("#restore").addEventListener("click", () => sheet("Sicherung einspielen", `
-    <div class="notice">Die Wiederherstellung ersetzt sämtliche vorhandenen Daten
-    dieser Installation. Bereits gesperrte Einträge des aktuellen Bestands gehen
-    dabei verloren. Lade vorher eine aktuelle Sicherung herunter.</div>
-    <form id="rs-form" class="stack" data-s="mt-lg">
-      <div class="field"><label for="rf">Sicherungsdatei</label>
-        <input id="rf" type="file" accept="application/json,.json" required></div>
-      <div class="field"><label for="rp2">Passwort</label>
-        <input id="rp2" type="password" autocomplete="current-password" required></div>
-      <div class="field"><label for="rt">Code aus der Authenticator-App</label>
-        <input id="rt" inputmode="numeric" maxlength="6" pattern="[0-9]*" required></div>
-      <button class="btn-primary btn-lg" type="submit">Daten ersetzen</button>
-      <p class="tiny muted" id="rs-err"></p>
-    </form>`, (body) => {
-    $("#rs-form", body).addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const file = $("#rf", body).files[0];
-      if (!file) return;
-      if (!confirm("Alle vorhandenen Daten werden ersetzt. Fortfahren?")) return;
-      const fd = new FormData();
-      fd.append("file", file);
-      const qs = new URLSearchParams({
-        password: $("#rp2", body).value, totp_code: $("#rt", body).value,
-      });
-      try {
-        await api("/api/exports/restore?" + qs.toString(), { method: "POST", body: fd });
-        closeSheet();
-        await loadCatalogs(true);
-        toast("Sicherung eingespielt.");
-        location.hash = "#/";
-        render();
-      } catch (err) { $("#rs-err", body).textContent = err.message; }
-    });
-  }));
-
-  api("/api/legal").then((l) => {
-    if (!$("#ln")) return;
-    $("#ln").value = l.name || "";
-    $("#la").value = l.address || "";
-    $("#le").value = l.email || "";
-    $("#lp").value = l.phone || "";
-    $("#lb").value = l.profession || "";
-    $("#lz").value = l.authority || "";
-    $("#lr").value = l.law || "";
-  });
-  $("#legal-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    await api("/api/legal", { method: "PUT", body: {
-      imprint_name: $("#ln").value, imprint_address: $("#la").value,
-      imprint_email: $("#le").value, imprint_phone: $("#lp").value,
-      imprint_profession: $("#lb").value, imprint_authority: $("#lz").value,
-      imprint_law: $("#lr").value } });
-    toast("Rechtliche Angaben gespeichert.");
-  });
-
   api("/api/auth/devices").then((d) => {
     const box = $("#devices");
     if (!box) return;
@@ -2778,6 +2851,7 @@ async function viewProfile() {
   });
 
   renderPasskeys();
+  bindeNetzProfil(np);
 
   /* Die Karten tragen ihre Gruppe nach Überschrift, nicht nach Position:
      eine eingeschobene Karte sortiert sich über ihre Überschrift richtig
@@ -2786,9 +2860,10 @@ async function viewProfile() {
     "Anmeldedaten": "konto", "Profil": "konto",
     "Sicherheit": "sicherheit", "Passkeys": "sicherheit",
     "Vertraute Geräte": "sicherheit",
-    "Erfassung": "erfassung", "Stammdaten": "erfassung",
-    "Rechtliche Angaben": "erfassung",
-    "Backup": "daten", "Änderungsprotokoll": "daten", "Deine Daten": "daten",
+    "Erfassung": "erfassung",
+    "Änderungsprotokoll": "daten", "Deine Daten": "daten",
+    "Kompetenznetz": "netz", "Profilbilder": "netz", "Vorstellung": "netz",
+    "Kompetenzen freigeben": "netz",
   };
   app().querySelectorAll(".card > h2").forEach((h) => {
     const gruppe = zuordnung[h.textContent.trim()];

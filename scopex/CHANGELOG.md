@@ -3,6 +3,119 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.4.0
+
+MINOR: neue Funktion mit neuen Endpunkten unter `/api/netz/` und einer
+Migration (`0010_netzwerk`). Bestehende Endpunkte, Sicherungsformat und
+Add-on-Optionen bleiben unverändert. Die Migration läuft beim Start
+automatisch; vorhandene Daten bleiben unberührt.
+
+### Sicherheit — bitte lesen
+
+**Sicherung war für jedes Mitglied abrufbar.** `GET /api/exports/backup`
+prüfte nur, ob jemand angemeldet ist. Jedes Mitglied konnte damit die
+Logbücher **aller** Mitglieder herunterladen — mit Einsatznummern,
+Fahrzeugen, Zeitpunkten und Notizen. Der Fehler bestand seit der
+Mehrbenutzerfähigkeit. Die Sicherung verlangt jetzt die
+Administrationsrolle; eine neue Prüfung in der Berechtigungsreihe legt
+ein markiertes Admin-Logbuch an und stellt sicher, dass es bei einem
+Mitglied nicht ankommt. Mit der alten Fassung schlägt sie an.
+
+Empfehlung: im Änderungsprotokoll nach Einträgen `exports … backup`
+suchen, die nicht von einem Administrationskonto stammen.
+
+Im selben Zug:
+
+- **Wiederherstellung behält die Zuordnung.** Bis 4.3.1 wurden beim
+  Einspielen alle Einsätze und Profile dem wiederherstellenden Konto
+  zugeschrieben. Jetzt behalten sie ihren Besitzer; nur verwaiste
+  Datensätze gehen an das wiederherstellende Konto.
+- **ZEK auf Einsatzebene in der Sicherung.** `encounter_complications`
+  fehlte seit 4.0 in Sicherung und Wiederherstellung und ging dabei still
+  verloren.
+- **Pillow 13.0.0** als direkte Abhängigkeit (11.3.0 hatte vier bekannte
+  Schwachstellen). Neue Bilder werden ausschließlich darüber verarbeitet.
+
+### Kompetenznetz
+
+Ein Lernfeed unter bestätigten Kontakten, nach dem Muster beruflicher
+Netzwerke. Abgeschaltet, bis ein Mitglied es selbst einschaltet; das
+Logbuch funktioniert ohne es unverändert.
+
+- **Startseite ist der Feed.** Die Einsatzliste liegt unter
+  `#/einsaetze`, alte Lesezeichen auf `#/neu` landen dort.
+- **Leiste**: Feed · Einsätze · **Neu** · Auswertung · Profil. Der
+  mittlere Punkt fragt jetzt, was entstehen soll: Einsatz dokumentieren
+  oder Beitrag teilen. Auf breiten Bildschirmen zusätzlich Kontakte und
+  Mitteilungen mit Zähler; auf Telefonen stehen beide im Kopf des Feeds.
+- **Beiträge** in drei Arten: Gedanke (Text), Wissen (Studie, Leitlinie,
+  Fachartikel mit Link, Titel und Art der Quelle) und Kompetenz (Einträge
+  aus genau einem eigenen Einsatz). Anerkennung als *Stark*,
+  *Lehrreich* oder *Danke*, Kommentare, Löschen, Melden.
+- **Profile** mit Profilbild, Kopfbild, Kurzbeschreibung und
+  Vorstellung. Kompetenzen am Profil sind durch das Logbuch belegt —
+  Anzahl und Erfolge, kein Datum — und je Maßnahme einzeln freizugeben.
+- **Kontakte** nach dem Bestätigungsmodell: Anfrage, Annehmen, Ablehnen,
+  Lösen. Eine Gegenanfrage gilt als Annahme.
+- **Kompetenz bestätigen** durch Kontakte, kollegial oder als
+  Praxisanleitung, mit Namen am Profil. Zurückziehen kann, wer bestätigt
+  hat, und wer bestätigt wurde.
+- **Mitteilungen** zu Anfragen, Anerkennung, Kommentaren, Bestätigungen,
+  Meldungen und Moderation.
+- **Moderation**: Administrator*innen sehen gemeldete Beiträge und
+  können sie mit Begründung entfernen. Die Verfasserin oder der Verfasser
+  erfährt den Grund, der Vorgang steht im Änderungsprotokoll.
+- **Teilen aus dem Einsatz**: „Als Kompetenz teilen" im Einsatzkopf und
+  „Teilen" an jedem Eintrag. Vorschau und Auswahl zeigen genau, was
+  hinausgeht.
+
+### Datenschutzgrenze
+
+Einsatznummer, Fahrzeug, Schicht, Datum und Uhrzeit eines Einsatzes,
+Dosierungen, Notizen und Patientenschaden verlassen das eigene Logbuch
+nie. Durchgesetzt im Server, nicht in der Oberfläche:
+
+- Ein Kompetenzbeitrag ist eine **Kopie aus einer Allowlist** —
+  Bezeichnung, Kategorie, Ergebnis, Rolle; bei Medikamenten Wirkstoff,
+  Etikettengruppe, Weg, Ergebnis. ZEK-Bezeichnungen und NACA nur einzeln
+  freigegeben. Die Tabelle `net_posts` hat keine Spalte, die auf einen
+  Einsatz verweist.
+- **Freitext wird geprüft**: Beiträge, Kommentare, Link-Titel und
+  Kurzbeschreibung mit einer eigenen Einsatznummer, einem eigenen
+  Fahrzeug, einem eigenen Einsatztag oder einer Uhrzeit werden
+  abgelehnt. Verdünnungen (1:10) und Reanimationsverhältnisse (30:2)
+  fallen nicht darunter.
+- **Sichtbarkeit**: Name, Profilbild und Kurzbeschreibung sehen alle
+  Mitglieder mit eingeschaltetem Netz; alles andere nur bestätigte
+  Kontakte. Benutzername und E-Mail-Adresse anderer werden nie
+  ausgegeben. Nicht sichtbare Objekte antworten mit 404.
+- **Bilder** werden dekodiert, beschnitten und neu als JPEG codiert.
+  EXIF, GPS, XMP, Farbprofile und angehängte Daten gehen dabei verloren.
+  Dekompressionsbomben werden abgewiesen.
+- Die Testreihe `test_netz.py` (113 Prüfungen) legt einen Einsatz mit
+  eindeutigen Markierwerten in jedem privaten Feld an und durchsucht jede
+  Antwort an Kontakte nach diesen Werten.
+- Zeitangaben im Feed sind relativ („vor 2 Std."), ab fünf Wochen nur
+  Monat und Jahr. Der Hinweis „mit Abstand zum Einsatz posten" steht an
+  jedem Eingabefeld.
+
+### Sonst
+
+- Stammdaten, rechtliche Angaben und Sicherung sind aus dem Profil in die
+  Verwaltung gewandert. Im Profil wurden sie allen angezeigt, benutzen
+  durfte sie nur die Administration.
+- Neue Profilgruppe **Netzwerk**: Ein- und Ausschalten, Bilder,
+  Vorstellung, Freigabe der Kompetenzen.
+- Auskunft (Art. 15 DSGVO) enthält die Netzdaten einschließlich Bildern;
+  Kontolöschung entfernt sie vollständig.
+- Datenschutzerklärung um einen Abschnitt zum Kompetenznetz ergänzt.
+- Die Netzdaten gehören bewusst nicht in die Sicherung: sie verknüpfen die
+  Daten mehrerer Mitglieder. Das Add-on-Backup von Home Assistant enthält
+  sie weiterhin.
+- Neue Oberflächendatei `netz.js`, vor `app.js` geladen. Die
+  Prüfschleife zählt beide gegen das Größenbudget und prüft Feed,
+  Einsätze, Kontakte und Mitteilungen auf Barrierefreiheit.
+
 ## 4.3.1
 
 PATCH: Fehlerbehebung ohne neue Felder, Endpunkte oder Optionen.

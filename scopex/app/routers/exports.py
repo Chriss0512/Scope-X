@@ -20,6 +20,7 @@ from ..analytics import (
 from ..core import audit, current_user, edit_window_minutes, require_admin
 from ..db import conn, engine, new_id, now_iso, q, row, rows, scalar
 from ..security import verify_password, verify_totp
+from . import netz
 
 router = APIRouter(prefix="/api", tags=["exports"])
 
@@ -28,8 +29,16 @@ BACKUP_TABLES = [
     "measure_parameter_definitions", "measure_attempts",
     "measure_attempt_parameters", "medications", "medication_preparations",
     "medication_administrations", "complications", "attempt_complications",
-    "medication_complications", "favorites", "settings", "audit_log",
+    "medication_complications", "encounter_complications", "favorites",
+    "settings", "audit_log",
 ]
+# encounter_complications kam mit 4.0 hinzu, fehlte hier aber bis 4.3.1:
+# Sicherung und Wiederherstellung verloren die ZEK auf Einsatzebene still.
+#
+# Die Tabellen des Kompetenznetzes (net_*) gehören bewusst nicht hinein.
+# Sie verknüpfen die Daten mehrerer Mitglieder, Bilder liegen als Binärdaten
+# vor, und für den Katastrophenfall sichert das Add-on-Backup von Home
+# Assistant ohnehin das gesamte /data.
 
 BACKUP_VERSION = 1
 
@@ -151,14 +160,20 @@ def export_csv(kind: str = "attempts", period: str | None = None,
 
 
 @router.get("/exports/backup")
-def export_backup(user=Depends(current_user)):
-    """Vollstaendiges Backup als JSON. Enthaelt Stammdaten, Profil,
-    Einsaetze, Massnahmen, Medikamentengaben, ZEK-Verknuepfungen,
-    Einstellungen und das Audit-Log.
+def export_backup(user=Depends(require_admin)):
+    """Instanzsicherung als JSON: Stammdaten, Profile, Einsaetze,
+    Massnahmen, Medikamentengaben, ZEK, Einstellungen, Audit-Log —
+    aller Konten.
+
+    Nur fuer Administrator*innen. Bis 4.3.1 genuegte eine Anmeldung, und
+    weil die Abfragen keinen Kontofilter haben, bekam jedes Mitglied, selbst
+    ein Gast, das vollstaendige Logbuch aller anderen. Die Funktion stammt
+    aus der Einzelplatzzeit und wurde beim Umbau auf mehrere Konten nicht
+    nachgezogen. Fuer die eigenen Daten gibt es /exports/my-data.
 
     Zugangsdaten sind bewusst nicht enthalten: kein Passwort-Hash, kein
     TOTP-Secret, keine Wiederherstellungscodes. Ein Backup allein gibt
-    damit niemandem Zugriff auf das Konto.
+    damit niemandem Zugriff auf ein Konto.
     """
     payload = {"format": "scopex-backup", "version": BACKUP_VERSION,
                "created_at": now_iso(), "tables": {}}
@@ -229,9 +244,32 @@ async def restore_backup(file: UploadFile = File(...),
             for rec in records:
                 q(c, sql, **{col: rec.get(col) for col in columns})
             counts[table] = len(records)
-        # Das wiederhergestellte Profil gehoert dem aktuellen Konto.
-        q(c, "UPDATE user_profile SET user_id = :u", u=user["id"])
-        q(c, "UPDATE encounters SET user_id = :u", u=user["id"])
+        # Zuordnung erhalten. Bis 4.3.1 wurden hier ALLE Einsaetze und
+        # Profile dem wiederherstellenden Konto zugeschrieben — auf einer
+        # Installation mit mehreren Mitgliedern landeten danach saemtliche
+        # Logbuecher bei einer Person. Jetzt behalten Datensaetze ihren
+        # Besitzer, sofern es das Konto hier gibt. Nur verwaiste
+        # Datensaetze, etwa aus einer Einzelplatz-Sicherung einer anderen
+        # Installation, gehen an das wiederherstellende Konto.
+        bekannt = {r_["id"] for r_ in rows(c, "SELECT id FROM users")}
+        for enc in rows(c, "SELECT id, user_id FROM encounters"):
+            if enc["user_id"] not in bekannt:
+                q(c, "UPDATE encounters SET user_id = :u WHERE id = :i",
+                  u=user["id"], i=enc["id"])
+        eigenes_profil = False
+        for prof in rows(c, "SELECT user_id FROM user_profile"):
+            if prof["user_id"] == user["id"]:
+                eigenes_profil = True
+        for prof in rows(c, "SELECT user_id FROM user_profile"):
+            if prof["user_id"] in bekannt:
+                continue
+            if not eigenes_profil:
+                q(c, "UPDATE user_profile SET user_id = :u WHERE user_id = :o",
+                  u=user["id"], o=prof["user_id"])
+                eigenes_profil = True
+            else:
+                q(c, "DELETE FROM user_profile WHERE user_id = :o",
+                  o=prof["user_id"])
         audit(c, user["id"], "exports", new_id(), "restore", "records",
               None, sum(counts.values()))
     return {"ok": True, "restored": counts}
@@ -302,6 +340,7 @@ def export_own_data(user=Depends(current_user)):
                           "FROM trusted_devices WHERE user_id = :u", u=user["id"])
         keys = rows(c, "SELECT label, created_at, last_used_at FROM passkeys "
                        "WHERE user_id = :u", u=user["id"])
+        netzwerk = netz.auskunft(c, user["id"])
         audit(c, user["id"], "exports", new_id(), "self_export", "encounters",
               None, len(ids))
 
@@ -313,6 +352,7 @@ def export_own_data(user=Depends(current_user)):
         "konto": account, "profil": profile, "einsaetze": encounters,
         "einstellungen": settings_rows, "aenderungsprotokoll": audit_rows,
         "vertraute_geraete": devices, "passkeys": keys,
+        "netzwerk": netzwerk,
     }
     stamp = datetime.now().strftime("%Y%m%d")
     return Response(
@@ -374,6 +414,10 @@ def delete_own_account(data: DeleteAccountIn, user=Depends(current_user)):
             q(c, "DELETE FROM medication_administrations WHERE encounter_id = :e", e=eid)
             q(c, "DELETE FROM encounter_complications WHERE encounter_id = :e", e=eid)
         q(c, "DELETE FROM encounters WHERE user_id = :u", u=user["id"])
+        # Kompetenznetz: Beiträge samt Reaktionen und Kommentaren anderer
+        # darauf, eigene Kommentare und Reaktionen, Kontakte, Bestätigungen
+        # in beide Richtungen, Bilder, Mitteilungen.
+        netz.loeschen(c, user["id"])
         for table in ("favorites", "settings", "recovery_codes", "sessions",
                       "trusted_devices", "passkeys", "password_resets",
                       "auth_totp", "user_profile"):

@@ -1082,3 +1082,234 @@ body.auth .to-top { display: none; }
   font-size: .68rem; font-weight: 700; letter-spacing: .02em;
 }
 .picktile .t-divi { background: var(--label-bg, var(--surface-2)); color: var(--label-fg, var(--ink)); }
+
+/* ======================================================= Kompetenznetz */
+
+.link-plain { text-decoration: none; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+h2.sec { font-size: .95rem; margin: 1.4rem 0 .6rem; }
+
+/* Kontakte und Mitteilungen stehen auf schmalen Bildschirmen im Kopf des
+   Feeds; die Leiste behält fünf Punkte, damit jeder groß genug bleibt. */
+@media (max-width: 899px) {
+  nav.tabbar a.nur-breit { display: none; }
+}
+nav.tabbar a .badge { margin-left: auto; }
+
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--fail); color: #fff; font-size: .68rem; font-weight: 700;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.badge[hidden] { display: none; }
+
+.icon-btn {
+  position: relative; display: inline-flex; align-items: center;
+  justify-content: center; width: 42px; height: 42px; border-radius: 50%;
+  color: var(--ink-strong); background: var(--surface);
+  border: 1px solid var(--line); padding: 0; min-height: 0; flex: 0 0 auto;
+}
+.icon-btn svg { width: 21px; height: 21px; flex: 0 0 auto; }
+.icon-btn .badge { position: absolute; top: -3px; right: -4px; }
+.icon-btn:hover { background: var(--surface-2); }
+
+/* ------------------------------------------------------------ Profilbild */
+
+.av {
+  flex: 0 0 auto; border-radius: 50%; object-fit: cover; display: block;
+  background: var(--surface-2);
+}
+.av.ini {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; letter-spacing: .02em;
+}
+.av.ini[data-farbe="0"] { background: var(--petrol); }
+.av.ini[data-farbe="1"] { background: #2c5f7c; }
+.av.ini[data-farbe="2"] { background: #4b6470; }
+.av.ini[data-farbe="3"] { background: #6a5a8c; }
+.av-s { width: 32px; height: 32px; font-size: .72rem; }
+.av-m { width: 44px; height: 44px; font-size: .88rem; }
+.av-xl { width: 96px; height: 96px; font-size: 1.8rem; border: 4px solid var(--surface); }
+/* Im Profilkopf sitzt das Foto innerhalb des Scope-Rings. */
+.avatar-ring .av-ring { width: 62px; height: 62px; position: relative; }
+
+/* ------------------------------------------------------------ Feedkopf */
+
+.netz-head .spread { align-items: flex-start; }
+.composer-prompt {
+  display: flex; align-items: center; gap: .7rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .75rem .85rem;
+}
+.prompt-btn {
+  flex: 1 1 auto; text-align: left; border-radius: var(--radius-pill);
+  color: var(--muted); background: var(--surface-inset);
+  min-height: 44px; padding: .5rem 1rem;
+}
+.composer-quick { margin-top: .5rem; }
+
+.privacy-box {
+  border-left: 3px solid var(--petrol); background: var(--surface-inset);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: .65rem .8rem; margin-top: .25rem;
+}
+.privacy-box strong { font-size: .82rem; color: var(--ink-strong); }
+.privacy-box p { margin: .3rem 0 0; }
+
+.choice {
+  display: flex; flex-direction: column; align-items: flex-start; gap: .2rem;
+  text-align: left; width: 100%; padding: .85rem 1rem; min-height: 60px;
+}
+
+.check-list { margin: 0; padding-left: 1.1rem; }
+.check-list li + li { margin-top: .35rem; }
+
+/* ----------------------------------------------------------- Beiträge */
+
+.npost {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .9rem 1rem .6rem;
+  box-shadow: var(--shadow-sm);
+}
+.npost + .npost { margin-top: .7rem; }
+.np-head { display: flex; align-items: flex-start; gap: .6rem; }
+.np-who { display: flex; align-items: center; gap: .65rem; color: inherit; min-width: 0; flex: 1 1 auto; }
+.np-who strong { color: var(--ink-strong); }
+.np-sub { display: block; margin-top: .1rem; overflow-wrap: anywhere; }
+.np-text {
+  margin-top: .7rem; white-space: pre-line; overflow-wrap: anywhere;
+  font-size: .93rem; line-height: 1.5; color: var(--ink);
+}
+.np-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .4rem; margin-top: .8rem; padding-top: .55rem; border-top: 1px solid var(--line);
+}
+.np-foot { justify-content: flex-start; }
+.icon-btn.flat { border-color: transparent; background: none; color: var(--muted); width: 38px; height: 38px; margin: -.3rem -.4rem 0 0; }
+.icon-btn.flat:hover { background: var(--surface-2); }
+.react-k { display: inline-flex; align-items: center; gap: .3rem; margin-left: auto; }
+.react-k svg { width: 18px; height: 18px; }
+.react-k .n { margin-left: 0; }
+.kompetenz .chip.static { min-height: 28px; padding: .15rem .6rem; font-size: .78rem; }
+.kt-row { color: var(--ink); }
+.person-row { flex-wrap: wrap; }
+.person-row > a { flex: 1 1 210px; }
+.note-row { padding-left: .5rem; }
+.note-row.neu::before { left: -.3rem; }
+.react {
+  min-height: 36px; padding: .25rem .7rem; border-radius: var(--radius-pill);
+  font-size: .82rem; font-weight: 500; background: var(--surface);
+}
+.react .n { font-variant-numeric: tabular-nums; color: var(--muted); margin-left: .15rem; }
+.react[aria-pressed="true"] {
+  background: var(--petrol); border-color: var(--petrol); color: #fff;
+}
+.react[aria-pressed="true"] .n { color: #fff; }
+.react[aria-expanded="true"] { border-color: var(--petrol); }
+
+.link-card {
+  display: flex; flex-direction: column; gap: .2rem; margin-top: .75rem;
+  padding: .75rem .85rem; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); background: var(--surface-inset);
+  text-decoration: none; color: var(--ink);
+}
+.link-card strong { color: var(--ink-strong); line-height: 1.35; overflow-wrap: anywhere; }
+.link-card .lc-kind {
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--petrol);
+}
+[data-theme="dark"] .link-card .lc-kind { color: var(--cyan); }
+.link-card:hover { border-color: var(--line-strong); }
+
+.kompetenz {
+  margin-top: .75rem; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: .65rem .75rem; background: var(--surface-inset);
+}
+.kz-head {
+  text-transform: uppercase; letter-spacing: .06em; font-weight: 600; color: var(--muted);
+}
+.kz-list { list-style: none; margin: .45rem 0 0; padding: 0; }
+.kz-row { display: flex; align-items: center; gap: .55rem; padding: .35rem 0; }
+.kz-row + .kz-row { border-top: 1px solid var(--line); }
+.kz-row .grow { min-width: 0; overflow-wrap: anywhere; font-size: .88rem; }
+.chip.static.zek { border-color: var(--zek); }
+
+.np-comments { margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+.np-comments[hidden] { display: none; }
+.k-list { list-style: none; margin: 0; padding: 0; }
+.k-item { display: flex; align-items: flex-start; gap: .55rem; }
+.k-item + .k-item { margin-top: .55rem; }
+.k-bubble {
+  min-width: 0; background: var(--surface-inset); border-radius: var(--radius-sm);
+  padding: .45rem .65rem;
+}
+.k-bubble .np-text { margin-top: .15rem; font-size: .86rem; }
+.k-bubble .btn-quiet { min-height: 30px; padding: .1rem .3rem; margin-top: .2rem; }
+.kommentar-form input { flex: 1 1 auto; min-width: 0; }
+
+/* ----------------------------------------------------------- Personen */
+
+.person-head { margin: -.2rem 0 0; }
+.banner {
+  position: relative; height: 0; padding-bottom: 33.333%;
+  border-radius: var(--radius); overflow: hidden;
+  background: linear-gradient(120deg, var(--navy), var(--petrol));
+  color: rgba(255, 255, 255, .22);
+}
+.banner img, .banner .ring-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.banner .ring-bg { width: auto; left: auto; right: -6%; height: 140%; top: -20%; }
+.person-id { display: flex; align-items: flex-end; gap: .9rem; margin-top: -48px; padding: 0 .6rem; position: relative; }
+.person-id .who { padding-bottom: .2rem; min-width: 0; }
+.person-id .who h1 { font-size: 1.35rem; overflow-wrap: anywhere; }
+.person-id .who p { margin: .15rem 0 0; }
+@media (max-width: 480px) {
+  .person-id { flex-direction: column; align-items: flex-start; gap: .4rem; }
+}
+
+.kz-items { list-style: none; margin: 0; padding: 0; }
+.kz-item { padding: .65rem 0; }
+.kz-item + .kz-item { border-top: 1px solid var(--line); }
+
+.person-list { list-style: none; margin: 0; padding: 0; }
+.person-list.card { padding: .2rem .85rem; }
+.person-row, .note-row {
+  display: flex; align-items: center; gap: .6rem; padding: .65rem 0;
+}
+.person-row + .person-row, .note-row + .note-row { border-top: 1px solid var(--line); }
+.person-row a, .note-row a { color: inherit; min-width: 0; }
+.person-row strong { color: var(--ink-strong); }
+.note-row.neu { position: relative; }
+.note-row.neu::before {
+  content: ""; position: absolute; left: -.55rem; top: 50%; width: 6px; height: 6px;
+  margin-top: -3px; border-radius: 50%; background: var(--petrol);
+}
+
+/* ------------------------------------------------- Profil: Netzwerk */
+
+#app[data-profil-gruppe="netz"] .card[data-gruppe]:not([data-gruppe="netz"]) { display: none; }
+@media (max-width: 420px) {
+  .seg .seg-item { font-size: .76rem; padding: .45rem .1rem; }
+}
+.media-edit { position: relative; padding-bottom: 54px; }
+.media-edit .av-xl { position: absolute; left: .8rem; bottom: 0; }
+.file-btn { position: relative; cursor: pointer; text-align: center; }
+.file-btn input {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+}
+.file-btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.kt-list { border: none; margin: 0; padding: 0; }
+.kt-list legend { margin-bottom: .4rem; font-weight: 600; }
+.kt-row {
+  display: flex; align-items: center; gap: .6rem; padding: .5rem 0;
+  font-size: .9rem; cursor: pointer;
+}
+.kt-row + .kt-row { border-top: 1px solid var(--line); }
+.kt-row input, label.check input { width: 20px; height: 20px; flex: 0 0 auto; margin: 0; }
+label.check { display: flex; align-items: center; gap: .55rem; font-size: .88rem; padding: .35rem 0; }
+fieldset.field { border: none; margin: 0; padding: 0; }

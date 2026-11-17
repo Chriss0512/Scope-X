@@ -328,6 +328,13 @@ check("Kein Framing", r.headers.get("x-frame-options") == "DENY")
 r = c.get("/assets/app.js")
 check("app.js ausgeliefert", r.status_code == 200 and len(r.content) > 20000, len(r.content))
 r = c.get("/assets/app.css"); check("app.css ausgeliefert", r.status_code == 200)
+r = c.get("/assets/netz.js")
+check("netz.js ausgeliefert", r.status_code == 200 and "viewNetz" in r.text, r.status_code)
+# netz.js muss vor app.js stehen: die Routentabelle in app.js verweist
+# beim Laden auf die Ansichten des Kompetenznetzes.
+spa = c.get("/").text
+check("netz.js vor app.js eingebunden",
+      0 <= spa.find("/assets/netz.js") < spa.find("/assets/app.js"))
 
 # Unbekannte Pfade. Der Catch-all lieferte früher für jeden Pfad außer
 # api/ die vollständige Oberfläche mit 200. Navigiert wird ausschließlich

@@ -248,7 +248,8 @@ ist bei dir aktiv, damit passt das.
 |---|---|
 | Datenbank | `/data/scopex.db` im Add-on-Container |
 | In HA-Backups | ja, `/data` ist Teil jedes Add-on-Backups |
-| Eigenes Backup | Profil & Einstellungen → Sicherung herunterladen |
+| Eigenes Backup | Verwaltung → Sicherung herunterladen (nur Administration, umfasst alle Mitglieder) |
+| Eigene Daten je Mitglied | Profil → Daten → Vollständige Auskunft |
 | Zugangsdaten im Backup | nein, bewusst nicht |
 
 Die eigene Sicherung enthält Stammdaten, Profil, Einsätze, Maßnahmen,
@@ -321,12 +322,34 @@ Freitext knapp und trage dort keine Patientendaten ein. Ob und in welchem
 Umfang du solche Aufzeichnungen führen darfst, richtet sich nach den Vorgaben
 deines Arbeitgebers.
 
+### Kompetenznetz (ab 4.4.0)
+
+Jedes Mitglied kann unter Profil → Netzwerk ein Kompetenznetz
+einschalten: Feed, Kontakte, Anerkennung, Kommentare und bestätigte
+Kompetenzen, sichtbar nur für bestätigte Kontakte. Abgeschaltet ist es,
+bis jemand es selbst einschaltet.
+
+| Bleibt immer privat | Kann geteilt werden |
+|---|---|
+| Einsatznummer, Fahrzeug, Schicht | Maßnahme: Bezeichnung, Kategorie, Ergebnis, Rolle |
+| Datum und Uhrzeit des Einsatzes | Medikament: Wirkstoff, Etikettengruppe, Weg, Ergebnis |
+| Dosierungen, Notizen, Patientenschaden | ZEK-Bezeichnungen und NACA, nur einzeln freigegeben |
+| Benutzername, E-Mail-Adresse | Name, Profilbild, Kurzbeschreibung, Vorstellung |
+
+Die Grenze setzt der Server durch: ein Kompetenzbeitrag ist eine Kopie aus
+einer festen Feldliste ohne Verweis auf den Einsatz, und Freitext mit einer
+eigenen Einsatznummer, einem eigenen Fahrzeug, einem eigenen Einsatztag
+oder einer Uhrzeit wird abgelehnt. Hochgeladene Bilder werden neu codiert,
+Metadaten wie der Aufnahmeort gehen dabei verloren. Gemeldete Beiträge
+prüft die Administration; ein Entfernen braucht eine Begründung und steht
+im Änderungsprotokoll.
+
 ## 10. Technische Eckpunkte
 
 Python 3.12, FastAPI, SQLite über SQLAlchemy Core, Frontend ohne Framework
 und ohne Build-Schritt. Kein Node, kein npm, keine `package.json`.
 Passwort-Hashing mit Argon2id, Altbestand aus `hashlib.scrypt`, TOTP nach RFC 6238 selbst implementiert, QR-Codes über
-`segno`, PDF über `fpdf2`. Zur Laufzeit gibt es keine externen Aufrufe: die
+`segno`, PDF über `fpdf2`, Bildverarbeitung über `Pillow`. Zur Laufzeit gibt es keine externen Aufrufe: die
 Content-Security-Policy erlaubt ausschließlich `'self'`, es gibt kein CDN,
 kein Tracking, keine Telemetrie.
 

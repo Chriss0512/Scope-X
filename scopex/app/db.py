@@ -557,6 +557,112 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         )""",
         "CREATE UNIQUE INDEX ix_challenge_handle ON webauthn_challenges(handle)",
     ]),
+    # Kompetenznetz. Keine dieser Tabellen hat eine Spalte, in der eine
+    # Einsatznummer, ein Einsatzzeitpunkt, eine Schicht, ein Fahrzeug,
+    # ein Maßnahmenzeitstempel oder eine Freitext-Notiz landen könnte.
+    # net_posts hält einen Schnappschuss der freigegebenen Werte und
+    # bewusst keine encounter_id: wer einen Beitrag liest, kann nicht
+    # einmal zurückverfolgen, aus welchem Einsatz er stammt.
+    ("0010_netzwerk", [
+        "ALTER TABLE user_profile ADD COLUMN headline TEXT",
+        "ALTER TABLE user_profile ADD COLUMN about TEXT",
+        # Voreinstellung aus: wer nichts tut, bleibt für andere unsichtbar.
+        "ALTER TABLE user_profile ADD COLUMN net_active INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE user_profile ADD COLUMN avatar_id TEXT",
+        "ALTER TABLE user_profile ADD COLUMN banner_id TEXT",
+
+        # MEDIUMBLOB statt BLOB: auf MariaDB fasst BLOB nur 64 KB, ein
+        # Kopfbild liegt darüber. SQLite liest den Typ über die
+        # Affinitätsregel (enthält "BLOB") ebenfalls richtig.
+        """CREATE TABLE net_media (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            data MEDIUMBLOB NOT NULL,
+            width INTEGER NOT NULL,
+            height INTEGER NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_media_user ON net_media(user_id)",
+
+        """CREATE TABLE net_connections (
+            id TEXT PRIMARY KEY,
+            requester_id TEXT NOT NULL,
+            addressee_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            accepted_at TEXT
+        )""",
+        "CREATE UNIQUE INDEX ix_conn_pair ON net_connections(requester_id, addressee_id)",
+        "CREATE INDEX ix_conn_addressee ON net_connections(addressee_id, status)",
+
+        """CREATE TABLE net_posts (
+            id TEXT PRIMARY KEY,
+            author_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            body TEXT NOT NULL,
+            link_url TEXT,
+            link_title TEXT,
+            link_source TEXT,
+            snapshot TEXT,
+            created_at TEXT NOT NULL,
+            removed_at TEXT,
+            removed_reason TEXT
+        )""",
+        "CREATE INDEX ix_posts_author ON net_posts(author_id, created_at)",
+        "CREATE INDEX ix_posts_created ON net_posts(created_at)",
+
+        """CREATE TABLE net_reactions (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_react_once ON net_reactions(post_id, user_id)",
+
+        """CREATE TABLE net_comments (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            removed_at TEXT,
+            removed_reason TEXT
+        )""",
+        "CREATE INDEX ix_comments_post ON net_comments(post_id, created_at)",
+        "CREATE INDEX ix_comments_author ON net_comments(author_id)",
+
+        """CREATE TABLE net_competencies (
+            user_id TEXT NOT NULL,
+            measure_id TEXT NOT NULL,
+            visible INTEGER NOT NULL DEFAULT 0
+        )""",
+        "CREATE UNIQUE INDEX ix_comp_pk ON net_competencies(user_id, measure_id)",
+
+        """CREATE TABLE net_endorsements (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            measure_id TEXT NOT NULL,
+            endorser_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_endorse_once ON net_endorsements(user_id, measure_id, endorser_id)",
+        "CREATE INDEX ix_endorse_endorser ON net_endorsements(endorser_id)",
+
+        """CREATE TABLE net_notifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            actor_id TEXT,
+            post_id TEXT,
+            created_at TEXT NOT NULL,
+            read_at TEXT
+        )""",
+        "CREATE INDEX ix_notif_user ON net_notifications(user_id, created_at)",
+    ]),
 ]
 
 

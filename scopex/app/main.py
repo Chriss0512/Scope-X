@@ -21,6 +21,7 @@ from .routers import (
     auth,
     catalog,
     exports,
+    netz,
     passkeys,
     profile,
     records,
@@ -34,7 +35,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 # Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
 # vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
 # nichts den Abgleich erzwang.
-APP_VERSION = "4.3.1"
+APP_VERSION = "4.4.0"
 
 
 @asynccontextmanager
@@ -98,6 +99,7 @@ app.include_router(records.router)
 app.include_router(stats.router)
 app.include_router(profile.router)
 app.include_router(exports.router)
+app.include_router(netz.router)
 
 
 @app.get("/api/health")

@@ -1,0 +1,44 @@
+feature,area,priority,original,clone,notes
+Netzwerkprofil aktivieren (Privatsphäre per Voreinstellung),profil,must,no,yes,Art. 25 DSGVO: ohne Aktivierung sieht niemand etwas
+Profilbild hochladen,profil,must,yes,yes,Metadaten entfernen und neu codieren
+Kopfbild hochladen,profil,should,yes,yes,
+Kopfzeile (Qualifikation und Tätigkeit),profil,must,yes,yes,
+Über mich,profil,should,yes,yes,
+Kompetenzen mit dokumentierter Anzahl,profil,must,no,yes,SCOPE X: durch Logbuch belegt statt Selbstauskunft
+Sichtbarkeit je Kompetenz selbst steuern,profil,must,yes,yes,Help 88215
+Mitglieder suchen,kontakte,must,yes,yes,
+Kontaktanfrage senden,kontakte,must,yes,yes,
+Anfrage annehmen oder ablehnen,kontakte,must,yes,yes,
+Anfrage zurückziehen,kontakte,should,yes,yes,
+Kontakt entfernen,kontakte,must,yes,yes,
+Feed mit Beiträgen des eigenen Netzes,feed,must,yes,yes,chronologisch
+Textbeitrag,feed,must,yes,yes,Nachrichten und Neuigkeiten
+Wissensbeitrag mit Link (Studie Leitlinie),feed,must,yes,yes,nur http und https; kein Abruf der Zielseite
+Kompetenzbeitrag aus eigenem Einsatz,feed,must,no,yes,Allowlist; Einsatznummer Zeitpunkt Schicht Fahrzeug Notizen nie
+Private Angaben im Beitragstext blockieren,feed,must,no,yes,Abgleich gegen eigene Einsatznummern und Fahrzeuge
+Beitrag löschen,feed,must,yes,yes,
+Reaktionen (Stark Lehrreich Danke),feed,must,yes,yes,eine je Person und Beitrag
+Kommentare,feed,must,yes,yes,
+Kommentar löschen,feed,must,yes,yes,
+Kompetenz bestätigen,kompetenz,must,yes,yes,nur Kontakte; als Kolleg*in oder Praxisanleitung
+Bestätigung zurückziehen,kompetenz,should,yes,yes,
+Mitteilungen,mitteilungen,must,yes,yes,
+Ungelesen-Zähler in der Leiste,mitteilungen,should,yes,yes,
+Moderation durch Administrator*in,moderation,must,yes,yes,mit Begründung im Änderungsprotokoll
+Auskunft über alle Netzwerkdaten,dsgvo,must,no,yes,Art. 15 und 20
+Löschung aller Netzwerkdaten,dsgvo,must,no,yes,Art. 17
+Datenschutzerklärung erweitert,dsgvo,must,no,yes,
+Teilen-Knopf an jeder Maßnahme,einsatz,should,no,yes,
+Relativer Zeitpunkt am Beitrag,feed,should,yes,yes,bewusst wie Instagram; Hinweis im Composer
+Hashtags,feed,could,yes,no,nicht in 4.4.0
+Beiträge anderer erneut teilen,feed,could,yes,no,nicht in 4.4.0
+Beitrag bearbeiten,feed,could,yes,no,nicht in 4.4.0
+Direktnachrichten,nachrichten,could,yes,skip,eigenes Thema mit eigenen Datenschutzfragen
+Stellenanzeigen,jobs,could,yes,skip,nicht Zweck von SCOPE X
+Unternehmensseiten,seiten,could,yes,skip,"keine Organisationen im Modell, nur Personen"
+Gruppen,gruppen,could,yes,skip,"kleiner Kreis, Kontakte genügen"
+Video und Live,medien,could,yes,skip,Speicher und Datenschutz; Bilder nur für Profil
+Premium und Werbung,monetarisierung,could,yes,skip,"privates, nicht kommerzielles Projekt"
+Algorithmischer Feed,feed,could,yes,skip,chronologisch; keine Optimierung auf Verweildauer
+Linkvorschau mit Abruf,feed,could,yes,skip,externer Aufruf zur Laufzeit und SSRF-Risiko
+Öffentliche Profile im Netz,profil,could,yes,skip,nur angemeldete Mitglieder

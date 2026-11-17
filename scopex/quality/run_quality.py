@@ -91,7 +91,8 @@ def have(tool: str) -> bool:
 # --------------------------------------------------------------------------
 
 SUITES = [ROOT / "quality" / "suites" / n for n in
-          ("test_core.py", "test_access.py", "test_documentation.py")]
+          ("test_core.py", "test_access.py", "test_documentation.py",
+           "test_netz.py")]
 
 
 @check("functional", "Funktionale Testreihen")
@@ -148,7 +149,8 @@ def check_response_times():
 @check("performance", "Auslieferungsgröße der Oberfläche")
 def check_asset_budget():
     static = APP / "static"
-    js = (static / "app.js").stat().st_size
+    # Seit 4.4.0 zwei Skripte: app.js und netz.js. Beide zählen.
+    js = sum(p.stat().st_size for p in static.glob("*.js"))
     css = (static / "app.css").stat().st_size
     font = (static / "fonts" / "InterVariable.woff2").stat().st_size
     total = js + css + font
