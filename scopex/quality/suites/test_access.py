@@ -117,6 +117,23 @@ check("Administrator sieht fremde Einsätze nicht", r.status_code == 404, r.stat
 r = admin.patch(f"/api/encounters/{enc['id']}", json={"naca": "IV"})
 check("Und kann sie nicht ändern", r.status_code == 404, r.status_code)
 
+# --- Instanzsicherung ----------------------------------------------------
+# Bis 4.3.1 verlangte GET /exports/backup nur eine Anmeldung und las alle
+# Tabellen ohne Kontofilter. Jedes Mitglied, selbst ein Gast, bekam damit
+# das vollständige Logbuch aller anderen: Einsatznummern, Fahrzeuge,
+# Uhrzeiten, Notizen. Gefunden beim Bau des Kompetenznetzes.
+admin.post("/api/encounters", json={"enc_date": "2026-09-03",
+    "enc_time": "03:12", "mission_number": "MARKE-ADMIN-4711"})
+r = user.get("/api/exports/backup")
+check("Mitglied lädt keine Instanzsicherung", r.status_code == 403, r.status_code)
+check("Und sieht darin keine fremde Einsatznummer",
+      "MARKE-ADMIN-4711" not in r.text, "Einsatznummer des Administrators enthalten")
+r = admin.get("/api/exports/backup")
+check("Administrator lädt die Instanzsicherung", r.status_code == 200, r.status_code)
+_tabellen = r.json()["tables"]
+check("Sicherung enthält die ZEK auf Einsatzebene",
+      "encounter_complications" in _tabellen, sorted(_tabellen))
+
 # --- Gastrolle -----------------------------------------------------------
 r = admin.patch(f"/api/admin/users/{st['user']['id']}",
                 json={"role": "guest", "totp_code": code(sec)})

@@ -3,6 +3,155 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.4.0
+
+MINOR: neue Funktion mit neuen Endpunkten unter `/api/netz/` und einer
+Migration (`0010_netzwerk`). Bestehende Endpunkte, Sicherungsformat und
+Add-on-Optionen bleiben unverändert. Die Migration läuft beim Start
+automatisch; vorhandene Daten bleiben unberührt.
+
+### Sicherheit — bitte lesen
+
+**Sicherung war für jedes Mitglied abrufbar.** `GET /api/exports/backup`
+prüfte nur, ob jemand angemeldet ist. Jedes Mitglied konnte damit die
+Logbücher **aller** Mitglieder herunterladen — mit Einsatznummern,
+Fahrzeugen, Zeitpunkten und Notizen. Der Fehler bestand seit der
+Mehrbenutzerfähigkeit. Die Sicherung verlangt jetzt die
+Administrationsrolle; eine neue Prüfung in der Berechtigungsreihe legt
+ein markiertes Admin-Logbuch an und stellt sicher, dass es bei einem
+Mitglied nicht ankommt. Mit der alten Fassung schlägt sie an.
+
+Empfehlung: im Änderungsprotokoll nach Einträgen `exports … backup`
+suchen, die nicht von einem Administrationskonto stammen.
+
+Im selben Zug:
+
+- **Wiederherstellung behält die Zuordnung.** Bis 4.3.1 wurden beim
+  Einspielen alle Einsätze und Profile dem wiederherstellenden Konto
+  zugeschrieben. Jetzt behalten sie ihren Besitzer; nur verwaiste
+  Datensätze gehen an das wiederherstellende Konto.
+- **ZEK auf Einsatzebene in der Sicherung.** `encounter_complications`
+  fehlte seit 4.0 in Sicherung und Wiederherstellung und ging dabei still
+  verloren.
+- **Pillow 13.0.0** als direkte Abhängigkeit (11.3.0 hatte vier bekannte
+  Schwachstellen). Neue Bilder werden ausschließlich darüber verarbeitet.
+
+### Kompetenznetz
+
+Ein soziales Netz für beruflichen Support in der Notfallmedizin, nach dem
+Muster großer Bild- und Berufsnetzwerke. Abgeschaltet, bis ein
+Mitglied es selbst einschaltet; das Logbuch funktioniert ohne es
+unverändert.
+
+- **Feed** mit zwei Reitern: **Für dich**, sortiert von einem
+  nachvollziehbaren Algorithmus, und **Folge ich**, chronologisch. An
+  jedem Beitrag steht unter „Warum sehe ich das?“, warum er erscheint.
+- **Algorithmus** (`app/algorithmus.py`): gewichtete Summe aus
+  Aktualität, Resonanz, Nähe zur Person, Art des Beitrags und Relevanz für
+  das eigene Lernen. Fallberichte zu seltenen Situationen und
+  Komplikationen sowie Maßnahmen, die man selbst selten oder nie
+  dokumentiert hat (Lernlücke), steigen. Danach Vielfalt: jeder weitere
+  Beitrag derselben Person zählt weniger. „Nicht interessiert“ blendet
+  einen Beitrag aus.
+- **Beitragsarten**: Beitrag (Text, bis zu zehn Bilder oder Videos),
+  **Fallbericht** (seltene Situation, Komplikation, Lernfall; was war
+  besonders, was lief gut, was würde ich anders machen; optional Einträge
+  aus dem Logbuch), **Algorithmus** (SOP oder Ablaufschema mit
+  Pflichtquelle, Stand und Geltungsbereich), Wissen (Studie, Leitlinie),
+  Kompetenz (Einträge aus einem eigenen Einsatz) und Repost.
+- **Reaktionen** wie in Bildnetzwerken: Gefällt mir, Kommentieren, Repost,
+  Senden.
+- **Folgen** wie in Bildnetzwerken: öffentliche Konten (innerhalb der
+  Installation) oder private Konten mit Folgeanfrage. Dazu
+  **Blockieren**: keine Sicht, kein Folgen, keine Nachricht in beide
+  Richtungen.
+- **Profil** mit Titelbild, Profilbild, Zahlen, Kurzbeschreibung und
+  Reitern Beiträge (Raster), **Chronik** (Beiträge und Lebensstationen
+  in einer Zeitleiste), Kompetenzen (belegt durch das Logbuch,
+  bestätigbar bei gegenseitigem Folgen) und **Info** (persönliche
+  Angaben, Werdegang, Ausbildung, Zertifikate mit Gültigkeit, Sprachen).
+- **Entdecken**: Raster aus dem ganzen Netz, Suche nach Personen, Wachen
+  und #Hashtags, eigene Seiten je Hashtag.
+- **Nachrichten**: Direktnachrichten mit Text, Bildern und gesendeten
+  Beiträgen, Ordner „Anfragen“ für Personen, die einem nicht folgen,
+  „gesehen“, Zurücknehmen, Ausblenden. Am Rechner zweispaltig.
+- **Mitteilungen** mit Folgeanfragen, gruppiert nach Heute, Woche, Monat.
+- **Medien**: Bilder werden mit Pillow neu codiert (Beitragsbilder 4:5
+  bis 1,91:1), Videos mit ffmpeg aus `imageio-ffmpeg` (H.264/AAC,
+  höchstens 90 Sekunden, Metadaten und Daten- und Untertitelspuren
+  verworfen). Videos werden im Hintergrund verarbeitet; ein Neustart
+  markiert unterbrochene Verarbeitungen als fehlgeschlagen. ffmpeg nimmt
+  nur die Containerformate von Telefonen und Kameras an (MP4, MOV, 3GP,
+  Matroska, WebM) und nur lokale Dateien: eine als Video getarnte
+  Wiedergabeliste kann keine Serverdateien einlesen. Dateien liegen
+  unter `/data/media` und damit im Add-on-Backup.
+- **Moderation**: gemeldete Beiträge sehen Administrator*innen und können
+  sie mit Begründung entfernen; der Vorgang steht im Änderungsprotokoll.
+
+### Neuer Aufbau und Gestaltung
+
+- **Leiste** auf dem Telefon: Feed · Entdecken · Neu · Logbuch · Profil.
+  Mitteilungen und Nachrichten oben rechts im Feed. Am Rechner eine
+  helle Seitenleiste mit allen Punkten einschließlich Auswertung und
+  Verwaltung.
+- **Logbuch** fasst Einsätze, Auswertung und Nachweise unter einem Reiter
+  zusammen. Die Auswertung bleibt vollständig erhalten.
+- **Neu** fragt, was entstehen soll: Beitrag, Fallbericht, Algorithmus,
+  Studie, Kompetenz oder Einsatz dokumentieren.
+- Beiträge randlos und ohne Kartenrahmen, Aktionen als Symbole, Feed am
+  Rechner als schmale Spalte mit Vorschlägen rechts. Weniger Rahmen und
+  Schatten insgesamt, Einstellungen mit Schaltern im iOS-Stil.
+- Die frühere Profilseite heißt jetzt **Einstellungen**; das Profil ist
+  die Seite im Netz.
+
+### Datenschutzgrenze
+
+Einsatznummer, Fahrzeug, Schicht, Datum und Uhrzeit eines Einsatzes,
+Dosierungen, Notizen und Patientenschaden verlassen das eigene Logbuch
+nie. Durchgesetzt im Server, nicht in der Oberfläche:
+
+- Kompetenz- und Fallbeiträge übernehmen Logbuchdaten nur als Kopie aus
+  einer Allowlist; `net_posts` hat keine Spalte, die auf einen Einsatz
+  verweist.
+- Beiträge, Falldetails, Kommentare, Link-Titel, Profiltexte und
+  Werdegang mit eigener Einsatznummer, eigenem Fahrzeug, eigenem
+  Einsatztag oder einer Uhrzeit werden abgelehnt. In Direktnachrichten
+  nur die Einsatznummer, sonst wäre keine Terminabsprache möglich.
+- Vor dem Teilen von Bildern oder Videos muss bestätigt werden, dass
+  keine Patient*innen, Kennzeichen, Einsatzorte oder Monitorwerte mit
+  Personenbezug zu erkennen sind.
+- Fallberichte erscheinen voreingestellt erst nach sieben Tagen.
+- Benutzername und E-Mail-Adresse anderer werden nie ausgegeben; nicht
+  sichtbare Objekte antworten mit 404.
+- Die Testreihe `test_netz.py` legt einen Einsatz mit eindeutigen
+  Markierwerten in jedem privaten Feld an und durchsucht Feed, Entdecken,
+  Profil, Chronik, Beitrag, Hashtag-Seite, Nachrichten und Mitteilungen
+  danach. Sie prüft außerdem private Konten, Blockieren, Nachrichten,
+  das Entfernen von EXIF- und GPS-Daten aus Bildern sowie von Orts- und
+  Titelangaben aus Videos.
+
+### Sonst
+
+- Stammdaten, rechtliche Angaben und Sicherung sind in die Verwaltung
+  gewandert. Im Profil wurden sie allen angezeigt, benutzen durfte sie nur
+  die Administration.
+- Auskunft (Art. 15 DSGVO) enthält alle Netzdaten einschließlich Bildern,
+  Videos und Nachrichten; Kontolöschung entfernt sie vollständig, auch
+  Gespräche beim Gegenüber.
+- Datenschutzerklärung um das Kompetenznetz ergänzt, einschließlich
+  Algorithmus und unverschlüsselter Nachrichten.
+- Die Netzdaten gehören nicht in die eigene Sicherung; sie verknüpfen
+  die Daten mehrerer Mitglieder. Das Add-on-Backup von Home Assistant
+  enthält Datenbank und Mediendateien.
+- **Nginx Proxy Manager**: für Videos muss `client_max_body_size` auf
+  mindestens `210m` stehen (bisher `25m`), siehe README.
+- Neue Abhängigkeit `imageio-ffmpeg` 0.7.0 (statisches ffmpeg für amd64
+  und aarch64, keine apt-Pakete nötig).
+- Neue Oberflächendatei `netz.js`, vor `app.js` geladen. Die
+  Prüfschleife zählt beide gegen das Größenbudget und prüft Feed,
+  Entdecken, Nachrichten, Mitteilungen, Logbuch und Einstellungen auf
+  Barrierefreiheit.
+
 ## 4.3.1
 
 PATCH: Fehlerbehebung ohne neue Felder, Endpunkte oder Optionen.

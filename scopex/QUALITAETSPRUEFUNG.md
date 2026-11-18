@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 17.11.2026 um 22:48 Uhr für SCOPE X.
+Erzeugt am 18.11.2026 um 00:24 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 251 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 500 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | JS 146 KB, CSS 41 KB, Schrift 343 KB, gesamt 532 KB von 700 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | JS 250 KB, CSS 72 KB, Schrift 343 KB, gesamt 667 KB von 700 KB |
 
 ## Compatibility
 
@@ -39,7 +39,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Migrationen sind idempotent | bestanden | 9 angewendet, zweiter Durchlauf leer |
+| Migrationen sind idempotent | bestanden | 10 angewendet, zweiter Durchlauf leer |
 | Sicherung und Wiederherstellung als Kreis | bestanden | Kennzahlen vor und nach der Wiederherstellung gleich |
 | Überwachung im Betrieb | manuell offen | Ausfall derzeit nur über das Add-on-Protokoll erkennbar |
 
@@ -60,16 +60,16 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 78.6 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.3.1, 10 Fassungen dokumentiert |
-| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 64 Pfade, 0 neu, Sicherungsformat 1 |
+| Testabdeckung mindestens 70 Prozent | bestanden | 79.8 Prozent |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.4.0, 11 Fassungen dokumentiert |
+| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 108 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.3.1, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.4.0, Änderungsprotokoll vorhanden |
 
 ## Safety
 

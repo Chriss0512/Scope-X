@@ -107,15 +107,18 @@ vom Client angesprochen wird. Sonst vertraut nginx einem Header, den der
 Client selbst setzen kann. Nur einschalten, wenn ein weiterer Proxy davor
 steht, etwa ein Cloudflare-Tunnel.
 
-Reiter *Advanced*, **Custom Nginx Configuration** — genau eine Zeile, ohne
-Code-Zaun, ohne Backticks:
+Reiter *Advanced*, **Custom Nginx Configuration** — ohne Code-Zaun, ohne
+Backticks:
 
 ```
-client_max_body_size 25m;
+client_max_body_size 210m;
+proxy_request_buffering off;
 ```
 
-Ohne diese Zeile scheitert das Einspielen einer Sicherung an der
-Standard-Uploadgrenze.
+Ohne die erste Zeile scheitern das Einspielen einer Sicherung und das
+Hochladen von Videos im Kompetenznetz an der Standard-Uploadgrenze (bis
+4.3 genügten `25m`; Videos dürfen seit 4.4.0 bis 200 MB groß sein). Die
+zweite reicht große Uploads direkt durch, statt sie bei NPM zwischenzuspeichern.
 
 Was dort **nicht** hineingehört, sind `proxy_set_header`-Direktiven. NPM
 schreibt den Inhalt dieses Feldes außerhalb des `location`-Blocks, wo sie
@@ -248,7 +251,8 @@ ist bei dir aktiv, damit passt das.
 |---|---|
 | Datenbank | `/data/scopex.db` im Add-on-Container |
 | In HA-Backups | ja, `/data` ist Teil jedes Add-on-Backups |
-| Eigenes Backup | Profil & Einstellungen → Sicherung herunterladen |
+| Eigenes Backup | Verwaltung → Sicherung herunterladen (nur Administration, umfasst alle Mitglieder) |
+| Eigene Daten je Mitglied | Profil → Daten → Vollständige Auskunft |
 | Zugangsdaten im Backup | nein, bewusst nicht |
 
 Die eigene Sicherung enthält Stammdaten, Profil, Einsätze, Maßnahmen,
@@ -321,12 +325,47 @@ Freitext knapp und trage dort keine Patientendaten ein. Ob und in welchem
 Umfang du solche Aufzeichnungen führen darfst, richtet sich nach den Vorgaben
 deines Arbeitgebers.
 
+### Kompetenznetz (ab 4.4.0)
+
+Ein soziales Netz für beruflichen Support: Feed mit Algorithmus, Entdecken,
+Profile mit Chronik und Info, Folgen, Gefällt mir, Kommentare, Reposts,
+Direktnachrichten, Bilder und Videos, Fallberichte zu seltenen Situationen
+und Komplikationen, Algorithmen mit Quelle. Jedes Mitglied schaltet es
+unter Einstellungen → Netzwerk selbst ein; ein Konto lässt sich auf privat
+stellen. Sichtbar ist alles nur für angemeldete Mitglieder dieser
+Installation.
+
+| Bleibt immer privat | Kann geteilt werden |
+|---|---|
+| Einsatznummer, Fahrzeug, Schicht | Maßnahme: Bezeichnung, Kategorie, Ergebnis, Rolle |
+| Datum und Uhrzeit des Einsatzes | Medikament: Wirkstoff, Etikettengruppe, Weg, Ergebnis |
+| Dosierungen, Notizen, Patientenschaden | ZEK-Bezeichnungen und NACA, nur einzeln freigegeben |
+| Benutzername, E-Mail-Adresse | Name, Bilder, Kurzbeschreibung, Werdegang, eigene Beiträge |
+
+Die Grenze setzt der Server durch: ein Kompetenz- oder Fallbeitrag ist eine
+Kopie aus einer festen Feldliste ohne Verweis auf den Einsatz, und Texte mit
+einer eigenen Einsatznummer, einem eigenen Fahrzeug, einem eigenen
+Einsatztag oder einer Uhrzeit werden abgelehnt. Bilder und Videos werden neu
+codiert, Metadaten wie der Aufnahmeort gehen dabei verloren; vor dem Teilen
+bestätigt man, dass niemand und nichts mit Personenbezug zu erkennen ist.
+Fallberichte erscheinen voreingestellt nach sieben Tagen. Gemeldete Beiträge
+prüft die Administration.
+
+Der Feed-Algorithmus steht in `app/algorithmus.py` und ist bewusst eine
+nachvollziehbare gewichtete Summe statt eines trainierten Modells. Das
+eigene Logbuch fließt nur als Anzahl je Maßnahme ein und nur in die
+eigene Reihenfolge.
+
+Nachrichten liegen wie alle Daten unverschlüsselt in der Datenbank des
+Add-ons. Mediendateien liegen unter `/data/media`.
+
 ## 10. Technische Eckpunkte
 
 Python 3.12, FastAPI, SQLite über SQLAlchemy Core, Frontend ohne Framework
 und ohne Build-Schritt. Kein Node, kein npm, keine `package.json`.
 Passwort-Hashing mit Argon2id, Altbestand aus `hashlib.scrypt`, TOTP nach RFC 6238 selbst implementiert, QR-Codes über
-`segno`, PDF über `fpdf2`. Zur Laufzeit gibt es keine externen Aufrufe: die
+`segno`, PDF über `fpdf2`, Bildverarbeitung über `Pillow`, Videos über
+ffmpeg aus `imageio-ffmpeg`. Zur Laufzeit gibt es keine externen Aufrufe: die
 Content-Security-Policy erlaubt ausschließlich `'self'`, es gibt kein CDN,
 kein Tracking, keine Telemetrie.
 

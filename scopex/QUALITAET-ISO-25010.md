@@ -112,6 +112,21 @@ Fehlversuche, gibt es nicht.
 - *Confidentiality:* Rollenmodell mit serverseitiger Prüfung auf jeder
   schreibenden Route. Datentrennung je Konto, auch gegenüber
   Administratoren: eine fremde UUID liefert 404.
+  Bis 4.3.1 durchbrach die Sicherung diese Trennung: jedes Mitglied konnte
+  sie abrufen und erhielt die Logbücher aller. Seit 4.4.0 ist sie der
+  Administration vorbehalten, eine Prüfung mit markiertem Admin-Logbuch
+  hält das fest.
+- *Confidentiality im Kompetenznetz* (4.4.0): Geteilt wird eine Kopie
+  aus einer festen Feldliste, ohne Verweis auf den Einsatz; Freitext mit
+  eigener Einsatznummer, eigenem Fahrzeug, eigenem Einsatztag oder einer
+  Uhrzeit lehnt der Server ab. `test_netz.py` belegt jedes private Feld
+  eines Einsatzes mit einem Markierwert und durchsucht jede Antwort an
+  Kontakte danach; ein probeweise in die Feldliste aufgenommenes
+  Notizfeld lässt die Reihe genau an dieser Stelle scheitern. Bilder
+  und Videos werden neu codiert, Metadaten verworfen; die Reihe prüft
+  das an einem Foto mit GPS-Daten und einem Video mit Ortsangabe.
+  Private Konten, Blockieren und Direktnachrichten haben eigene
+  Prüfungen, jeweils mit 404 statt 403 für Unsichtbares.
 - *Integrity:* Bearbeitungsfrist, danach Sperre. Änderungen innerhalb der
   Frist feldweise im Änderungsprotokoll. Gesperrte Einträge nur mit
   Pflichtbegründung stilllegbar, nie physisch gelöscht.

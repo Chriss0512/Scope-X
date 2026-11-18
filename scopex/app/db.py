@@ -557,6 +557,199 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         )""",
         "CREATE UNIQUE INDEX ix_challenge_handle ON webauthn_challenges(handle)",
     ]),
+    # Kompetenznetz. Keine dieser Tabellen hat eine Spalte, in der eine
+    # Einsatznummer, ein Einsatzzeitpunkt, eine Schicht, ein Fahrzeug,
+    # ein Maßnahmenzeitstempel oder eine Freitext-Notiz landen könnte.
+    # net_posts hält einen Schnappschuss der freigegebenen Werte und
+    # bewusst keine encounter_id: wer einen Beitrag liest, kann nicht
+    # einmal zurückverfolgen, aus welchem Einsatz er stammt.
+    ("0010_netzwerk", [
+        # Netzwerkprofil. Voreinstellung aus: wer nichts tut, bleibt für
+        # andere unsichtbar. net_private wie in Bildnetzwerken: Beiträge, Chronik
+        # und Info sehen dann nur bestätigte Follower.
+        "ALTER TABLE user_profile ADD COLUMN headline TEXT",
+        "ALTER TABLE user_profile ADD COLUMN about TEXT",
+        "ALTER TABLE user_profile ADD COLUMN net_active INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE user_profile ADD COLUMN net_private INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE user_profile ADD COLUMN avatar_id TEXT",
+        "ALTER TABLE user_profile ADD COLUMN banner_id TEXT",
+        "ALTER TABLE user_profile ADD COLUMN location TEXT",
+        "ALTER TABLE user_profile ADD COLUMN organisation TEXT",
+
+        # Medien liegen als Dateien unter SCOPEX_MEDIA_DIR, nicht in der
+        # Datenbank: Videos sprengen jede Zeile. Die Zeile hält nur, wem
+        # die Datei gehört und wo sie hängt.
+        """CREATE TABLE net_media (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            mime TEXT NOT NULL,
+            file TEXT NOT NULL,
+            poster TEXT,
+            width INTEGER,
+            height INTEGER,
+            duration REAL,
+            bytes INTEGER,
+            status TEXT NOT NULL,
+            post_id TEXT,
+            message_id TEXT,
+            position INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_media_user ON net_media(user_id)",
+        "CREATE INDEX ix_media_post ON net_media(post_id)",
+        "CREATE INDEX ix_media_message ON net_media(message_id)",
+
+        """CREATE TABLE net_follows (
+            id TEXT PRIMARY KEY,
+            follower_id TEXT NOT NULL,
+            followee_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            accepted_at TEXT
+        )""",
+        "CREATE UNIQUE INDEX ix_follow_pair ON net_follows(follower_id, followee_id)",
+        "CREATE INDEX ix_follow_followee ON net_follows(followee_id, status)",
+
+        """CREATE TABLE net_blocks (
+            id TEXT PRIMARY KEY,
+            blocker_id TEXT NOT NULL,
+            blocked_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_block_pair ON net_blocks(blocker_id, blocked_id)",
+        "CREATE INDEX ix_block_blocked ON net_blocks(blocked_id)",
+
+        # Keine encounter_id, keine Einsatzfelder. Was aus dem Logbuch
+        # kommt, steht als Allowlist-Kopie in snapshot.
+        """CREATE TABLE net_posts (
+            id TEXT PRIMARY KEY,
+            author_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            title TEXT,
+            body TEXT NOT NULL,
+            details TEXT,
+            link_url TEXT,
+            link_title TEXT,
+            link_source TEXT,
+            snapshot TEXT,
+            repost_of TEXT,
+            created_at TEXT NOT NULL,
+            published_at TEXT NOT NULL,
+            removed_at TEXT,
+            removed_reason TEXT
+        )""",
+        "CREATE INDEX ix_posts_author ON net_posts(author_id, published_at)",
+        "CREATE INDEX ix_posts_published ON net_posts(published_at)",
+        "CREATE INDEX ix_posts_repost ON net_posts(repost_of)",
+
+        """CREATE TABLE net_tags (
+            post_id TEXT NOT NULL,
+            tag TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_tags_pk ON net_tags(post_id, tag)",
+        "CREATE INDEX ix_tags_tag ON net_tags(tag)",
+
+        """CREATE TABLE net_likes (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_like_once ON net_likes(post_id, user_id)",
+        "CREATE INDEX ix_like_user ON net_likes(user_id, created_at)",
+
+        """CREATE TABLE net_comments (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            removed_at TEXT,
+            removed_reason TEXT
+        )""",
+        "CREATE INDEX ix_comments_post ON net_comments(post_id, created_at)",
+        "CREATE INDEX ix_comments_author ON net_comments(author_id)",
+
+        # "Nicht interessiert": blendet einen Beitrag für eine Person aus
+        # und fließt als Signal in den Algorithmus.
+        """CREATE TABLE net_hidden (
+            user_id TEXT NOT NULL,
+            post_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_hidden_pk ON net_hidden(user_id, post_id)",
+
+        """CREATE TABLE net_competencies (
+            user_id TEXT NOT NULL,
+            measure_id TEXT NOT NULL,
+            visible INTEGER NOT NULL DEFAULT 0
+        )""",
+        "CREATE UNIQUE INDEX ix_comp_pk ON net_competencies(user_id, measure_id)",
+
+        """CREATE TABLE net_endorsements (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            measure_id TEXT NOT NULL,
+            endorser_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_endorse_once ON net_endorsements(user_id, measure_id, endorser_id)",
+        "CREATE INDEX ix_endorse_endorser ON net_endorsements(endorser_id)",
+
+        # Werdegang, Ausbildung, Zertifikate, Sprachen.
+        """CREATE TABLE net_profile_entries (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            title TEXT NOT NULL,
+            org TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            note TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_entries_user ON net_profile_entries(user_id, kind)",
+
+        """CREATE TABLE net_notifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            actor_id TEXT,
+            post_id TEXT,
+            created_at TEXT NOT NULL,
+            read_at TEXT
+        )""",
+        "CREATE INDEX ix_notif_user ON net_notifications(user_id, created_at)",
+
+        # Direktnachrichten. Ein Gespräch je Paar, user_a < user_b.
+        # request_for: wer die Anfrage noch annehmen muss; NULL = offen.
+        # hidden_a/hidden_b: ab wann eine Seite das Gespräch ausgeblendet hat.
+        """CREATE TABLE net_conversations (
+            id TEXT PRIMARY KEY,
+            user_a TEXT NOT NULL,
+            user_b TEXT NOT NULL,
+            request_for TEXT,
+            hidden_a TEXT,
+            hidden_b TEXT,
+            created_at TEXT NOT NULL,
+            last_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_conv_pair ON net_conversations(user_a, user_b)",
+        "CREATE INDEX ix_conv_b ON net_conversations(user_b)",
+
+        """CREATE TABLE net_messages (
+            id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL,
+            sender_id TEXT NOT NULL,
+            body TEXT NOT NULL,
+            post_id TEXT,
+            created_at TEXT NOT NULL,
+            read_at TEXT
+        )""",
+        "CREATE INDEX ix_msg_conv ON net_messages(conversation_id, created_at)",
+    ]),
 ]
 
 

@@ -58,10 +58,12 @@ def audit() -> list[str]:
                 page_ctx.add_cookies([{"name": "scopex_session", "value": token,
                                        "domain": "127.0.0.1", "path": "/"}])
                 page = page_ctx.new_page()
-                # "#/neu" läuft seit 4.3.0 im Feed auf; dafür kam die
-                # eigene Verwaltungsseite hinzu.
-                for route in ["#/", "#/dashboard", "#/nachweise",
-                              "#/profil", "#/verwaltung", "#/rechtliches"]:
+                # Seit 4.4.0 ist "#/" der Kompetenzfeed; die Einsatzliste
+                # hat eine eigene Adresse, dazu Kontakte und Mitteilungen.
+                for route in ["#/", "#/entdecken", "#/nachrichten",
+                              "#/mitteilungen", "#/einsaetze", "#/dashboard",
+                              "#/nachweise", "#/profil", "#/einstellungen",
+                              "#/verwaltung", "#/rechtliches"]:
                     page.goto(f"http://127.0.0.1:8199/{route}",
                               wait_until="networkidle")
                     page.wait_for_timeout(900)
