@@ -138,8 +138,11 @@ def beziehung(c, ich: str, andere: str) -> dict:
     seins = follow(c, andere, ich)
     return {
         "selbst": False,
-        # nein | angefragt | aktiv
-        "ich_folge": meins["status"] if meins else "nein",
+        # nein | angefragt | aktiv. Eine ignorierte Anfrage sieht für die
+        # anfragende Person aus wie eine offene: Ignorieren sendet kein
+        # Signal.
+        "ich_folge": ("angefragt" if meins and meins["status"] == "ignoriert"
+                      else meins["status"] if meins else "nein"),
         "folgt_mir": bool(seins and seins["status"] == "aktiv"),
         "fragt_an": bool(seins and seins["status"] == "angefragt"),
     }
@@ -167,9 +170,32 @@ def voll_sichtbar(c, ich: str, andere: str) -> bool:
     return not privat(profil(c, andere)) or folgt(c, ich, andere)
 
 
+ABZEICHEN_KATEGORIEN = ("Reanimation", "Trauma", "Weitere Kurse",
+                        "Funktion und Zusatzqualifikation")
+
+
+def abzeichen(c, uid: str) -> list[str]:
+    """Kurzbezeichnungen gültiger Kurse und Funktionen (ERC ALS, PHTLS,
+    Praxisanleitung). Abgelaufene erscheinen nicht."""
+    monat = datetime.now(timezone.utc).strftime("%Y-%m")
+    return [r_["kurz"] or r_["name"] for r_ in rows(
+        c, "SELECT k.kurz, k.name FROM net_user_qualifications u JOIN "
+           "net_qualifications k ON k.id = u.qual_id WHERE u.user_id = :u AND "
+           "k.status = 'frei' AND k.kategorie IN (:k1, :k2, :k3, :k4) AND "
+           "(u.gueltig_bis IS NULL OR u.gueltig_bis >= :m) "
+           "ORDER BY k.sort_order, k.name LIMIT 5",
+        u=uid, m=monat, k1=ABZEICHEN_KATEGORIEN[0], k2=ABZEICHEN_KATEGORIEN[1],
+        k3=ABZEICHEN_KATEGORIEN[2], k4=ABZEICHEN_KATEGORIEN[3])]
+
+
 def person_kurz(c, ich: str, p: dict) -> dict:
-    """Was jedes aktive Mitglied von jedem anderen sehen darf."""
+    """Was jedes aktive Mitglied von jedem anderen sehen darf.
+
+    Abzeichen gehören zur Qualifikation und damit zum vollen Profil: bei
+    privaten Konten sehen sie nur bestätigte Follower.
+    """
     b = beziehung(c, ich, p["uid"])
+    offen = ich == p["uid"] or not privat(p) or b["ich_folge"] == "aktiv"
     return {
         "id": p["uid"],
         "name": anzeigename(p),
@@ -178,6 +204,7 @@ def person_kurz(c, ich: str, p: dict) -> dict:
         "privat": privat(p),
         "ich_folge": b["ich_folge"],
         "folgt_mir": b["folgt_mir"],
+        "abzeichen": abzeichen(c, p["uid"]) if offen else [],
     }
 
 

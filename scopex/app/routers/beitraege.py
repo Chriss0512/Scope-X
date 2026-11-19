@@ -11,6 +11,19 @@ Beitragsarten:
               empfiehlt nichts; der Beitrag ist Inhalt eines Mitglieds.
 * kompetenz   Einträge aus genau einem eigenen Einsatz (Allowlist-Kopie)
 * repost      Teilt einen fremden Beitrag weiter, optional mit Kommentar
+* fallvorstellung
+              Strukturierte, anonymisierte Fallvorstellung mit Frage an die
+              Community: Meldebild → Befund nach xABCDE → Maßnahmen → Frage.
+              Kommentare sind Antworten; die fragende Person kann eine als
+              hilfreich markieren. Nur Altersgruppe, kein Alter, kein Datum.
+
+Kommentare lassen sich je Beitrag ausschalten: von der Autorin oder dem
+Autor, oder von der Administration. Hat die Administration sie
+geschlossen, kann nur sie sie wieder öffnen.
+
+Kuratierte Themen (#Atemwegsmanagement, #EKG-Quiz …) sind gewöhnliche
+Schlagwörter in net_tags; der Katalog net_topics gibt ihnen Namen und
+Kategorie und macht sie im Feed filterbar.
 
 Sichtbarkeit, Datenschutzgrenze und Mitteilungen kommen aus netzkern.
 """
@@ -30,7 +43,12 @@ from ..db import conn, new_id, now_iso, q, row, rows, scalar
 
 router = APIRouter(prefix="/api/netz", tags=["netz"])
 
-BEITRAGSARTEN = ("beitrag", "wissen", "fall", "algorithmus", "kompetenz", "repost")
+BEITRAGSARTEN = ("beitrag", "wissen", "fall", "algorithmus", "kompetenz", "repost",
+                 "fallvorstellung")
+ALTERSGRUPPEN = ("neugeboren", "saeugling", "kleinkind", "schulkind", "jugendlich",
+                 "erwachsen", "hochbetagt")
+XABCDE = ("x", "a", "b", "c", "d", "e")
+MAX_THEMEN = 5
 FALLKATEGORIEN = ("selten", "komplikation", "lernfall")
 SEITE = 20
 HASHTAG = re.compile(r"#([0-9A-Za-zÄÖÜäöüß_-]{2,40})")
@@ -50,6 +68,12 @@ def _medien(c, post_id: str) -> list[dict]:
             for m in rows(c, "SELECT id, kind, width, height, duration FROM net_media "
                              "WHERE post_id = :p AND status = 'bereit' "
                              "ORDER BY position", p=post_id)]
+
+
+def themen_von(c, post_id: str) -> list[dict]:
+    return [{"code": t["code"], "name": t["name"]} for t in rows(
+        c, "SELECT k.code, k.name FROM net_tags t JOIN net_topics k ON k.code = t.tag "
+           "WHERE t.post_id = :p AND k.status = 'frei' ORDER BY k.sort_order", p=post_id)]
 
 
 def beitrag_aus(c, user: dict, post: dict, gruende: list[str] | None = None,
@@ -90,6 +114,15 @@ def beitrag_aus(c, user: dict, post: dict, gruende: list[str] | None = None,
         "entfernt_grund": post["removed_reason"] if eigen else None,
         "warum": gruende or [],
         "original": None,
+        "themen": themen_von(c, post["id"]),
+        "kommentare_aus": bool(post["comments_off"]),
+        # Von der Administration geschlossen: die Autorin kann es nicht
+        # wieder öffnen.
+        "kommentare_gesperrt": post["comments_off_by"] == "admin",
+        "darf_kommentare_schalten": eigen or nk.ist_admin(user),
+        "gemerkt": bool(row(c, "SELECT post_id FROM net_saved WHERE user_id = :u "
+                               "AND post_id = :p", u=ich, p=post["id"])),
+        "hilfreich": post["answer_comment_id"],
     }
     if post["kind"] == "repost" and tiefe == 0:
         orig = row(c, "SELECT * FROM net_posts WHERE id = :i", i=post["repost_of"])
@@ -104,22 +137,47 @@ def beitrag_aus(c, user: dict, post: dict, gruende: list[str] | None = None,
 # Feed
 # --------------------------------------------------------------------------
 
+def _mit_tag(c, kandidaten: list[dict], tags: set[str]) -> list[dict]:
+    if not tags or not kandidaten:
+        return []
+    werte = {f"t{i}": t for i, t in enumerate(sorted(tags))}
+    ids = {r_["post_id"] for r_ in rows(
+        c, "SELECT post_id FROM net_tags WHERE tag IN ("
+           + ", ".join(f":{k}" for k in werte) + ")", **werte)}
+    return [p for p in kandidaten if p["id"] in ids]
+
+
 @router.get("/feed")
 def feed(modus: str = "fuerdich", seite: int = Query(0, ge=0, le=50),
-         user=Depends(current_user)):
+         thema: str = Query("", max_length=40), user=Depends(current_user)):
+    """Modi: fuerdich (Algorithmus), folgeich (chronologisch, Personen),
+    themen (Algorithmus, nur gefolgte Themen). thema filtert jeden Modus
+    auf ein Schlagwort – das Kompetenz-Routing des Feeds."""
     with conn() as c:
         if not nk.aktiv(nk.profil(c, user["id"])):
             return {"aktiv": False, "beitraege": [], "weiter": None}
         ich = user["id"]
+        tag = thema.strip().lstrip("#").lower()
         if modus == "folgeich":
             autoren = nk.gefolgt_ids(c, ich) | {ich}
             kandidaten = algorithmus.sichtbare_kandidaten(c, ich, fenster_tage=3650,
                                                           nur_autoren=autoren)
+            if tag:
+                kandidaten = _mit_tag(c, kandidaten, {tag})
             auswahl = [(p, 0.0, []) for p in kandidaten]
         else:
-            auswahl = algorithmus.rangliste(
-                c, ich, algorithmus.sichtbare_kandidaten(c, ich))
+            kandidaten = algorithmus.sichtbare_kandidaten(
+                c, ich, fenster_tage=365 if (tag or modus == "themen")
+                else algorithmus.FENSTER_TAGE)
+            if tag:
+                kandidaten = _mit_tag(c, kandidaten, {tag})
+            elif modus == "themen":
+                kandidaten = _mit_tag(c, kandidaten, algorithmus.gefolgte_themen(c, ich))
+            auswahl = algorithmus.rangliste(c, ich, kandidaten)
         stueck = auswahl[seite * SEITE:(seite + 1) * SEITE]
+        if modus != "folgeich":
+            algorithmus.gesehen(c, ich, [p["id"] for p, _, _ in stueck
+                                         if p["author_id"] != ich])
         return {
             "aktiv": True,
             "beitraege": [beitrag_aus(c, user, p, g) for p, _, g in stueck],
@@ -141,18 +199,6 @@ def entdecken(seite: int = Query(0, ge=0, le=50), user=Depends(current_user)):
                 "weiter": seite + 1 if len(auswahl) > (seite + 1) * 30 else None}
 
 
-@router.get("/suche")
-def suche(q_: str = Query("", alias="q", max_length=80), user=Depends(current_user)):
-    with conn() as c:
-        nk.aktiv_erforderlich(c, user)
-        begriff = q_.strip().lstrip("#").lower()
-        if len(begriff) < 2:
-            return {"tags": []}
-        tags = rows(c, "SELECT tag, COUNT(*) AS n FROM net_tags WHERE tag LIKE :m "
-                       "GROUP BY tag ORDER BY n DESC LIMIT 12", m=f"%{begriff}%")
-        return {"tags": [{"tag": t["tag"], "anzahl": t["n"]} for t in tags]}
-
-
 @router.get("/tags/{tag}")
 def tag_beitraege(tag: str, seite: int = Query(0, ge=0, le=50),
                   user=Depends(current_user)):
@@ -163,7 +209,12 @@ def tag_beitraege(tag: str, seite: int = Query(0, ge=0, le=50),
         kandidaten = [p for p in algorithmus.sichtbare_kandidaten(c, user["id"], 3650)
                       if p["id"] in ids]
         stueck = kandidaten[seite * SEITE:(seite + 1) * SEITE]
+        thema = row(c, "SELECT code, name, kategorie FROM net_topics WHERE code = :t "
+                       "AND status = 'frei'", t=tag.lower()[:40])
         return {"tag": tag.lower(), "anzahl": len(kandidaten),
+                "thema": ({**thema, "folge_ich": bool(row(
+                    c, "SELECT tag FROM net_topic_follows WHERE user_id = :u AND "
+                       "tag = :t", u=user["id"], t=thema["code"]))} if thema else None),
                 "beitraege": [beitrag_aus(c, user, p) for p in stueck],
                 "weiter": seite + 1 if len(kandidaten) > (seite + 1) * SEITE else None}
 
@@ -209,11 +260,16 @@ class BeitragIn(BaseModel):
     medien_bestaetigt: bool = False
     repost_of: str | None = None
     verzoegerung_tage: int = Field(default=0, ge=0, le=30)
+    themen: list[str] = Field(default_factory=list, max_length=MAX_THEMEN)
+    kommentare_aus: bool = False
 
 
 DETAILFELDER = {
     "fall": {"kategorie": 20, "besonderheit": 1500, "gut": 1500, "anders": 1500},
     "algorithmus": {"quelle": 200, "stand": 60, "geltung": 160},
+    "fallvorstellung": {"meldebild": 800, "x": 500, "a": 500, "b": 500, "c": 500,
+                        "d": 500, "e": 500, "massnahmen": 1500, "frage": 800,
+                        "altersgruppe": 20},
 }
 
 
@@ -235,6 +291,16 @@ def _details(c, uid: str, art: str, roh: dict[str, str] | None) -> dict | None:
                                      "Komplikation oder ein Lernfall war.")
         if not aus.get("besonderheit"):
             raise HTTPException(400, "Beschreibe, was an dem Fall besonders war.")
+    if art == "fallvorstellung":
+        if aus.get("altersgruppe") and aus["altersgruppe"] not in ALTERSGRUPPEN:
+            raise HTTPException(400, "Unbekannte Altersgruppe.")
+        if not aus.get("meldebild"):
+            raise HTTPException(400, "Beschreibe das Meldebild.")
+        if not any(aus.get(k) for k in XABCDE):
+            raise HTTPException(400, "Halte mindestens einen Befund nach xABCDE fest.")
+        if not aus.get("frage"):
+            raise HTTPException(400, "Eine Fallvorstellung endet mit einer Frage an "
+                                     "die Community.")
     if art == "algorithmus" and not aus.get("quelle"):
         raise HTTPException(400, "Ein Algorithmus braucht eine Quelle, etwa die "
                                  "herausgebende Stelle und Fassung.")
@@ -285,13 +351,14 @@ def beitrag_erstellen(data: BeitragIn, user=Depends(current_user)):
                 raise HTTPException(400, "Ein Wissensbeitrag braucht Titel und Link.")
             nk.pruefe_text(c, ich, link_titel)
             nk.pruefe_text(c, ich, link_quelle or "")
-        elif data.art in ("fall", "algorithmus"):
+        elif data.art in ("fall", "algorithmus", "fallvorstellung"):
             if not titel:
                 raise HTTPException(400, "Gib dem Beitrag einen Titel.")
             if data.art == "algorithmus" and data.link_url:
                 link_url = nk.pruefe_link(data.link_url)
                 link_titel = titel
-            if data.art == "fall" and (data.attempt_ids or data.medication_ids):
+            if data.art in ("fall", "fallvorstellung") and (
+                    data.attempt_ids or data.medication_ids):
                 schnapp = nk.schnappschuss(c, ich, data.attempt_ids, data.medication_ids,
                                            data.mit_zek, data.mit_naca)
         elif data.art == "kompetenz":
@@ -314,22 +381,34 @@ def beitrag_erstellen(data: BeitragIn, user=Depends(current_user)):
                      "Patient*innen, Kennzeichen, Einsatzorte oder Monitorwerte mit "
                      "Personenbezug zu erkennen sind.")
 
+        themen = set()
+        for code in data.themen:
+            t = row(c, "SELECT code FROM net_topics WHERE code = :c AND status = 'frei'",
+                    c=(code or "").strip().lower()[:40])
+            if not t:
+                raise HTTPException(400, "Unbekanntes Thema.")
+            themen.add(t["code"])
+        if data.art == "fallvorstellung":
+            themen.add("fallvorstellung")
+
         jetzt = datetime.now(timezone.utc).replace(microsecond=0)
         veroeffentlicht = (jetzt + timedelta(days=data.verzoegerung_tage)).isoformat()
         pid = new_id()
         q(c, "INSERT INTO net_posts (id, author_id, kind, title, body, details, "
              "link_url, link_title, link_source, snapshot, repost_of, created_at, "
-             "published_at) VALUES (:i, :a, :k, :ti, :b, :d, :lu, :lt, :ls, :s, :r, "
-             ":c, :p)",
+             "published_at, comments_off, comments_off_by) VALUES (:i, :a, :k, :ti, "
+             ":b, :d, :lu, :lt, :ls, :s, :r, :c, :p, :co, :cb)",
           i=pid, a=ich, k=data.art, ti=titel, b=text,
           d=json.dumps(details, ensure_ascii=False) if details else None,
           lu=link_url, lt=link_titel, ls=link_quelle,
           s=json.dumps(schnapp, ensure_ascii=False) if schnapp else None,
-          r=repost_of, c=jetzt.isoformat(), p=veroeffentlicht)
+          r=repost_of, c=jetzt.isoformat(), p=veroeffentlicht,
+          co=1 if data.kommentare_aus else 0,
+          cb="autor" if data.kommentare_aus else None)
         for pos, m in enumerate(medien_zeilen):
             q(c, "UPDATE net_media SET post_id = :p, position = :n WHERE id = :i",
               p=pid, n=pos, i=m["id"])
-        for tag in _tags(text, titel, *(details or {}).values()):
+        for tag in _tags(text, titel, *(details or {}).values()) | themen:
             q(c, "INSERT INTO net_tags (post_id, tag) VALUES (:p, :t)", p=pid, t=tag)
         if repost_of:
             nk.melde(c, scalar(c, "SELECT author_id FROM net_posts WHERE id = :i",
@@ -354,7 +433,7 @@ def beitrag_loeschen(post_id: str, user=Depends(current_user)):
         for m in rows(c, "SELECT id FROM net_media WHERE post_id = :p", p=post_id):
             medium_loeschen(c, m["id"], user["id"])
         for tabelle in ("net_likes", "net_comments", "net_tags", "net_hidden",
-                        "net_notifications"):
+                        "net_notifications", "net_saved", "net_seen"):
             q(c, f"DELETE FROM {tabelle} WHERE post_id = :p", p=post_id)
         q(c, "DELETE FROM net_posts WHERE id = :i", i=post_id)
     return {"ok": True}
@@ -476,8 +555,13 @@ def kommentare(post_id: str, user=Depends(current_user)):
                 "autor": nk.person_kurz(c, user["id"], autor),
                 "darf_entfernen": k["author_id"] == user["id"]
                 or post["author_id"] == user["id"] or nk.ist_admin(user),
+                "hilfreich": k["id"] == post["answer_comment_id"],
             })
-        return {"kommentare": aus}
+        # Die hilfreiche Antwort steht oben, wie bei Frage-Antwort-Foren.
+        aus.sort(key=lambda k: not k["hilfreich"])
+        return {"kommentare": aus, "aus": bool(post["comments_off"]),
+                "darf_markieren": post["kind"] == "fallvorstellung"
+                and post["author_id"] == user["id"]}
 
 
 @router.post("/beitraege/{post_id}/kommentare")
@@ -490,6 +574,9 @@ def kommentieren(post_id: str, data: KommentarIn, user=Depends(current_user)):
     with conn() as c:
         nk.aktiv_erforderlich(c, user)
         post = nk.beitrag_oder_404(c, user, post_id)
+        if post["comments_off"]:
+            raise HTTPException(403, "Die Kommentare zu diesem Beitrag sind "
+                                     "ausgeschaltet.")
         nk.pruefe_text(c, user["id"], text)
         q(c, "INSERT INTO net_comments (id, post_id, author_id, body, created_at) "
              "VALUES (:i, :p, :a, :b, :t)",
@@ -510,6 +597,9 @@ def kommentar_entfernen(comment_id: str, user=Depends(current_user)):
                 or nk.ist_admin(user))
         if not darf:
             raise HTTPException(403, "Diesen Kommentar kannst du nicht entfernen.")
+        if post["answer_comment_id"] == comment_id:
+            q(c, "UPDATE net_posts SET answer_comment_id = NULL WHERE id = :p",
+              p=post["id"])
         if k["author_id"] == user["id"]:
             q(c, "DELETE FROM net_comments WHERE id = :i", i=comment_id)
         else:
@@ -519,3 +609,108 @@ def kommentar_entfernen(comment_id: str, user=Depends(current_user)):
               else "moderiert", i=comment_id)
             audit(c, user["id"], "net_comments", comment_id, "entfernt")
     return {"ok": True}
+
+
+class SchalterIn(BaseModel):
+    aus: bool
+
+
+@router.put("/beitraege/{post_id}/kommentare-aus")
+def kommentare_schalten(post_id: str, data: SchalterIn, user=Depends(current_user)):
+    """Kommentare aus- oder einschalten. Autor*in oder Administration.
+
+    Schließt die Administration, steht in comments_off_by „admin“; dann
+    kann nur sie wieder öffnen. Bestehende Kommentare bleiben sichtbar.
+    """
+    with conn() as c:
+        post = nk.beitrag_oder_404(c, user, post_id)
+        eigen = post["author_id"] == user["id"]
+        admin = nk.ist_admin(user)
+        if not (eigen or admin):
+            raise HTTPException(403, "Nur die Autorin, der Autor oder die "
+                                     "Administration schalten Kommentare.")
+        if not data.aus and post["comments_off_by"] == "admin" and not admin:
+            raise HTTPException(403, "Die Administration hat die Kommentare "
+                                     "geschlossen.")
+        von = None
+        if data.aus:
+            von = "autor" if eigen and post["comments_off_by"] != "admin" else "admin"
+        q(c, "UPDATE net_posts SET comments_off = :a, comments_off_by = :v "
+             "WHERE id = :p", a=1 if data.aus else 0, v=von, p=post_id)
+        if not eigen:
+            audit(c, user["id"], "net_posts", post_id,
+                  "kommentare_geschlossen" if data.aus else "kommentare_geoeffnet")
+        return beitrag_aus(c, user, row(c, "SELECT * FROM net_posts WHERE id = :i",
+                                        i=post_id))
+
+
+# --------------------------------------------------------------------------
+# Merken (Favoriten)
+# --------------------------------------------------------------------------
+
+@router.put("/beitraege/{post_id}/merken")
+def merken(post_id: str, user=Depends(current_user)):
+    with conn() as c:
+        nk.beitrag_oder_404(c, user, post_id)
+        if not row(c, "SELECT post_id FROM net_saved WHERE user_id = :u AND "
+                      "post_id = :p", u=user["id"], p=post_id):
+            q(c, "INSERT INTO net_saved (user_id, post_id, created_at) VALUES "
+                 "(:u, :p, :t)", u=user["id"], p=post_id, t=now_iso())
+    return {"gemerkt": True}
+
+
+@router.delete("/beitraege/{post_id}/merken")
+def nicht_mehr_merken(post_id: str, user=Depends(current_user)):
+    with conn() as c:
+        q(c, "DELETE FROM net_saved WHERE user_id = :u AND post_id = :p",
+          u=user["id"], p=post_id)
+    return {"gemerkt": False}
+
+
+@router.get("/gemerkt")
+def gemerkte(seite: int = Query(0, ge=0, le=100), user=Depends(current_user)):
+    """Gemerkte Beiträge, zuletzt gemerkte zuerst. Was inzwischen nicht mehr
+    sichtbar ist (gelöscht, entfernt, privat geworden), fällt still heraus –
+    Merken verschafft keinen Zugriff."""
+    with conn() as c:
+        aus = []
+        for s_ in rows(c, "SELECT post_id FROM net_saved WHERE user_id = :u "
+                          "ORDER BY created_at DESC", u=user["id"]):
+            post = row(c, "SELECT * FROM net_posts WHERE id = :i", i=s_["post_id"])
+            if post and not post["removed_at"] and nk.darf_beitrag_sehen(c, user, post):
+                aus.append(post)
+        stueck = aus[seite * SEITE:(seite + 1) * SEITE]
+        return {"beitraege": [beitrag_aus(c, user, p) for p in stueck],
+                "anzahl": len(aus),
+                "weiter": seite + 1 if len(aus) > (seite + 1) * SEITE else None}
+
+
+# --------------------------------------------------------------------------
+# Fallvorstellung: hilfreiche Antwort
+# --------------------------------------------------------------------------
+
+@router.put("/beitraege/{post_id}/hilfreich/{comment_id}")
+def hilfreich_markieren(post_id: str, comment_id: str, user=Depends(current_user)):
+    with conn() as c:
+        post = row(c, "SELECT * FROM net_posts WHERE id = :i AND author_id = :a "
+                      "AND kind = 'fallvorstellung'", i=post_id, a=user["id"])
+        if not post:
+            raise HTTPException(404, "Fallvorstellung nicht gefunden.")
+        k = row(c, "SELECT * FROM net_comments WHERE id = :i AND post_id = :p AND "
+                   "removed_at IS NULL", i=comment_id, p=post_id)
+        if not k:
+            raise HTTPException(404, "Antwort nicht gefunden.")
+        q(c, "UPDATE net_posts SET answer_comment_id = :k WHERE id = :p",
+          k=comment_id, p=post_id)
+        nk.melde(c, k["author_id"], "hilfreich", user["id"], post_id)
+    return kommentare(post_id, user)
+
+
+@router.delete("/beitraege/{post_id}/hilfreich")
+def hilfreich_aufheben(post_id: str, user=Depends(current_user)):
+    with conn() as c:
+        if not row(c, "SELECT id FROM net_posts WHERE id = :i AND author_id = :a",
+                   i=post_id, a=user["id"]):
+            raise HTTPException(404, "Fallvorstellung nicht gefunden.")
+        q(c, "UPDATE net_posts SET answer_comment_id = NULL WHERE id = :p", p=post_id)
+    return kommentare(post_id, user)

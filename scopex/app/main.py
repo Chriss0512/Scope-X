@@ -22,13 +22,17 @@ from .routers import (
     beitraege,
     catalog,
     exports,
+    kataloge,
     nachrichten,
     netz,
+    netzwerk,
     passkeys,
     profile,
     records,
     stats,
+    zugang,
 )
+from . import kataloge as katalogdaten
 from .seed import seed_if_empty
 
 log = logging.getLogger("scopex")
@@ -52,6 +56,10 @@ async def lifespan(_: FastAPI):
     with conn() as c:
         if seed_if_empty(c):
             log.info("Stammdaten eingespielt.")
+        neu = katalogdaten.einspielen(c)
+        if neu:
+            log.info("%s Katalogeinträge ergänzt.", neu)
+        zugang.aufraeumen(c)
         # Videos, deren Verarbeitung ein Neustart unterbrochen hat, kommen
         # nie mehr fertig; ohne diesen Schritt bliebe der Upload ewig
         # „in Verarbeitung“.
@@ -109,6 +117,9 @@ app.include_router(exports.router)
 app.include_router(netz.router)
 app.include_router(beitraege.router)
 app.include_router(nachrichten.router)
+app.include_router(kataloge.router)
+app.include_router(zugang.router)
+app.include_router(netzwerk.router)
 
 
 @app.get("/api/health")

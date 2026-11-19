@@ -25,6 +25,7 @@ GESCHUETZT = (
     "/api/auth/login",
     "/api/auth/register",
     "/api/auth/password-reset/request",
+    "/api/oeffentlich/bewerbung",
 )
 
 _original_post = TestClient.post
@@ -49,7 +50,7 @@ def loese(aufgabe: dict) -> dict:
 
 
 def _kennung(nutzdaten: dict) -> str:
-    for feld in ("username", "identifier"):
+    for feld in ("username", "identifier", "email"):
         if nutzdaten.get(feld):
             return str(nutzdaten[feld])
     return ""
@@ -63,6 +64,11 @@ def _post(self, url, *args, **kwargs):
                            params={"kennung": _kennung(nutzdaten)})
         if antwort.status_code == 200:
             kwargs["json"] = {**nutzdaten, "pow": loese(antwort.json())}
+    # Neue Konten stimmen der Nutzungsvereinbarung zu, wenn der Test nichts
+    # anderes sagt. Die Ablehnung prüft ein eigener Test mit False.
+    if (url.endswith("/api/auth/register") and isinstance(kwargs.get("json"), dict)
+            and "nutzung_akzeptiert" not in kwargs["json"]):
+        kwargs["json"] = {**kwargs["json"], "nutzung_akzeptiert": True}
     return _original_post(self, url, *args, **kwargs)
 
 

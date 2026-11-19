@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from .. import gate, mailer
+from .. import gate, mailer, nutzung
 from ..core import ROLE_LABELS, audit, current_user, optional_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..security import (
@@ -175,6 +175,8 @@ class RegisterIn(BaseModel):
     last_name: str = ""
     qualification: str = ""
     invite_code: str | None = None
+    # Zustimmung zur Nutzungsvereinbarung; Pflicht für jedes neue Konto.
+    nutzung_akzeptiert: bool = False
     pow: dict | None = None
 
 
@@ -215,9 +217,17 @@ def check_invitation(code: str):
         inv = _find_invitation(c, code)
     if not inv:
         raise HTTPException(404, "Diese Einladung ist ungültig oder abgelaufen.")
+    # Aus einer Bewerbung: Name vorausfüllen. Wer den Code hat, ist die
+    # Person, die sich beworben hat; mehr als den eigenen Namen erfährt sie
+    # nicht.
+    with conn() as c:
+        b = row(c, "SELECT first_name, last_name FROM applications "
+                   "WHERE invitation_id = :i", i=inv["id"])
     return {"valid": True, "role": inv["role"],
             "role_label": ROLE_LABELS.get(inv["role"], inv["role"]),
-            "email": inv["email"] or ""}
+            "email": inv["email"] or "",
+            "first_name": b["first_name"] if b else "",
+            "last_name": b["last_name"] if b else ""}
 
 
 @router.get("/device")
@@ -280,6 +290,7 @@ def auth_state(request: Request):
     with conn() as c:
         totp = row(c, "SELECT confirmed_at FROM auth_totp WHERE user_id = :u", u=user["id"])
         profile = row(c, "SELECT * FROM user_profile WHERE user_id = :u", u=user["id"])
+        nutzung_offen = nutzung.offen(c, user["id"])
     # Bewusst nur die Felder, die die Oberflaeche wirklich braucht. Der
     # Passwort-Hash und andere interne Spalten verlassen den Server nicht.
     return {
@@ -290,6 +301,7 @@ def auth_state(request: Request):
                  "email": user["email"], "role": user.get("role") or "user"},
         "profile": profile or {},
         "mail_configured": mailer.is_configured(),
+        "nutzung_offen": nutzung_offen,
     }
 
 
@@ -300,6 +312,8 @@ def register(data: RegisterIn, request: Request, response: Response):
         data.password, kennungen=(data.username, data.email or ""))
     if problems:
         raise HTTPException(400, " ".join(problems))
+    if not data.nutzung_akzeptiert:
+        raise HTTPException(400, "Bitte stimme der Nutzungsvereinbarung zu.")
     with conn() as c:
         existing_accounts = scalar(c, "SELECT COUNT(*) FROM users") or 0
         invitation = None
@@ -338,6 +352,10 @@ def register(data: RegisterIn, request: Request, response: Response):
         q(c, "INSERT INTO auth_totp (user_id, secret, created_at) "
              "VALUES (:u, :s, :t)", u=uid, s=secret, t=now_iso())
         audit(c, uid, "users", uid, "create")
+        nutzung.zustimmen(c, uid)
+        if invitation:
+            from .zugang import nach_registrierung
+            nach_registrierung(c, invitation["id"], uid)
     token = create_session(uid)
     _set_cookie(response, request, token)
     account = data.email or data.username

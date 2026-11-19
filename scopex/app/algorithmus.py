@@ -22,6 +22,26 @@ Signale, je 0 bis 1:
 Danach Vielfalt: jeder weitere Beitrag derselben Person zählt nur noch
 65 Prozent des vorigen, damit niemand den Feed allein füllt.
 
+Korrekturen nach dem Vorbild großer offener Feed-Systeme (Kandidaten aus
+dem eigenen Netz und von außerhalb, Abwertung für bereits Gesehenes,
+negative Signale, Vielfalt mit Untergrenze):
+
+* Gesehen      Was der Feed schon ausgeliefert hat, sinkt je Auslieferung
+               um 0,06 (höchstens dreimal). Neues kommt so nach oben, ohne
+               dass Gesehenes verschwindet.
+* Außerhalb    Beiträge von Personen, denen ich nicht folge, zählen 85 %.
+               Das eigene Netz hat Vorrang, ohne es abzuschotten.
+* Negativ      Habe ich Beiträge einer Person mit „Nicht interessiert“
+               ausgeblendet, zählt jeder weitere Beitrag von ihr 75 % je
+               Ausblendung, mindestens aber 40 %.
+* Gemerkt      Merken ist das stärkste positive Signal: Themen und
+               Personen gemerkter Beiträge zählen dreifach.
+* Themen       Gefolgte Themen heben die Relevanz auf 0,9.
+* Neu im Netz  Wer neu ist und noch wenig geteilt hat, bekommt einen
+               kleinen Zuschlag, damit neue Stimmen überhaupt gesehen werden.
+* Fragen       Fallvorstellungen ohne hilfreiche Antwort steigen in den
+               ersten drei Tagen: dort wird Hilfe gebraucht.
+
 Das eigene Logbuch fließt nur als Zählwert je Maßnahme ein und nur in die
 eigene Rangfolge. Kein anderes Mitglied erfährt daraus etwas.
 """
@@ -34,13 +54,18 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 
 from . import netzkern as nk
-from .db import now_iso, rows
+from .db import now_iso, q, row, rows
 
 GEWICHTE = {"aktualitaet": 0.28, "resonanz": 0.18, "naehe": 0.22,
             "art": 0.16, "relevanz": 0.16}
 
-ARTWERT = {"fall": 0.85, "algorithmus": 0.8, "wissen": 0.6, "kompetenz": 0.6,
-           "beitrag": 0.4, "repost": 0.4}
+ARTWERT = {"fall": 0.85, "fallvorstellung": 0.9, "algorithmus": 0.8, "wissen": 0.6,
+           "kompetenz": 0.6, "beitrag": 0.4, "repost": 0.4}
+GESEHEN_ABZUG = 0.06
+AUSSERHALB = 0.85
+AUSGEBLENDET = 0.75
+AUSGEBLENDET_MIN = 0.4
+NEU_TAGE = 14
 FALLWERT = {"komplikation": 1.0, "selten": 1.0, "lernfall": 0.8}
 FALLGRUND = {"komplikation": "Komplikation", "selten": "Seltene Situation",
              "lernfall": "Lernfall"}
@@ -126,9 +151,30 @@ def _logbuch_profil(c, ich: str) -> Counter:
            "GROUP BY a.measure_name", u=ich)})
 
 
+def gefolgte_themen(c, ich: str) -> set[str]:
+    return {r_["tag"] for r_ in rows(
+        c, "SELECT tag FROM net_topic_follows WHERE user_id = :u", u=ich)}
+
+
+def gesehen(c, ich: str, ids: list[str]) -> None:
+    """Merkt, welche Beiträge der Feed ausgeliefert hat."""
+    jetzt = now_iso()
+    for pid in ids:
+        if row(c, "SELECT post_id FROM net_seen WHERE user_id = :u AND post_id = :p",
+               u=ich, p=pid):
+            q(c, "UPDATE net_seen SET times = times + 1, last_at = :t WHERE "
+                 "user_id = :u AND post_id = :p", t=jetzt, u=ich, p=pid)
+        else:
+            q(c, "INSERT INTO net_seen (user_id, post_id, times, last_at) VALUES "
+                 "(:u, :p, 1, :t)", u=ich, p=pid, t=jetzt)
+
+
 def _interessen(c, ich: str) -> Counter:
-    """Hashtags der Beiträge, die ich mochte oder kommentiert habe."""
+    """Hashtags der Beiträge, die ich mochte, kommentiert oder gemerkt habe."""
     themen: Counter = Counter()
+    for r_ in rows(c, "SELECT t.tag FROM net_tags t JOIN net_saved s ON "
+                      "s.post_id = t.post_id WHERE s.user_id = :u", u=ich):
+        themen[r_["tag"]] += 3
     for r_ in rows(c, "SELECT t.tag FROM net_tags t JOIN net_likes l ON "
                       "l.post_id = t.post_id WHERE l.user_id = :u", u=ich):
         themen[r_["tag"]] += 1
@@ -147,6 +193,9 @@ def _naehe(c, ich: str) -> Counter:
     for r_ in rows(c, "SELECT p.author_id FROM net_comments k JOIN net_posts p ON "
                       "p.id = k.post_id WHERE k.author_id = :u", u=ich):
         n[r_["author_id"]] += 2
+    for r_ in rows(c, "SELECT p.author_id FROM net_saved s JOIN net_posts p ON "
+                      "p.id = s.post_id WHERE s.user_id = :u", u=ich):
+        n[r_["author_id"]] += 3
     for r_ in rows(c, "SELECT CASE WHEN k.user_a = :u THEN k.user_b ELSE k.user_a "
                       "END AS gegen FROM net_messages m JOIN net_conversations k "
                       "ON k.id = m.conversation_id WHERE m.sender_id = :u", u=ich):
@@ -171,6 +220,15 @@ def rangliste(c, ich: str, kandidaten: list[dict], entdecken: bool = False
     naehe = _naehe(c, ich)
     logbuch = _logbuch_profil(c, ich)
     interessen = _interessen(c, ich)
+    meine_themen = gefolgte_themen(c, ich)
+    schon_gesehen = {r_["post_id"]: r_["times"] for r_ in rows(
+        c, "SELECT post_id, times FROM net_seen WHERE user_id = :u", u=ich)}
+    abgelehnt = Counter({r_["author_id"]: r_["n"] for r_ in rows(
+        c, "SELECT p.author_id, COUNT(*) AS n FROM net_hidden h JOIN net_posts p "
+           "ON p.id = h.post_id WHERE h.user_id = :u GROUP BY p.author_id", u=ich)})
+    grenze_neu = (jetzt - timedelta(days=NEU_TAGE)).replace(microsecond=0).isoformat()
+    neue_autoren = {r_["id"] for r_ in rows(
+        c, "SELECT id FROM users WHERE created_at >= :g", g=grenze_neu)}
     namen: dict[str, str] = {}
 
     def name(uid: str) -> str:
@@ -221,6 +279,8 @@ def rangliste(c, ich: str, kandidaten: list[dict], entdecken: bool = False
             gruende.append((0.9, FALLGRUND.get(kat, "Fallbericht")))
         elif art == "algorithmus":
             gruende.append((0.7, "Algorithmus mit Quelle"))
+        elif art == "fallvorstellung":
+            gruende.append((0.85, "Fallvorstellung: Frage an die Community"))
 
         relevanz = 0.0
         schnapp = nk.json_oder_none(p["snapshot"]) or {}
@@ -238,6 +298,13 @@ def rangliste(c, ich: str, kandidaten: list[dict], entdecken: bool = False
         if bestes and interessen[bestes]:
             relevanz = max(relevanz, min(1.0, 0.4 + 0.15 * interessen[bestes]))
             gruende.append((0.6, f"Thema, das dich interessiert: #{bestes}"))
+        gefolgt_thema = next((t for t in themen if t in meine_themen), None)
+        if gefolgt_thema:
+            relevanz = max(relevanz, 0.9)
+            gruende.append((0.75, f"Thema, dem du folgst: #{gefolgt_thema}"))
+        if art == "fallvorstellung" and not p.get("answer_comment_id") and alter < 72:
+            relevanz = max(relevanz, 0.8)
+            gruende.append((0.7, "Noch ohne hilfreiche Antwort"))
 
         wert = (GEWICHTE["aktualitaet"] * aktualitaet
                 + GEWICHTE["resonanz"] * resonanz
@@ -246,6 +313,15 @@ def rangliste(c, ich: str, kandidaten: list[dict], entdecken: bool = False
                 + GEWICHTE["relevanz"] * relevanz)
         if p["id"] in meine_likes:
             wert -= 0.12
+        if autor != ich:
+            wert -= GESEHEN_ABZUG * min(3, schon_gesehen.get(p["id"], 0))
+            if autor not in gefolgt and not entdecken:
+                wert *= AUSSERHALB
+            if abgelehnt[autor]:
+                wert *= max(AUSGEBLENDET_MIN, AUSGEBLENDET ** abgelehnt[autor])
+            if autor in neue_autoren:
+                wert += 0.05
+                gruende.append((0.15, "Neu im Netz"))
         if autor == ich:
             # Eigene Beiträge oben, solange sie frisch sind — danach nicht
             # mehr im eigenen Feed, dafür gibt es die Chronik.
