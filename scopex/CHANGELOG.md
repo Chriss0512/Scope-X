@@ -3,6 +3,158 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.5.0
+
+MINOR: neue Funktionen und eine Migration (`0011_bewerbung_kataloge`).
+Bestehende Endpunkte bleiben erhalten; `GET /api/netz/suche` liefert
+zusätzlich Personen, Themen und Beiträge. Sicherungsformat und
+Add-on-Optionen bleiben unverändert.
+
+### Bitte beachten
+
+- **Nutzungsvereinbarung.** Alle Mitglieder werden bei der nächsten
+  Anfrage einmal gebeten, der neuen Nutzungsvereinbarung zuzustimmen.
+  Bis dahin beantwortet der Server alles außer Anmeldung, Vereinbarung,
+  Datenauskunft und Kontolöschung mit 428. Neue Konten stimmen bei der
+  Registrierung zu. Der Text steht in `app/nutzung.py`; er ist eine
+  sorgfältige Vorlage, keine Rechtsberatung, und sollte vor dem Einsatz
+  für andere geprüft werden. Eine inhaltliche Änderung bekommt eine neue
+  `VERSION` und löst eine erneute Zustimmung aus.
+- **„Verwaltung“ heißt jetzt „Administration“**, Adresse
+  `#/administration`. Alte Lesezeichen auf `#/verwaltung` leiten um.
+- **Skripte und Stile werden komprimiert ausgeliefert** (nur unter
+  `/assets`, nicht die API). Die Prüfschleife misst seither die
+  Übertragung und getrennt die einzulesende Menge, siehe unten.
+
+### Zugang
+
+- **Bewerbung um Zugang** unter `#/bewerben`, verlinkt von der Anmeldung:
+  Name, E-Mail, Beruf, Kreis, optional Organisation, Wache, Begründung
+  und ein Mitglied, das bürgen kann. Rechenaufgabe und Drosselung wie bei
+  der Anmeldung, höchstens drei Bewerbungen je Herkunft und Tag.
+- **Doppelte Bestätigung**: erst nach Klick auf den Link in der Mail geht
+  die Bewerbung an die Administration. Unbestätigte verfallen nach
+  48 Stunden spurlos.
+- **Mitglied bürgt, Administration entscheidet.** Das genannte Mitglied
+  findet die Anfrage unter „Netzwerk“ und per Mail und sagt, ob es die
+  Person kennt. Es sieht Name, Beruf, Region und Begründung, nie die
+  E-Mail-Adresse. Antworten kann nur dieses Mitglied.
+- **Gleiche Antwort für alle**: ob es die Adresse schon als Konto gibt,
+  ob eine Bewerbung offen ist oder ob das genannte Mitglied existiert,
+  lässt sich über das Formular nicht herausfinden. Wer schon ein Konto
+  hat, bekommt eine Mail mit dem Weg zu „Passwort vergessen“.
+- **Annahme nur mit frischem Code** aus der Authenticator-App, nur als
+  Mitarbeiter oder Gast. Die Einladung geht an die bestätigte Adresse,
+  füllt den Namen vor und übernimmt den Kreis ins Profil. Mit der
+  Registrierung wird die Bewerbung gelöscht; abgelehnte und angenommene
+  30 Tage nach der Entscheidung.
+- Bewerbungen lassen sich in der Administration abschalten. Ohne
+  Mailversand gibt es keine Bewerbung.
+
+### Netzwerk
+
+- **Neue Übersicht „Netzwerk“** (`#/netzwerk`, auf dem Telefon in der
+  Leiste statt „Entdecken“): Bürgschaftsanfragen, Folgeanfragen mit
+  **Annehmen** oder **Ignorieren**, Vorschläge mit Begründung, „Ich
+  folge“, Follower, offene eigene Anfragen, Themen, Gespeichertes.
+- **Ignorieren sendet kein Signal**: die Anfrage verschwindet aus Liste
+  und Zähler, für die anfragende Person bleibt sie „angefragt“. Annehmen
+  geht später noch.
+- **Vorschläge aus Zusammenhängen**: gleiche Wache, gleiche Organisation
+  im selben Kreis, gleicher Kreis (etwa „Auch Heidekreis“), gleiche
+  Organisation, folgt dir, gemeinsame Kontakte, gleiche Kurse, neu im
+  Netz. Ort und Kurse privater Konten fließen nicht ein, solange man
+  ihnen nicht folgt. Ausgeblendete Vorschläge kommen nicht wieder. Im
+  Feed erscheinen Vorschläge an fester Stelle als Karte.
+- **Region, Organisation und Wache aus Listen** statt Freitext: die 400
+  Kreise und kreisfreien Städte aus dem Gemeindeverzeichnis des
+  Statistischen Bundesamtes (Stand 31.12.2024, Datenlizenz Deutschland –
+  Namensnennung 2.0), eine Grundliste von Organisationen, Wachen
+  ausschließlich aus Einreichungen der Mitglieder. Die Administration
+  sichtet, benennt um und führt Doppelte zusammen.
+
+### Qualifikationen und Fortbildung
+
+- **Kuratierte Liste** von Berufsabschlüssen, Funktionen und Kursen
+  (Praxisanleitung, OrgL, LNA, ERC BLS/ILS/ALS/EPALS/NLS, AHA BLS/ACLS/PALS,
+  PHTLS, AMLS, TECC, ITLS, ATLS u. a.). Fehlendes lässt sich vorschlagen;
+  frei wählbar ist es erst nach Freigabe.
+- **Ablaufdaten** werden aus den Angaben der Herausgeber berechnet, soweit
+  belegt: ERC drei Jahre, AHA zwei Jahre, NAEMT-Providerkurse vier Jahre.
+  Wo keine belegte Angabe vorlag, steht keine Dauer. 90 Tage vor Ablauf
+  kommt eine Mitteilung. Andere sehen nur gültige Einträge, keine Daten.
+- **Abzeichen**: gültige Kurse und Funktionen erscheinen kurz am Namen
+  (bei privaten Konten nur für Follower).
+- **Fortbildungsnachweis** im Logbuch (`#/fortbildung`), privat: Stunden je
+  Jahr, angerechnet auf eine Qualifikation, mit Pflichtstand, etwa
+  24 Stunden berufspädagogische Fortbildung für Praxisanleitung
+  (NotSan-APrV § 3).
+
+### Beiträge
+
+- **Fallvorstellung** als eigene Beitragsart: Meldebild → Befund nach
+  xABCDE → Maßnahmen → Frage an die Community. Nur Altersgruppe, kein
+  Alter; dieselbe Prüfung auf Uhrzeiten, Einsatznummern und Fahrzeuge wie
+  überall. Antworten sind Kommentare; die fragende Person markiert die
+  hilfreichste, sie steht dann oben.
+- **Themen als Kompetenz-Routing**: kuratierte Themen wie
+  #Atemwegsmanagement, #EKG-Quiz, #Recht-2aNotSanG, #Praxisanleitung,
+  #Luftrettung, #Intensivverlegung, #Peer-to-Peer-Hilfe. Beim Teilen
+  wählbar, im Feed als Filter, „Meine Themen“ als eigener Reiter, Themen
+  lassen sich folgen. Die Administration pflegt die Liste.
+- **Kommentare ausschalten** durch Autor*in (auch schon beim Teilen) oder
+  Administration. Hat die Administration geschlossen, kann nur sie wieder
+  öffnen.
+- **Speichern**: Beiträge anderer merken, Liste unter `#/gespeichert`.
+  Merken verschafft keinen Zugriff: was nicht mehr sichtbar ist, fällt
+  heraus.
+
+### Suche
+
+- **Eigene Seite** `#/suche` für Personen, Themen und Beiträge, mit
+  Filtern nach Kreis, Organisation und Qualifikation. Leer zeigt sie, was
+  es zu entdecken gibt.
+- **Suchfeld auf jeder Seite** direkt am Logo: in der Seitenleiste unter
+  dem Logo, auf dem Telefon in einer Kopfzeile mit Mitteilungen und
+  Nachrichten.
+
+### „Für dich“
+
+Nach dem Vorbild offen dokumentierter Feed-Systeme ergänzt, weiterhin
+als nachvollziehbare gewichtete Summe:
+
+- Bereits Ausgeliefertes sinkt je Auslieferung (höchstens dreimal).
+- Beiträge von außerhalb des eigenen Netzes zählen 85 %.
+- „Nicht interessiert“ wirkt auf weitere Beiträge derselben Person
+  (75 % je Ausblendung, mindestens 40 %).
+- Gemerkte Beiträge sind das stärkste positive Signal.
+- Gefolgte Themen heben die Relevanz; offene Fallvorstellungen steigen in
+  den ersten drei Tagen; neue Mitglieder bekommen einen kleinen Zuschlag.
+- „Warum sehe ich das?“ nennt die neuen Gründe.
+
+### Datenschutz
+
+- Datenauskunft enthält Region, Qualifikationen, Fortbildungen,
+  Gespeichertes, gefolgte Themen, ausgeblendete Vorschläge, Gesehenes,
+  Zustimmungen und eigene Einreichungen. Kontolöschung entfernt all das;
+  eingereichte Katalogeinträge bleiben ohne Personenbezug.
+- Die JSON-Sicherung der Administration enthält Kataloge, Bewerbungen und
+  Zustimmungen nicht, wie schon die übrigen Netztabellen; das
+  Home-Assistant-Backup sichert `/data` vollständig.
+
+### Qualität
+
+- Neue Testreihe `test_zugang.py` (Vereinbarung, Bewerbung, Bürgschaft,
+  Kataloge, Vorschläge und Suchfilter bei privaten Konten, Ignorieren,
+  Themen, Fallvorstellung, Kommentare aus, Speichern, Löschung).
+- Rollenprüfung um die neuen Administrationsrouten erweitert.
+- Barrierefreiheit auf den neuen Seiten geprüft. Die Messung des
+  Seitenendes ignoriert jetzt den Inhalt geschlossener Aufklappbereiche,
+  den Chromium mit Layout versieht, obwohl er nicht zu sehen ist.
+- Auslieferungsgröße: Übertragung höchstens 500 KB (komprimierte Skripte
+  und Stile plus Schrift), einzulesen höchstens 480 KB Skript und Stil.
+  Vorher zählten die unkomprimierten Bytes gegen 700 KB.
+
 ## 4.4.0
 
 MINOR: neue Funktion mit neuen Endpunkten unter `/api/netz/` und einer

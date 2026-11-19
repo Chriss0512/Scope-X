@@ -750,6 +750,173 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         )""",
         "CREATE INDEX ix_msg_conv ON net_messages(conversation_id, created_at)",
     ]),
+    ("0011_bewerbung_kataloge", [
+        # Kataloge für Region, Organisation, Wache und Qualifikation. Region
+        # ist der Amtliche Regionalschlüssel des Kreises (app/data/kreise.json).
+        "ALTER TABLE user_profile ADD COLUMN kreis_ags TEXT",
+        "ALTER TABLE user_profile ADD COLUMN organisation_id TEXT",
+        "ALTER TABLE user_profile ADD COLUMN wache_id TEXT",
+
+        # status: frei (für alle), neu (eingereicht, für alle nutzbar, von
+        # der Administration noch nicht gesichtet).
+        """CREATE TABLE net_organisations (
+            id TEXT PRIMARY KEY,
+            code TEXT,
+            name TEXT NOT NULL,
+            art TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_org_name ON net_organisations(name)",
+        """CREATE TABLE net_wachen (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            organisation_id TEXT,
+            kreis_ags TEXT,
+            status TEXT NOT NULL,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_wache_kreis ON net_wachen(kreis_ags)",
+
+        # Kuratierte Qualifikationen. gueltig_monate leer: kein Ablauf.
+        # fortbildung_stunden: jährliche Fortbildungspflicht. status:
+        # frei, vorgeschlagen (nur für die einreichende Person), aus.
+        """CREATE TABLE net_qualifications (
+            id TEXT PRIMARY KEY,
+            code TEXT,
+            name TEXT NOT NULL,
+            kurz TEXT,
+            kategorie TEXT NOT NULL,
+            herausgeber TEXT,
+            gueltig_monate INTEGER,
+            fortbildung_stunden INTEGER,
+            quelle TEXT,
+            status TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_qual_code ON net_qualifications(code)",
+        """CREATE TABLE net_user_qualifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            qual_id TEXT NOT NULL,
+            erworben TEXT,
+            gueltig_bis TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_uq_once ON net_user_qualifications(user_id, qual_id)",
+        "CREATE INDEX ix_uq_qual ON net_user_qualifications(qual_id)",
+
+        # Fortbildungsnachweis. Privat, wie das Logbuch.
+        """CREATE TABLE net_fortbildungen (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            titel TEXT NOT NULL,
+            datum TEXT NOT NULL,
+            stunden REAL NOT NULL,
+            qual_id TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_fb_user ON net_fortbildungen(user_id, datum)",
+
+        # Gemerkte Beiträge.
+        """CREATE TABLE net_saved (
+            user_id TEXT NOT NULL,
+            post_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_saved_pk ON net_saved(user_id, post_id)",
+        "CREATE INDEX ix_saved_post ON net_saved(post_id)",
+
+        # Kommentare ausschalten: durch Autor*in oder Administration.
+        "ALTER TABLE net_posts ADD COLUMN comments_off INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE net_posts ADD COLUMN comments_off_by TEXT",
+
+        # Ausgeblendete Vorschläge.
+        """CREATE TABLE net_dismissed (
+            user_id TEXT NOT NULL,
+            other_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_dismissed_pk ON net_dismissed(user_id, other_id)",
+
+        # Was der Feed schon ausgeliefert hat. Grundlage für das Abwerten
+        # bereits gesehener Beiträge.
+        """CREATE TABLE net_seen (
+            user_id TEXT NOT NULL,
+            post_id TEXT NOT NULL,
+            times INTEGER NOT NULL DEFAULT 1,
+            last_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_seen_pk ON net_seen(user_id, post_id)",
+
+        # Bezug für Mitteilungen ohne Beitrag (Bewerbung, Qualifikation).
+        "ALTER TABLE net_notifications ADD COLUMN ref_id TEXT",
+
+        # Bewerbungen um Zugang. Personenbezogen und nur so lange
+        # gespeichert, wie es die Entscheidung braucht, siehe bewerbung.py.
+        """CREATE TABLE applications (
+            id TEXT PRIMARY KEY,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            qualification TEXT,
+            kreis_ags TEXT,
+            organisation TEXT,
+            wache TEXT,
+            motivation TEXT,
+            sponsor_id TEXT,
+            sponsor_status TEXT,
+            sponsor_text TEXT,
+            sponsor_at TEXT,
+            status TEXT NOT NULL,
+            token_hash TEXT,
+            ip_hash TEXT,
+            created_at TEXT NOT NULL,
+            confirmed_at TEXT,
+            decided_at TEXT,
+            decided_by TEXT,
+            decision_note TEXT,
+            invitation_id TEXT
+        )""",
+        "CREATE INDEX ix_app_status ON applications(status, created_at)",
+        "CREATE INDEX ix_app_email ON applications(email)",
+        "CREATE INDEX ix_app_sponsor ON applications(sponsor_id)",
+
+        # Kuratierte Themen (Kompetenz-Tags). code ist der Hashtag ohne #,
+        # klein geschrieben; Beiträge tragen ihn in net_tags.
+        """CREATE TABLE net_topics (
+            code TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            kategorie TEXT NOT NULL,
+            status TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )""",
+        """CREATE TABLE net_topic_follows (
+            user_id TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_topic_follow_pk ON net_topic_follows(user_id, tag)",
+
+        # Fallvorstellung: Antwort, die die fragende Person als hilfreich
+        # markiert hat.
+        "ALTER TABLE net_posts ADD COLUMN answer_comment_id TEXT",
+
+        # Zustimmung zur Nutzungsvereinbarung, je Fassung.
+        """CREATE TABLE terms_acceptance (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            version TEXT NOT NULL,
+            accepted_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_terms_once ON terms_acceptance(user_id, version)",
+    ]),
 ]
 
 

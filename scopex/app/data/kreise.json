@@ -1,0 +1,2806 @@
+{
+"quelle": "Statistisches Bundesamt (Destatis), Gemeindeverzeichnis GV-ISys, dl-de/by-2-0",
+"stand": "Kreisfreie Städte und Landkreise nach Fläche, Bevölkerung und Bevölkerungsdichte am 31.12.2024 (Jahr)",
+"kreise": [
+{
+"ags": "01001",
+"name": "Flensburg",
+"amtlich": "Flensburg, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01002",
+"name": "Kiel",
+"amtlich": "Kiel, Landeshauptstadt",
+"art": "Kreisfreie Stadt",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01003",
+"name": "Lübeck",
+"amtlich": "Lübeck, Hansestadt",
+"art": "Kreisfreie Stadt",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01004",
+"name": "Neumünster",
+"amtlich": "Neumünster, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01051",
+"name": "Dithmarschen",
+"amtlich": "Dithmarschen",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01053",
+"name": "Herzogtum Lauenburg",
+"amtlich": "Herzogtum Lauenburg",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01054",
+"name": "Nordfriesland",
+"amtlich": "Nordfriesland",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01055",
+"name": "Ostholstein",
+"amtlich": "Ostholstein",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01056",
+"name": "Pinneberg",
+"amtlich": "Pinneberg",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01057",
+"name": "Plön",
+"amtlich": "Plön",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01058",
+"name": "Rendsburg-Eckernförde",
+"amtlich": "Rendsburg-Eckernförde",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01059",
+"name": "Schleswig-Flensburg",
+"amtlich": "Schleswig-Flensburg",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01060",
+"name": "Segeberg",
+"amtlich": "Segeberg",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01061",
+"name": "Steinburg",
+"amtlich": "Steinburg",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "01062",
+"name": "Stormarn",
+"amtlich": "Stormarn",
+"art": "Kreis",
+"land": "Schleswig-Holstein"
+},
+{
+"ags": "02000",
+"name": "Hamburg",
+"amtlich": "Hamburg, Freie und Hansestadt",
+"art": "Kreisfreie Stadt",
+"land": "Hamburg"
+},
+{
+"ags": "03101",
+"name": "Braunschweig",
+"amtlich": "Braunschweig, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03102",
+"name": "Salzgitter",
+"amtlich": "Salzgitter, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03103",
+"name": "Wolfsburg",
+"amtlich": "Wolfsburg, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03151",
+"name": "Gifhorn",
+"amtlich": "Gifhorn",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03153",
+"name": "Goslar",
+"amtlich": "Goslar",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03154",
+"name": "Helmstedt",
+"amtlich": "Helmstedt",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03155",
+"name": "Northeim",
+"amtlich": "Northeim",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03157",
+"name": "Peine",
+"amtlich": "Peine",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03158",
+"name": "Wolfenbüttel",
+"amtlich": "Wolfenbüttel",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03159",
+"name": "Göttingen",
+"amtlich": "Göttingen",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03241",
+"name": "Region Hannover",
+"amtlich": "Region Hannover",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03251",
+"name": "Diepholz",
+"amtlich": "Diepholz",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03252",
+"name": "Hameln-Pyrmont",
+"amtlich": "Hameln-Pyrmont",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03254",
+"name": "Hildesheim",
+"amtlich": "Hildesheim",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03255",
+"name": "Holzminden",
+"amtlich": "Holzminden",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03256",
+"name": "Nienburg (Weser)",
+"amtlich": "Nienburg (Weser)",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03257",
+"name": "Schaumburg",
+"amtlich": "Schaumburg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03351",
+"name": "Celle",
+"amtlich": "Celle",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03352",
+"name": "Cuxhaven",
+"amtlich": "Cuxhaven",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03353",
+"name": "Harburg",
+"amtlich": "Harburg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03354",
+"name": "Lüchow-Dannenberg",
+"amtlich": "Lüchow-Dannenberg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03355",
+"name": "Lüneburg",
+"amtlich": "Lüneburg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03356",
+"name": "Osterholz",
+"amtlich": "Osterholz",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03357",
+"name": "Rotenburg (Wümme)",
+"amtlich": "Rotenburg (Wümme)",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03358",
+"name": "Heidekreis",
+"amtlich": "Heidekreis",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03359",
+"name": "Stade",
+"amtlich": "Stade",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03360",
+"name": "Uelzen",
+"amtlich": "Uelzen",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03361",
+"name": "Verden",
+"amtlich": "Verden",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03401",
+"name": "Delmenhorst",
+"amtlich": "Delmenhorst, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03402",
+"name": "Emden",
+"amtlich": "Emden, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03403",
+"name": "Oldenburg (Oldenburg)",
+"amtlich": "Oldenburg (Oldenburg), Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03404",
+"name": "Osnabrück",
+"amtlich": "Osnabrück, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03405",
+"name": "Wilhelmshaven",
+"amtlich": "Wilhelmshaven, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Niedersachsen"
+},
+{
+"ags": "03451",
+"name": "Ammerland",
+"amtlich": "Ammerland",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03452",
+"name": "Aurich",
+"amtlich": "Aurich",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03453",
+"name": "Cloppenburg",
+"amtlich": "Cloppenburg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03454",
+"name": "Emsland",
+"amtlich": "Emsland",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03455",
+"name": "Friesland",
+"amtlich": "Friesland",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03456",
+"name": "Grafschaft Bentheim",
+"amtlich": "Grafschaft Bentheim",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03457",
+"name": "Leer",
+"amtlich": "Leer",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03458",
+"name": "Oldenburg",
+"amtlich": "Oldenburg",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03459",
+"name": "Osnabrück",
+"amtlich": "Osnabrück",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03460",
+"name": "Vechta",
+"amtlich": "Vechta",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03461",
+"name": "Wesermarsch",
+"amtlich": "Wesermarsch",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "03462",
+"name": "Wittmund",
+"amtlich": "Wittmund",
+"art": "Landkreis",
+"land": "Niedersachsen"
+},
+{
+"ags": "04011",
+"name": "Bremen",
+"amtlich": "Bremen, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Bremen"
+},
+{
+"ags": "04012",
+"name": "Bremerhaven",
+"amtlich": "Bremerhaven, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Bremen"
+},
+{
+"ags": "05111",
+"name": "Düsseldorf",
+"amtlich": "Düsseldorf, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05112",
+"name": "Duisburg",
+"amtlich": "Duisburg, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05113",
+"name": "Essen",
+"amtlich": "Essen, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05114",
+"name": "Krefeld",
+"amtlich": "Krefeld, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05116",
+"name": "Mönchengladbach",
+"amtlich": "Mönchengladbach, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05117",
+"name": "Mülheim an der Ruhr",
+"amtlich": "Mülheim an der Ruhr, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05119",
+"name": "Oberhausen",
+"amtlich": "Oberhausen, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05120",
+"name": "Remscheid",
+"amtlich": "Remscheid, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05122",
+"name": "Solingen",
+"amtlich": "Solingen, Klingenstadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05124",
+"name": "Wuppertal",
+"amtlich": "Wuppertal, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05154",
+"name": "Kleve",
+"amtlich": "Kleve",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05158",
+"name": "Mettmann",
+"amtlich": "Mettmann",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05162",
+"name": "Rhein-Kreis Neuss",
+"amtlich": "Rhein-Kreis Neuss",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05166",
+"name": "Viersen",
+"amtlich": "Viersen",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05170",
+"name": "Wesel",
+"amtlich": "Wesel",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05314",
+"name": "Bonn",
+"amtlich": "Bonn, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05315",
+"name": "Köln",
+"amtlich": "Köln, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05316",
+"name": "Leverkusen",
+"amtlich": "Leverkusen, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05334",
+"name": "Städteregion Aachen",
+"amtlich": "Städteregion Aachen",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05358",
+"name": "Düren",
+"amtlich": "Düren",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05362",
+"name": "Rhein-Erft-Kreis",
+"amtlich": "Rhein-Erft-Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05366",
+"name": "Euskirchen",
+"amtlich": "Euskirchen",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05370",
+"name": "Heinsberg",
+"amtlich": "Heinsberg",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05374",
+"name": "Oberbergischer Kreis",
+"amtlich": "Oberbergischer Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05378",
+"name": "Rheinisch-Bergischer Kreis",
+"amtlich": "Rheinisch-Bergischer Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05382",
+"name": "Rhein-Sieg-Kreis",
+"amtlich": "Rhein-Sieg-Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05512",
+"name": "Bottrop",
+"amtlich": "Bottrop, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05513",
+"name": "Gelsenkirchen",
+"amtlich": "Gelsenkirchen, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05515",
+"name": "Münster",
+"amtlich": "Münster, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05554",
+"name": "Borken",
+"amtlich": "Borken",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05558",
+"name": "Coesfeld",
+"amtlich": "Coesfeld",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05562",
+"name": "Recklinghausen",
+"amtlich": "Recklinghausen",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05566",
+"name": "Steinfurt",
+"amtlich": "Steinfurt",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05570",
+"name": "Warendorf",
+"amtlich": "Warendorf",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05711",
+"name": "Bielefeld",
+"amtlich": "Bielefeld, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05754",
+"name": "Gütersloh",
+"amtlich": "Gütersloh",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05758",
+"name": "Herford",
+"amtlich": "Herford",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05762",
+"name": "Höxter",
+"amtlich": "Höxter",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05766",
+"name": "Lippe",
+"amtlich": "Lippe",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05770",
+"name": "Minden-Lübbecke",
+"amtlich": "Minden-Lübbecke",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05774",
+"name": "Paderborn",
+"amtlich": "Paderborn",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05911",
+"name": "Bochum",
+"amtlich": "Bochum, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05913",
+"name": "Dortmund",
+"amtlich": "Dortmund, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05914",
+"name": "Hagen",
+"amtlich": "Hagen, Stadt der FernUniversität",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05915",
+"name": "Hamm",
+"amtlich": "Hamm, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05916",
+"name": "Herne",
+"amtlich": "Herne, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05954",
+"name": "Ennepe-Ruhr-Kreis",
+"amtlich": "Ennepe-Ruhr-Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05958",
+"name": "Hochsauerlandkreis",
+"amtlich": "Hochsauerlandkreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05962",
+"name": "Märkischer Kreis",
+"amtlich": "Märkischer Kreis",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05966",
+"name": "Olpe",
+"amtlich": "Olpe",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05970",
+"name": "Siegen-Wittgenstein",
+"amtlich": "Siegen-Wittgenstein",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05974",
+"name": "Soest",
+"amtlich": "Soest",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "05978",
+"name": "Unna",
+"amtlich": "Unna",
+"art": "Kreis",
+"land": "Nordrhein-Westfalen"
+},
+{
+"ags": "06411",
+"name": "Darmstadt",
+"amtlich": "Darmstadt, Wissenschaftsstadt",
+"art": "Kreisfreie Stadt",
+"land": "Hessen"
+},
+{
+"ags": "06412",
+"name": "Frankfurt am Main",
+"amtlich": "Frankfurt am Main, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Hessen"
+},
+{
+"ags": "06413",
+"name": "Offenbach am Main",
+"amtlich": "Offenbach am Main, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Hessen"
+},
+{
+"ags": "06414",
+"name": "Wiesbaden",
+"amtlich": "Wiesbaden, Landeshauptstadt",
+"art": "Kreisfreie Stadt",
+"land": "Hessen"
+},
+{
+"ags": "06431",
+"name": "Bergstraße",
+"amtlich": "Bergstraße",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06432",
+"name": "Darmstadt-Dieburg",
+"amtlich": "Darmstadt-Dieburg",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06433",
+"name": "Groß-Gerau",
+"amtlich": "Groß-Gerau",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06434",
+"name": "Hochtaunuskreis",
+"amtlich": "Hochtaunuskreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06435",
+"name": "Main-Kinzig-Kreis",
+"amtlich": "Main-Kinzig-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06436",
+"name": "Main-Taunus-Kreis",
+"amtlich": "Main-Taunus-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06437",
+"name": "Odenwaldkreis",
+"amtlich": "Odenwaldkreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06438",
+"name": "Offenbach",
+"amtlich": "Offenbach",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06439",
+"name": "Rheingau-Taunus-Kreis",
+"amtlich": "Rheingau-Taunus-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06440",
+"name": "Wetteraukreis",
+"amtlich": "Wetteraukreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06531",
+"name": "Gießen",
+"amtlich": "Gießen",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06532",
+"name": "Lahn-Dill-Kreis",
+"amtlich": "Lahn-Dill-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06533",
+"name": "Limburg-Weilburg",
+"amtlich": "Limburg-Weilburg",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06534",
+"name": "Marburg-Biedenkopf",
+"amtlich": "Marburg-Biedenkopf",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06535",
+"name": "Vogelsbergkreis",
+"amtlich": "Vogelsbergkreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06611",
+"name": "Kassel",
+"amtlich": "Kassel, documenta-Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Hessen"
+},
+{
+"ags": "06631",
+"name": "Fulda",
+"amtlich": "Fulda",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06632",
+"name": "Hersfeld-Rotenburg",
+"amtlich": "Hersfeld-Rotenburg",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06633",
+"name": "Kassel",
+"amtlich": "Kassel",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06634",
+"name": "Schwalm-Eder-Kreis",
+"amtlich": "Schwalm-Eder-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06635",
+"name": "Waldeck-Frankenberg",
+"amtlich": "Waldeck-Frankenberg",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "06636",
+"name": "Werra-Meißner-Kreis",
+"amtlich": "Werra-Meißner-Kreis",
+"art": "Landkreis",
+"land": "Hessen"
+},
+{
+"ags": "07111",
+"name": "Koblenz",
+"amtlich": "Koblenz, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07131",
+"name": "Ahrweiler",
+"amtlich": "Ahrweiler",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07132",
+"name": "Altenkirchen (Westerwald)",
+"amtlich": "Altenkirchen (Westerwald)",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07133",
+"name": "Bad Kreuznach",
+"amtlich": "Bad Kreuznach",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07134",
+"name": "Birkenfeld",
+"amtlich": "Birkenfeld",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07135",
+"name": "Cochem-Zell",
+"amtlich": "Cochem-Zell",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07137",
+"name": "Mayen-Koblenz",
+"amtlich": "Mayen-Koblenz",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07138",
+"name": "Neuwied",
+"amtlich": "Neuwied",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07140",
+"name": "Rhein-Hunsrück-Kreis",
+"amtlich": "Rhein-Hunsrück-Kreis",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07141",
+"name": "Rhein-Lahn-Kreis",
+"amtlich": "Rhein-Lahn-Kreis",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07143",
+"name": "Westerwaldkreis",
+"amtlich": "Westerwaldkreis",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07211",
+"name": "Trier",
+"amtlich": "Trier, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07231",
+"name": "Bernkastel-Wittlich",
+"amtlich": "Bernkastel-Wittlich",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07232",
+"name": "Eifelkreis Bitburg-Prüm",
+"amtlich": "Eifelkreis Bitburg-Prüm",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07233",
+"name": "Vulkaneifel",
+"amtlich": "Vulkaneifel",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07235",
+"name": "Trier-Saarburg",
+"amtlich": "Trier-Saarburg",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07311",
+"name": "Frankenthal (Pfalz)",
+"amtlich": "Frankenthal (Pfalz), kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07312",
+"name": "Kaiserslautern",
+"amtlich": "Kaiserslautern, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07313",
+"name": "Landau in der Pfalz",
+"amtlich": "Landau in der Pfalz, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07314",
+"name": "Ludwigshafen am Rhein",
+"amtlich": "Ludwigshafen am Rhein, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07315",
+"name": "Mainz",
+"amtlich": "Mainz, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07316",
+"name": "Neustadt an der Weinstraße",
+"amtlich": "Neustadt an der Weinstraße, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07317",
+"name": "Pirmasens",
+"amtlich": "Pirmasens, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07318",
+"name": "Speyer",
+"amtlich": "Speyer, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07319",
+"name": "Worms",
+"amtlich": "Worms, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07320",
+"name": "Zweibrücken",
+"amtlich": "Zweibrücken, kreisfreie Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07331",
+"name": "Alzey-Worms",
+"amtlich": "Alzey-Worms",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07332",
+"name": "Bad Dürkheim",
+"amtlich": "Bad Dürkheim",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07333",
+"name": "Donnersbergkreis",
+"amtlich": "Donnersbergkreis",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07334",
+"name": "Germersheim",
+"amtlich": "Germersheim",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07335",
+"name": "Kaiserslautern",
+"amtlich": "Kaiserslautern",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07336",
+"name": "Kusel",
+"amtlich": "Kusel",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07337",
+"name": "Südliche Weinstraße",
+"amtlich": "Südliche Weinstraße",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07338",
+"name": "Rhein-Pfalz-Kreis",
+"amtlich": "Rhein-Pfalz-Kreis",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07339",
+"name": "Mainz-Bingen",
+"amtlich": "Mainz-Bingen",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "07340",
+"name": "Südwestpfalz",
+"amtlich": "Südwestpfalz",
+"art": "Landkreis",
+"land": "Rheinland-Pfalz"
+},
+{
+"ags": "08111",
+"name": "Stuttgart",
+"amtlich": "Stuttgart, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08115",
+"name": "Böblingen",
+"amtlich": "Böblingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08116",
+"name": "Esslingen",
+"amtlich": "Esslingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08117",
+"name": "Göppingen",
+"amtlich": "Göppingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08118",
+"name": "Ludwigsburg",
+"amtlich": "Ludwigsburg",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08119",
+"name": "Rems-Murr-Kreis",
+"amtlich": "Rems-Murr-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08121",
+"name": "Heilbronn",
+"amtlich": "Heilbronn, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08125",
+"name": "Heilbronn",
+"amtlich": "Heilbronn",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08126",
+"name": "Hohenlohekreis",
+"amtlich": "Hohenlohekreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08127",
+"name": "Schwäbisch Hall",
+"amtlich": "Schwäbisch Hall",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08128",
+"name": "Main-Tauber-Kreis",
+"amtlich": "Main-Tauber-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08135",
+"name": "Heidenheim",
+"amtlich": "Heidenheim",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08136",
+"name": "Ostalbkreis",
+"amtlich": "Ostalbkreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08211",
+"name": "Baden-Baden",
+"amtlich": "Baden-Baden, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08212",
+"name": "Karlsruhe",
+"amtlich": "Karlsruhe, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08215",
+"name": "Karlsruhe",
+"amtlich": "Karlsruhe",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08216",
+"name": "Rastatt",
+"amtlich": "Rastatt",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08221",
+"name": "Heidelberg",
+"amtlich": "Heidelberg, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08222",
+"name": "Mannheim",
+"amtlich": "Mannheim, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08225",
+"name": "Neckar-Odenwald-Kreis",
+"amtlich": "Neckar-Odenwald-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08226",
+"name": "Rhein-Neckar-Kreis",
+"amtlich": "Rhein-Neckar-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08231",
+"name": "Pforzheim",
+"amtlich": "Pforzheim, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08235",
+"name": "Calw",
+"amtlich": "Calw",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08236",
+"name": "Enzkreis",
+"amtlich": "Enzkreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08237",
+"name": "Freudenstadt",
+"amtlich": "Freudenstadt",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08311",
+"name": "Freiburg im Breisgau",
+"amtlich": "Freiburg im Breisgau, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08315",
+"name": "Breisgau-Hochschwarzwald",
+"amtlich": "Breisgau-Hochschwarzwald",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08316",
+"name": "Emmendingen",
+"amtlich": "Emmendingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08317",
+"name": "Ortenaukreis",
+"amtlich": "Ortenaukreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08325",
+"name": "Rottweil",
+"amtlich": "Rottweil",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08326",
+"name": "Schwarzwald-Baar-Kreis",
+"amtlich": "Schwarzwald-Baar-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08327",
+"name": "Tuttlingen",
+"amtlich": "Tuttlingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08335",
+"name": "Konstanz",
+"amtlich": "Konstanz",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08336",
+"name": "Lörrach",
+"amtlich": "Lörrach",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08337",
+"name": "Waldshut",
+"amtlich": "Waldshut",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08415",
+"name": "Reutlingen",
+"amtlich": "Reutlingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08416",
+"name": "Tübingen",
+"amtlich": "Tübingen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08417",
+"name": "Zollernalbkreis",
+"amtlich": "Zollernalbkreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08421",
+"name": "Ulm",
+"amtlich": "Ulm, Stadtkreis",
+"art": "Stadtkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08425",
+"name": "Alb-Donau-Kreis",
+"amtlich": "Alb-Donau-Kreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08426",
+"name": "Biberach",
+"amtlich": "Biberach",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08435",
+"name": "Bodenseekreis",
+"amtlich": "Bodenseekreis",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08436",
+"name": "Ravensburg",
+"amtlich": "Ravensburg",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "08437",
+"name": "Sigmaringen",
+"amtlich": "Sigmaringen",
+"art": "Landkreis",
+"land": "Baden-Württemberg"
+},
+{
+"ags": "09161",
+"name": "Ingolstadt",
+"amtlich": "Ingolstadt",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09162",
+"name": "München",
+"amtlich": "München, Landeshauptstadt",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09163",
+"name": "Rosenheim",
+"amtlich": "Rosenheim",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09171",
+"name": "Altötting",
+"amtlich": "Altötting",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09172",
+"name": "Berchtesgadener Land",
+"amtlich": "Berchtesgadener Land",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09173",
+"name": "Bad Tölz-Wolfratshausen",
+"amtlich": "Bad Tölz-Wolfratshausen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09174",
+"name": "Dachau",
+"amtlich": "Dachau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09175",
+"name": "Ebersberg",
+"amtlich": "Ebersberg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09176",
+"name": "Eichstätt",
+"amtlich": "Eichstätt",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09177",
+"name": "Erding",
+"amtlich": "Erding",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09178",
+"name": "Freising",
+"amtlich": "Freising",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09179",
+"name": "Fürstenfeldbruck",
+"amtlich": "Fürstenfeldbruck",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09180",
+"name": "Garmisch-Partenkirchen",
+"amtlich": "Garmisch-Partenkirchen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09181",
+"name": "Landsberg am Lech",
+"amtlich": "Landsberg am Lech",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09182",
+"name": "Miesbach",
+"amtlich": "Miesbach",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09183",
+"name": "Mühldorf a.Inn",
+"amtlich": "Mühldorf a.Inn",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09184",
+"name": "München",
+"amtlich": "München",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09185",
+"name": "Neuburg-Schrobenhausen",
+"amtlich": "Neuburg-Schrobenhausen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09186",
+"name": "Pfaffenhofen a.d.Ilm",
+"amtlich": "Pfaffenhofen a.d.Ilm",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09187",
+"name": "Rosenheim",
+"amtlich": "Rosenheim",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09188",
+"name": "Starnberg",
+"amtlich": "Starnberg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09189",
+"name": "Traunstein",
+"amtlich": "Traunstein",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09190",
+"name": "Weilheim-Schongau",
+"amtlich": "Weilheim-Schongau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09261",
+"name": "Landshut",
+"amtlich": "Landshut",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09262",
+"name": "Passau",
+"amtlich": "Passau",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09263",
+"name": "Straubing",
+"amtlich": "Straubing",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09271",
+"name": "Deggendorf",
+"amtlich": "Deggendorf",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09272",
+"name": "Freyung-Grafenau",
+"amtlich": "Freyung-Grafenau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09273",
+"name": "Kelheim",
+"amtlich": "Kelheim",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09274",
+"name": "Landshut",
+"amtlich": "Landshut",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09275",
+"name": "Passau",
+"amtlich": "Passau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09276",
+"name": "Regen",
+"amtlich": "Regen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09277",
+"name": "Rottal-Inn",
+"amtlich": "Rottal-Inn",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09278",
+"name": "Straubing-Bogen",
+"amtlich": "Straubing-Bogen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09279",
+"name": "Dingolfing-Landau",
+"amtlich": "Dingolfing-Landau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09361",
+"name": "Amberg",
+"amtlich": "Amberg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09362",
+"name": "Regensburg",
+"amtlich": "Regensburg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09363",
+"name": "Weiden i.d.OPf.",
+"amtlich": "Weiden i.d.OPf.",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09371",
+"name": "Amberg-Sulzbach",
+"amtlich": "Amberg-Sulzbach",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09372",
+"name": "Cham",
+"amtlich": "Cham",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09373",
+"name": "Neumarkt i.d.OPf.",
+"amtlich": "Neumarkt i.d.OPf.",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09374",
+"name": "Neustadt a.d.Waldnaab",
+"amtlich": "Neustadt a.d.Waldnaab",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09375",
+"name": "Regensburg",
+"amtlich": "Regensburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09376",
+"name": "Schwandorf",
+"amtlich": "Schwandorf",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09377",
+"name": "Tirschenreuth",
+"amtlich": "Tirschenreuth",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09461",
+"name": "Bamberg",
+"amtlich": "Bamberg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09462",
+"name": "Bayreuth",
+"amtlich": "Bayreuth",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09463",
+"name": "Coburg",
+"amtlich": "Coburg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09464",
+"name": "Hof",
+"amtlich": "Hof",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09471",
+"name": "Bamberg",
+"amtlich": "Bamberg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09472",
+"name": "Bayreuth",
+"amtlich": "Bayreuth",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09473",
+"name": "Coburg",
+"amtlich": "Coburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09474",
+"name": "Forchheim",
+"amtlich": "Forchheim",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09475",
+"name": "Hof",
+"amtlich": "Hof",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09476",
+"name": "Kronach",
+"amtlich": "Kronach",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09477",
+"name": "Kulmbach",
+"amtlich": "Kulmbach",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09478",
+"name": "Lichtenfels",
+"amtlich": "Lichtenfels",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09479",
+"name": "Wunsiedel i.Fichtelgebirge",
+"amtlich": "Wunsiedel i.Fichtelgebirge",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09561",
+"name": "Ansbach",
+"amtlich": "Ansbach",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09562",
+"name": "Erlangen",
+"amtlich": "Erlangen",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09563",
+"name": "Fürth",
+"amtlich": "Fürth",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09564",
+"name": "Nürnberg",
+"amtlich": "Nürnberg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09565",
+"name": "Schwabach",
+"amtlich": "Schwabach",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09571",
+"name": "Ansbach",
+"amtlich": "Ansbach",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09572",
+"name": "Erlangen-Höchstadt",
+"amtlich": "Erlangen-Höchstadt",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09573",
+"name": "Fürth",
+"amtlich": "Fürth",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09574",
+"name": "Nürnberger Land",
+"amtlich": "Nürnberger Land",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09575",
+"name": "Neustadt a.d.Aisch-Bad Windsheim",
+"amtlich": "Neustadt a.d.Aisch-Bad Windsheim",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09576",
+"name": "Roth",
+"amtlich": "Roth",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09577",
+"name": "Weißenburg-Gunzenhausen",
+"amtlich": "Weißenburg-Gunzenhausen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09661",
+"name": "Aschaffenburg",
+"amtlich": "Aschaffenburg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09662",
+"name": "Schweinfurt",
+"amtlich": "Schweinfurt",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09663",
+"name": "Würzburg",
+"amtlich": "Würzburg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09671",
+"name": "Aschaffenburg",
+"amtlich": "Aschaffenburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09672",
+"name": "Bad Kissingen",
+"amtlich": "Bad Kissingen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09673",
+"name": "Rhön-Grabfeld",
+"amtlich": "Rhön-Grabfeld",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09674",
+"name": "Haßberge",
+"amtlich": "Haßberge",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09675",
+"name": "Kitzingen",
+"amtlich": "Kitzingen",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09676",
+"name": "Miltenberg",
+"amtlich": "Miltenberg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09677",
+"name": "Main-Spessart",
+"amtlich": "Main-Spessart",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09678",
+"name": "Schweinfurt",
+"amtlich": "Schweinfurt",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09679",
+"name": "Würzburg",
+"amtlich": "Würzburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09761",
+"name": "Augsburg",
+"amtlich": "Augsburg",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09762",
+"name": "Kaufbeuren",
+"amtlich": "Kaufbeuren",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09763",
+"name": "Kempten (Allgäu)",
+"amtlich": "Kempten (Allgäu)",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09764",
+"name": "Memmingen",
+"amtlich": "Memmingen",
+"art": "Kreisfreie Stadt",
+"land": "Bayern"
+},
+{
+"ags": "09771",
+"name": "Aichach-Friedberg",
+"amtlich": "Aichach-Friedberg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09772",
+"name": "Augsburg",
+"amtlich": "Augsburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09773",
+"name": "Dillingen a.d.Donau",
+"amtlich": "Dillingen a.d.Donau",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09774",
+"name": "Günzburg",
+"amtlich": "Günzburg",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09775",
+"name": "Neu-Ulm",
+"amtlich": "Neu-Ulm",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09776",
+"name": "Lindau (Bodensee)",
+"amtlich": "Lindau (Bodensee)",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09777",
+"name": "Ostallgäu",
+"amtlich": "Ostallgäu",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09778",
+"name": "Unterallgäu",
+"amtlich": "Unterallgäu",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09779",
+"name": "Donau-Ries",
+"amtlich": "Donau-Ries",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "09780",
+"name": "Oberallgäu",
+"amtlich": "Oberallgäu",
+"art": "Landkreis",
+"land": "Bayern"
+},
+{
+"ags": "10041",
+"name": "Regionalverband Saarbrücken",
+"amtlich": "Regionalverband Saarbrücken",
+"art": "Regionalverband",
+"land": "Saarland"
+},
+{
+"ags": "10042",
+"name": "Merzig-Wadern",
+"amtlich": "Merzig-Wadern",
+"art": "Landkreis",
+"land": "Saarland"
+},
+{
+"ags": "10043",
+"name": "Neunkirchen",
+"amtlich": "Neunkirchen",
+"art": "Landkreis",
+"land": "Saarland"
+},
+{
+"ags": "10044",
+"name": "Saarlouis",
+"amtlich": "Saarlouis",
+"art": "Landkreis",
+"land": "Saarland"
+},
+{
+"ags": "10045",
+"name": "Saarpfalz-Kreis",
+"amtlich": "Saarpfalz-Kreis",
+"art": "Landkreis",
+"land": "Saarland"
+},
+{
+"ags": "10046",
+"name": "St. Wendel",
+"amtlich": "St. Wendel",
+"art": "Landkreis",
+"land": "Saarland"
+},
+{
+"ags": "11000",
+"name": "Berlin",
+"amtlich": "Berlin, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Berlin"
+},
+{
+"ags": "12051",
+"name": "Brandenburg an der Havel",
+"amtlich": "Brandenburg an der Havel, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Brandenburg"
+},
+{
+"ags": "12052",
+"name": "Cottbus",
+"amtlich": "Cottbus, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Brandenburg"
+},
+{
+"ags": "12053",
+"name": "Frankfurt (Oder)",
+"amtlich": "Frankfurt (Oder), Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Brandenburg"
+},
+{
+"ags": "12054",
+"name": "Potsdam",
+"amtlich": "Potsdam, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Brandenburg"
+},
+{
+"ags": "12060",
+"name": "Barnim",
+"amtlich": "Barnim",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12061",
+"name": "Dahme-Spreewald",
+"amtlich": "Dahme-Spreewald",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12062",
+"name": "Elbe-Elster",
+"amtlich": "Elbe-Elster",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12063",
+"name": "Havelland",
+"amtlich": "Havelland",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12064",
+"name": "Märkisch-Oderland",
+"amtlich": "Märkisch-Oderland",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12065",
+"name": "Oberhavel",
+"amtlich": "Oberhavel",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12066",
+"name": "Oberspreewald-Lausitz",
+"amtlich": "Oberspreewald-Lausitz",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12067",
+"name": "Oder-Spree",
+"amtlich": "Oder-Spree",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12068",
+"name": "Ostprignitz-Ruppin",
+"amtlich": "Ostprignitz-Ruppin",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12069",
+"name": "Potsdam-Mittelmark",
+"amtlich": "Potsdam-Mittelmark",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12070",
+"name": "Prignitz",
+"amtlich": "Prignitz",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12071",
+"name": "Spree-Neiße",
+"amtlich": "Spree-Neiße",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12072",
+"name": "Teltow-Fläming",
+"amtlich": "Teltow-Fläming",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "12073",
+"name": "Uckermark",
+"amtlich": "Uckermark",
+"art": "Landkreis",
+"land": "Brandenburg"
+},
+{
+"ags": "13003",
+"name": "Rostock",
+"amtlich": "Rostock",
+"art": "Kreisfreie Stadt",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13004",
+"name": "Schwerin",
+"amtlich": "Schwerin",
+"art": "Kreisfreie Stadt",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13071",
+"name": "Mecklenburgische Seenplatte",
+"amtlich": "Mecklenburgische Seenplatte",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13072",
+"name": "Landkreis Rostock",
+"amtlich": "Landkreis Rostock",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13073",
+"name": "Vorpommern-Rügen",
+"amtlich": "Vorpommern-Rügen",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13074",
+"name": "Nordwestmecklenburg",
+"amtlich": "Nordwestmecklenburg",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13075",
+"name": "Vorpommern-Greifswald",
+"amtlich": "Vorpommern-Greifswald",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "13076",
+"name": "Ludwigslust-Parchim",
+"amtlich": "Ludwigslust-Parchim",
+"art": "Landkreis",
+"land": "Mecklenburg-Vorpommern"
+},
+{
+"ags": "14511",
+"name": "Chemnitz",
+"amtlich": "Chemnitz, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen"
+},
+{
+"ags": "14521",
+"name": "Erzgebirgskreis",
+"amtlich": "Erzgebirgskreis",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14522",
+"name": "Mittelsachsen",
+"amtlich": "Mittelsachsen",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14523",
+"name": "Vogtlandkreis",
+"amtlich": "Vogtlandkreis",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14524",
+"name": "Zwickau",
+"amtlich": "Zwickau",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14612",
+"name": "Dresden",
+"amtlich": "Dresden, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen"
+},
+{
+"ags": "14625",
+"name": "Bautzen",
+"amtlich": "Bautzen",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14626",
+"name": "Görlitz",
+"amtlich": "Görlitz",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14627",
+"name": "Meißen",
+"amtlich": "Meißen",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14628",
+"name": "Sächsische Schweiz-Osterzgebirge",
+"amtlich": "Sächsische Schweiz-Osterzgebirge",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14713",
+"name": "Leipzig",
+"amtlich": "Leipzig, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen"
+},
+{
+"ags": "14729",
+"name": "Leipzig",
+"amtlich": "Leipzig",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "14730",
+"name": "Nordsachsen",
+"amtlich": "Nordsachsen",
+"art": "Landkreis",
+"land": "Sachsen"
+},
+{
+"ags": "15001",
+"name": "Dessau-Roßlau",
+"amtlich": "Dessau-Roßlau, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15002",
+"name": "Halle (Saale)",
+"amtlich": "Halle (Saale), Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15003",
+"name": "Magdeburg",
+"amtlich": "Magdeburg, Landeshauptstadt",
+"art": "Kreisfreie Stadt",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15081",
+"name": "Altmarkkreis Salzwedel",
+"amtlich": "Altmarkkreis Salzwedel",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15082",
+"name": "Anhalt-Bitterfeld",
+"amtlich": "Anhalt-Bitterfeld",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15083",
+"name": "Börde",
+"amtlich": "Börde",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15084",
+"name": "Burgenlandkreis",
+"amtlich": "Burgenlandkreis",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15085",
+"name": "Harz",
+"amtlich": "Harz",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15086",
+"name": "Jerichower Land",
+"amtlich": "Jerichower Land",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15087",
+"name": "Mansfeld-Südharz",
+"amtlich": "Mansfeld-Südharz",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15088",
+"name": "Saalekreis",
+"amtlich": "Saalekreis",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15089",
+"name": "Salzlandkreis",
+"amtlich": "Salzlandkreis",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15090",
+"name": "Stendal",
+"amtlich": "Stendal",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "15091",
+"name": "Wittenberg",
+"amtlich": "Wittenberg",
+"art": "Landkreis",
+"land": "Sachsen-Anhalt"
+},
+{
+"ags": "16051",
+"name": "Erfurt",
+"amtlich": "Erfurt, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Thüringen"
+},
+{
+"ags": "16052",
+"name": "Gera",
+"amtlich": "Gera, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Thüringen"
+},
+{
+"ags": "16053",
+"name": "Jena",
+"amtlich": "Jena, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Thüringen"
+},
+{
+"ags": "16054",
+"name": "Suhl",
+"amtlich": "Suhl, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Thüringen"
+},
+{
+"ags": "16055",
+"name": "Weimar",
+"amtlich": "Weimar, Stadt",
+"art": "Kreisfreie Stadt",
+"land": "Thüringen"
+},
+{
+"ags": "16061",
+"name": "Eichsfeld",
+"amtlich": "Eichsfeld",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16062",
+"name": "Nordhausen",
+"amtlich": "Nordhausen",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16063",
+"name": "Wartburgkreis",
+"amtlich": "Wartburgkreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16064",
+"name": "Unstrut-Hainich-Kreis",
+"amtlich": "Unstrut-Hainich-Kreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16065",
+"name": "Kyffhäuserkreis",
+"amtlich": "Kyffhäuserkreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16066",
+"name": "Schmalkalden-Meiningen",
+"amtlich": "Schmalkalden-Meiningen",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16067",
+"name": "Gotha",
+"amtlich": "Gotha",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16068",
+"name": "Sömmerda",
+"amtlich": "Sömmerda",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16069",
+"name": "Hildburghausen",
+"amtlich": "Hildburghausen",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16070",
+"name": "Ilm-Kreis",
+"amtlich": "Ilm-Kreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16071",
+"name": "Weimarer Land",
+"amtlich": "Weimarer Land",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16072",
+"name": "Sonneberg",
+"amtlich": "Sonneberg",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16073",
+"name": "Saalfeld-Rudolstadt",
+"amtlich": "Saalfeld-Rudolstadt",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16074",
+"name": "Saale-Holzland-Kreis",
+"amtlich": "Saale-Holzland-Kreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16075",
+"name": "Saale-Orla-Kreis",
+"amtlich": "Saale-Orla-Kreis",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16076",
+"name": "Greiz",
+"amtlich": "Greiz",
+"art": "Landkreis",
+"land": "Thüringen"
+},
+{
+"ags": "16077",
+"name": "Altenburger Land",
+"amtlich": "Altenburger Land",
+"art": "Landkreis",
+"land": "Thüringen"
+}
+]
+}

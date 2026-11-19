@@ -131,6 +131,11 @@ def role_matrix() -> list[str]:
             ("GET", "/api/admin/status", None),
             ("PUT", "/api/legal", {"imprint_name": "Fremd"}),
             ("PUT", "/api/settings", {"edit_window_minutes": 500}),
+            ("GET", "/api/admin/bewerbungen", None),
+            ("PUT", "/api/admin/bewerbungen/einstellung", {"offen": False}),
+            ("GET", "/api/admin/katalog", None),
+            ("GET", "/api/admin/themen", None),
+            ("POST", "/api/admin/themen", {"name": "Prüfthema", "kategorie": "Fachthema"}),
         ]
         for method, path, body in admin_only:
             kw = {"json": body} if body is not None else {}

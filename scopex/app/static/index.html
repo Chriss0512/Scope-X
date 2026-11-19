@@ -27,17 +27,35 @@
     <span class="type">SCOPE<span class="x">X</span></span>
   </div>
 
+  <form class="nav-suche g-suche" role="search" data-suche>
+    <label class="sr-only" for="nav-such">Suche</label>
+    <svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+      <circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>
+    </svg>
+    <input id="nav-such" type="search" name="q" maxlength="80" autocomplete="off"
+      placeholder="Suche">
+  </form>
+
   <a href="#/" data-route="/">
     <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M3.5 10.6 12 3.8l8.5 6.8v8.6a1.4 1.4 0 0 1-1.4 1.4h-4.4v-6h-5.4v6H4.9a1.4 1.4 0 0 1-1.4-1.4z"/>
     </svg><span class="lbl">Feed</span></a>
 
-  <a href="#/entdecken" data-route="/entdecken">
+  <a href="#/entdecken" data-route="/entdecken" class="nur-breit">
     <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
       <circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>
     </svg><span class="lbl">Entdecken</span></a>
+
+  <a href="#/netzwerk" data-route="/netzwerk">
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="7.4" r="3"/><circle cx="5.2" cy="15.6" r="2.4"/>
+      <circle cx="18.8" cy="15.6" r="2.4"/>
+      <path d="M10.4 10 6.6 13.6M13.6 10l3.8 3.6M7.6 16.2h8.8"/>
+    </svg><span class="lbl">Netzwerk</span><span class="badge" data-zaehler="anfragen" hidden></span></a>
 
   <a href="#/nachrichten" data-route="/nachrichten" class="nur-breit">
     <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -78,19 +96,50 @@
         <circle cx="12" cy="8.6" r="3.6"/><path d="M5.4 19.6a6.9 6.9 0 0 1 13.2 0"/>
       </svg></span><span class="lbl">Profil</span></a>
 
-  <a href="#/verwaltung" data-route="/verwaltung" id="tab-admin" class="nur-breit" hidden>
+  <a href="#/administration" data-route="/administration" id="tab-admin" class="nur-breit" hidden>
     <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="9" cy="8.2" r="3.2"/>
       <path d="M3.2 19.2a5.9 5.9 0 0 1 11.6 0"/>
       <circle cx="17.4" cy="9.4" r="2.5"/>
       <path d="M14.6 14.9a4.6 4.6 0 0 1 6.2 4.3"/>
-    </svg><span class="lbl">Verwaltung</span></a>
+    </svg><span class="lbl">Administration</span></a>
 </nav>
+<header class="g-top" id="g-top" hidden>
+  <a href="#/" class="link-plain g-logo" aria-label="SCOPE X, zum Feed">
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+      <g fill="none" stroke-width="10" stroke-linecap="round" transform="rotate(-90 50 50)">
+        <circle cx="50" cy="50" r="38" stroke="#126878" stroke-dasharray="68 170.76"/>
+        <circle cx="50" cy="50" r="38" stroke="#19A6B5" stroke-dasharray="52 186.76"
+                stroke-dashoffset="-96"/>
+        <circle cx="50" cy="50" r="38" stroke="#B9D936" stroke-dasharray="26 212.76"
+                stroke-dashoffset="-172"/>
+      </g>
+    </svg></a>
+  <form class="g-suche grow" role="search" data-suche>
+    <label class="sr-only" for="top-such">Suche</label>
+    <svg class="lupe" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+      <circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/>
+    </svg>
+    <input id="top-such" type="search" name="q" maxlength="80" autocomplete="off"
+      placeholder="Suche">
+  </form>
+  <a class="icon-btn flat link-plain" href="#/mitteilungen" aria-label="Mitteilungen">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+         stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.8-4.6-7.8-10.2A4.4 4.4 0 0 1 12 7.3 4.4 4.4 0 0 1 19.8 10c0 5.6-7.8 10.2-7.8 10.2z"/></svg>
+    <span class="badge" data-zaehler="mitteilungen" hidden></span></a>
+  <a class="icon-btn flat link-plain" href="#/nachrichten" aria-label="Nachrichten">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3.5 10.2 13.3M21 3.5l-6.6 17-4.2-7.2L3 9.6z"/></svg>
+    <span class="badge" data-zaehler="nachrichten" hidden></span></a>
+</header>
 <main id="app"></main>
 <div id="sheet-root"></div>
 <div id="toast-root"></div>
 <script src="/assets/netz.js"></script>
+<script src="/assets/netzwerk.js"></script>
+<script src="/assets/zugang.js"></script>
 <script src="/assets/app.js"></script>
 </body>
 </html>

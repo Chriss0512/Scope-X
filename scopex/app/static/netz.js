@@ -42,7 +42,7 @@ const NETZ_FALL = {
 };
 const NETZ_ART = {
   beitrag: "", wissen: "Wissen", fall: "Fallbericht", algorithmus: "Algorithmus",
-  kompetenz: "Kompetenz", repost: "",
+  kompetenz: "Kompetenz", repost: "", fallvorstellung: "Fallvorstellung",
 };
 const NETZ_EINTRAG = {
   station: "Werdegang", ausbildung: "Ausbildung", zertifikat: "Zertifikate und Kurse",
@@ -128,7 +128,8 @@ async function mitteilungsZaehler(sofort = false) {
 
 function zeigeZaehler() {
   const z = NETZ.zaehler || {};
-  const werte = { mitteilungen: (z.mitteilungen || 0) + (z.anfragen || 0),
+  // Folgeanfragen stehen seit 4.5.0 unter Netzwerk und zählen dort.
+  const werte = { mitteilungen: z.mitteilungen || 0, anfragen: z.anfragen || 0,
     nachrichten: z.nachrichten || 0 };
   document.querySelectorAll("[data-zaehler]").forEach((n) => {
     const w = werte[n.dataset.zaehler] || 0;
@@ -254,6 +255,7 @@ function inhaltHtml(b) {
       </div>
       ${linkBlock(b.link)}`;
   }
+  if (b.art === "fallvorstellung") return fallvorstellungHtml(b);
   if (b.art === "wissen") return linkBlock(b.link);
   if (b.art === "kompetenz") return kompetenzBlock(b.kompetenz);
   return "";
@@ -269,7 +271,7 @@ function kopfHtml(b, klein = false) {
       <a href="#/person/${esc(b.autor.id)}" class="np-who link-plain">
         ${avatarHtml(b.autor, klein ? "s" : "m")}
         <span class="grow">
-          <span class="np-name"><strong>${esc(b.autor.name)}</strong>
+          <span class="np-name"><strong>${esc(b.autor.name)}</strong>${klein ? "" : abzeichenHtml(b.autor, 2)}
             <span class="muted"> · ${esc(relZeit(b.erstellt, true))}</span></span>
           ${unter ? `<span class="tiny muted np-sub">${esc(unter)}</span>` : ""}
         </span>
@@ -308,6 +310,9 @@ function aktionenHtml(b) {
         ${b.teilbar && !b.eigen && !b.ich_repost ? "" : "disabled"}>${NETZ_ICON.repost}</button>
       <button type="button" class="act" data-akt="senden"
         aria-label="Senden">${NETZ_ICON.senden}</button>
+      <button type="button" class="act merken${b.gemerkt ? " an" : ""}" data-akt="merken"
+        aria-pressed="${!!b.gemerkt}" aria-label="Speichern">${
+        b.gemerkt ? NETZ_ICON_GEMERKT : NETZ_ICON_MERKEN}</button>
     </div>
     <div class="np-stats small">
       ${b.likes ? `<button type="button" class="link-btn" data-akt="likes"><strong>${
@@ -318,6 +323,8 @@ function aktionenHtml(b) {
 
 function postHtml(b) {
   const fuss = `
+    ${b.kommentare_aus ? `<p class="tiny muted np-kaus">Kommentare ${
+      b.kommentare_gesperrt ? "von der Administration geschlossen" : "ausgeschaltet"}.</p>` : ""}
     ${b.kommentare ? `<button type="button" class="link-btn muted np-allk" data-akt="kommentare">${
       b.kommentare === 1 ? "1 Kommentar ansehen" : `Alle ${b.kommentare} Kommentare ansehen`}</button>` : ""}
     <div class="np-zeit tiny muted">${esc(relZeit(b.erstellt))}</div>`;
@@ -325,7 +332,8 @@ function postHtml(b) {
     const o = b.original || {};
     return `
       <article class="npost repost" data-post="${esc(b.id)}" data-eigen="${b.eigen}"
-        data-mod="${b.darf_moderieren}">
+        data-mod="${b.darf_moderieren}" data-kaus="${b.kommentare_aus}"
+        data-kschalt="${b.darf_kommentare_schalten}" data-kgesperrt="${b.kommentare_gesperrt}">
         <div class="rp-line small">${NETZ_ICON.repost}
           <a href="#/person/${esc(b.autor.id)}" class="link-plain grow"><strong>${esc(b.autor.name)}</strong>
           <span class="muted">hat geteilt · ${esc(relZeit(b.erstellt, true))}</span></a>
@@ -342,7 +350,8 @@ function postHtml(b) {
   }
   return `
     <article class="npost" data-post="${esc(b.id)}" data-eigen="${b.eigen}"
-      data-mod="${b.darf_moderieren}">
+      data-mod="${b.darf_moderieren}" data-kaus="${b.kommentare_aus}"
+      data-kschalt="${b.darf_kommentare_schalten}" data-kgesperrt="${b.kommentare_gesperrt}">
       ${kopfHtml(b)}
       ${b.geplant ? `<div class="np-plan tiny">Geplant · erscheint ${esc(relZeit(b.erstellt))}.
         Bis dahin siehst nur du ihn.</div>` : ""}
@@ -352,6 +361,7 @@ function postHtml(b) {
       ${medienHtml(b.medien)}
       ${aktionenHtml(b)}
       ${captionHtml(b)}
+      ${themenChipsHtml(b)}
       ${b.art === "algorithmus" ? `<p class="tiny muted np-hinweis">Geteilt von einem Mitglied,
         keine Empfehlung von SCOPE X. Maßgeblich ist die SOP deines ÄLRD.</p>` : ""}
       ${fuss}
@@ -394,6 +404,13 @@ function bindePosts(bereich) {
         repostSheet(id, knopf);
       } else if (akt === "senden") {
         sendenSheet(id);
+      } else if (akt === "merken") {
+        const an = knopf.getAttribute("aria-pressed") === "true";
+        await api(`/api/netz/beitraege/${encodeURIComponent(id)}/merken`, { method: an ? "DELETE" : "PUT" });
+        knopf.setAttribute("aria-pressed", String(!an));
+        knopf.classList.toggle("an", !an);
+        knopf.innerHTML = an ? NETZ_ICON_MERKEN : NETZ_ICON_GEMERKT;
+        toast(an ? "Nicht mehr gespeichert." : "Gespeichert. Zu finden unter Profil → Gespeichert.");
       } else if (akt === "likes") {
         personenSheet("Gefällt", `/api/netz/beitraege/${encodeURIComponent(id)}/likes`);
       } else if (akt === "mehr-text") {
@@ -430,8 +447,13 @@ function beitragMenue(karte) {
   const id = karte.dataset.post;
   const eigen = karte.dataset.eigen === "true";
   const mod = karte.dataset.mod === "true";
+  const kaus = karte.dataset.kaus === "true";
+  const schalten = karte.dataset.kschalt === "true"
+    && !(kaus && karte.dataset.kgesperrt === "true" && !isAdmin());
   sheet("Beitrag", `
     <div class="menu-list">
+      ${schalten ? `<button type="button" id="bm-kaus">${kaus ? "Kommentare einschalten"
+        : "Kommentare ausschalten"}</button>` : ""}
       ${karte.dataset.warum !== undefined ? `<button type="button" id="bm-warum">Warum sehe ich das?</button>` : ""}
       <a href="#/beitrag/${esc(id)}" class="link-plain" id="bm-oeffnen">Zum Beitrag</a>
       ${eigen ? `<button type="button" class="danger" id="bm-loeschen">Löschen</button>` : `
@@ -440,6 +462,15 @@ function beitragMenue(karte) {
       ${mod ? `<button type="button" class="danger" id="bm-mod">Als Administration entfernen</button>` : ""}
     </div>`, (body) => {
     $("#bm-oeffnen", body).addEventListener("click", closeSheet);
+    const ka = $("#bm-kaus", body);
+    if (ka) ka.addEventListener("click", async () => {
+      try {
+        await api(`/api/netz/beitraege/${encodeURIComponent(id)}/kommentare-aus`,
+          { method: "PUT", body: { aus: !kaus } });
+        closeSheet(); toast(kaus ? "Kommentare eingeschaltet." : "Kommentare ausgeschaltet.");
+        render();
+      } catch (err) { toast(err.message); }
+    });
     const warum = $("#bm-warum", body);
     if (warum) warum.addEventListener("click", () => {
       const gruende = (karte.dataset.warum || "").split("|").filter(Boolean);
@@ -448,9 +479,10 @@ function beitragMenue(karte) {
           .map((g) => `<li>${esc(g)}</li>`).join("")}</ul>
         <p class="tiny muted" data-s="mt-md">„Für dich“ ordnet nach Aktualität, Resonanz, Nähe
         zur Person, Art des Beitrags und Relevanz für dein Lernen. Fallberichte zu seltenen
-        Situationen und Komplikationen sowie Maßnahmen, die du selbst selten dokumentierst,
-        steigen nach oben. Dein Logbuch fließt nur als Anzahl je Maßnahme ein und nur in deine
-        eigene Reihenfolge.</p>`);
+        Situationen und Komplikationen, offene Fallvorstellungen, Themen, denen du folgst, und
+        Maßnahmen, die du selbst selten dokumentierst, steigen nach oben. Schon Gesehenes und
+        Personen, deren Beiträge du ausgeblendet hast, sinken. Dein Logbuch fließt nur als Anzahl
+        je Maßnahme ein und nur in deine eigene Reihenfolge.</p>`);
     });
     const l = $("#bm-loeschen", body);
     if (l) l.addEventListener("click", async () => {
@@ -509,17 +541,20 @@ function moderierenSheet(id, karte) {
 
 // ------------------------------------------------------------ Kommentare
 
-function kommentarListeHtml(liste) {
+function kommentarListeHtml(liste, markieren = false) {
   if (!liste.length) return `<p class="small muted k-leer">Noch keine Kommentare.</p>`;
   return `<ul class="k-list">${liste.map((k) => `
-    <li class="k-item">
+    <li class="k-item${k.hilfreich ? " hilfreich" : ""}">
       <a href="#/person/${esc(k.autor.id)}" class="link-plain"
         aria-label="Profil von ${esc(k.autor.name)}">${avatarHtml(k.autor, "s")}</a>
       <div class="grow">
         <div class="small"><strong>${esc(k.autor.name)}</strong> <span class="np-text">${
           textMitTags(k.text)}</span></div>
+        ${k.hilfreich ? `<div class="tiny k-hilf">Hilfreiche Antwort</div>` : ""}
         <div class="tiny muted k-meta">${esc(relZeit(k.erstellt, true))}${k.darf_entfernen
-          ? ` · <button type="button" class="link-btn muted" data-k-del="${esc(k.id)}">Entfernen</button>` : ""}</div>
+          ? ` · <button type="button" class="link-btn muted" data-k-del="${esc(k.id)}">Entfernen</button>` : ""}${
+          markieren ? ` · <button type="button" class="link-btn muted" data-k-hilf="${esc(k.id)}"
+            data-an="${k.hilfreich}">${k.hilfreich ? "Markierung aufheben" : "Als hilfreich markieren"}</button>` : ""}</div>
       </div>
     </li>`).join("")}</ul>`;
 }
@@ -527,8 +562,9 @@ function kommentarListeHtml(liste) {
 async function kommentarSheet(postId, karte) {
   const k = await api(`/api/netz/beitraege/${encodeURIComponent(postId)}/kommentare`);
   sheet("Kommentare", `
-    <div id="k-liste">${kommentarListeHtml(k.kommentare)}</div>
-    ${canWrite() ? `
+    <div id="k-liste">${kommentarListeHtml(k.kommentare, k.darf_markieren)}</div>
+    ${k.aus ? `<p class="small muted">Für diesen Beitrag sind die Kommentare ausgeschaltet.</p>` : ""}
+    ${canWrite() && !k.aus ? `
     <form class="k-form" id="k-form">
       ${avatarHtml({ id: ichId(), name: (NETZ.profil || {}).name, avatar_id: (NETZ.profil || {}).avatar_id }, "s")}
       <label class="sr-only" for="k-text">Kommentar</label>
@@ -538,12 +574,21 @@ async function kommentarSheet(postId, karte) {
     <p class="tiny muted" id="k-err" role="alert"></p>` : ""}`, (body) => {
     body.closest(".sheet").classList.add("tall");
     const zeige = (liste) => {
-      $("#k-liste", body).innerHTML = kommentarListeHtml(liste);
+      $("#k-liste", body).innerHTML = kommentarListeHtml(liste, k.darf_markieren);
       const alle = karte && $(".np-allk", karte);
       if (alle) alle.textContent = liste.length === 1 ? "1 Kommentar ansehen"
         : `Alle ${liste.length} Kommentare ansehen`;
     };
     body.addEventListener("click", async (e) => {
+      const hilf = e.target.closest("[data-k-hilf]");
+      if (hilf) {
+        const pfad = `/api/netz/beitraege/${encodeURIComponent(postId)}/hilfreich`;
+        const r = await api(hilf.dataset.an === "true" ? pfad
+          : `${pfad}/${encodeURIComponent(hilf.dataset.kHilf)}`,
+        { method: hilf.dataset.an === "true" ? "DELETE" : "PUT" });
+        zeige(r.kommentare);
+        return;
+      }
       const del = e.target.closest("[data-k-del]");
       if (!del) return;
       await api("/api/netz/kommentare/" + encodeURIComponent(del.dataset.kDel), { method: "DELETE" });
@@ -646,31 +691,27 @@ async function personenSheet(titel, url) {
 
 // --------------------------------------------------------------- Feed
 
-function netzKopfMobil() {
-  return `
-    <header class="top-bar nur-schmal">
-      ${wordmark()}
-      <div class="row" data-s="gap-sm">
-        <a class="icon-btn flat link-plain" href="#/mitteilungen" aria-label="Mitteilungen">
-          ${NETZ_ICON.herz}<span class="badge" data-zaehler="mitteilungen" hidden></span></a>
-        <a class="icon-btn flat link-plain" href="#/nachrichten" aria-label="Nachrichten">
-          ${NETZ_ICON.senden}<span class="badge" data-zaehler="nachrichten" hidden></span></a>
-      </div>
-    </header>`;
-}
-
 async function viewNetz() {
   const p = await netzProfil(true);
   if (!p.aktiv) return netzEinstieg(p);
   const modus = NETZ.feedModus;
+  const thema = NETZ.feedThema || "";
+  const th = await themenKatalog().catch(() => ({ themen: [] }));
+  const gefolgt = th.themen.filter((t) => t.folge_ich);
+  const chips = [...gefolgt, ...th.themen.filter((t) => !t.folge_ich)].slice(0, 16);
   app().innerHTML = `
-    ${netzKopfMobil()}
     <h1 class="sr-only">Feed</h1>
     <div class="feed-layout">
       <div class="feed-col">
         <div class="feed-tabs" role="tablist" aria-label="Feed">
           <button role="tab" data-modus="fuerdich" aria-selected="${modus === "fuerdich"}">Für dich</button>
           <button role="tab" data-modus="folgeich" aria-selected="${modus === "folgeich"}">Folge ich</button>
+          ${gefolgt.length ? `<button role="tab" data-modus="themen" aria-selected="${modus === "themen"}">Meine Themen</button>` : ""}
+        </div>
+        <div class="chip-scroll feed-themen" role="group" aria-label="Nach Thema filtern">
+          ${chips.map((t) => `<button type="button" class="chip thema" data-feedthema="${esc(t.code)}"
+            aria-pressed="${t.code === thema}">#${esc(t.name)}</button>`).join("")}
+          <a class="chip link-plain" href="#/themen">Themen</a>
         </div>
         <div id="netz-feed"><p class="small muted feed-laedt">Wird geladen …</p></div>
         <div id="netz-mehr"></div>
@@ -683,20 +724,26 @@ async function viewNetz() {
     NETZ.feedModus = b.dataset.modus;
     viewNetz();
   }));
+  app().querySelectorAll("[data-feedthema]").forEach((b) => b.addEventListener("click", () => {
+    NETZ.feedThema = NETZ.feedThema === b.dataset.feedthema ? "" : b.dataset.feedthema;
+    viewNetz();
+  }));
   ladeVorschlaege($("#feed-side"), p);
 
-  const feed = await api(`/api/netz/feed?modus=${modus}`);
+  const feed = await api(`/api/netz/feed?modus=${modus}&thema=${encodeURIComponent(thema)}`);
   const liste = $("#netz-feed");
   if (!liste) return;
   if (!feed.beitraege.length) {
     liste.innerHTML = `<div class="empty">${markSvg("mark")}
-      <strong>${modus === "folgeich" ? "Noch niemandem gefolgt." : "Noch ist es ruhig hier."}</strong>
-      Folge Kolleg*innen oder teile den ersten Fall.
-      <a href="#/entdecken">Entdecken</a></div>`;
+      <strong>${thema ? "Zu diesem Thema noch nichts." : modus === "folgeich"
+        ? "Noch niemandem gefolgt." : "Noch ist es ruhig hier."}</strong>
+      ${thema ? "Teile den ersten Beitrag dazu." : "Folge Kolleg*innen oder teile den ersten Fall."}
+      <a href="#/netzwerk">Netzwerk</a></div>`;
     return;
   }
   zeigeBeitraege(liste, feed.beitraege, false);
-  mehrLaden(feed.weiter, modus);
+  mehrLaden(feed.weiter, modus, thema);
+  if (modus === "fuerdich" && !thema) vorschlagKarte(liste);
 }
 
 function zeigeBeitraege(liste, beitraege, anhaengen) {
@@ -711,15 +758,15 @@ function zeigeBeitraege(liste, beitraege, anhaengen) {
   bindePosts(liste);
 }
 
-function mehrLaden(weiter, modus) {
+function mehrLaden(weiter, modus, thema = "") {
   const box = $("#netz-mehr");
   if (!box) return;
   if (weiter === null || weiter === undefined) { box.innerHTML = ""; return; }
   box.innerHTML = `<button type="button" class="btn-quiet btn-lg" id="mehr">Weitere Beiträge</button>`;
   $("#mehr").addEventListener("click", async () => {
-    const f = await api(`/api/netz/feed?modus=${modus}&seite=${weiter}`);
+    const f = await api(`/api/netz/feed?modus=${modus}&seite=${weiter}&thema=${encodeURIComponent(thema)}`);
     zeigeBeitraege($("#netz-feed"), f.beitraege, true);
-    mehrLaden(f.weiter, modus);
+    mehrLaden(f.weiter, modus, thema);
   });
 }
 
@@ -730,7 +777,8 @@ async function ladeVorschlaege(box, p) {
   box.innerHTML = `
     <a class="side-me link-plain" href="#/profil">${avatarHtml({ id: p.id, name: p.name, avatar_id: p.avatar_id }, "l")}
       <span class="grow"><strong>${esc(p.name)}</strong><span class="tiny muted np-sub">${esc(p.headline)}</span></span></a>
-    ${v.personen.length ? `<div class="side-title small muted">Vorschläge für dich</div>
+    ${v.personen.length ? `<div class="side-title small muted spread">Vorschläge für dich
+      <a class="tiny link-plain" href="#/netzwerk">Alle</a></div>
     <ul class="person-list">${v.personen.map((x) => personZeile(x, x.grund)).join("")}</ul>` : ""}
     <p class="tiny muted side-foot">„Für dich“ ordnet nach Relevanz für dein Lernen.
     Dein Logbuch bleibt privat.</p>`;
@@ -804,41 +852,10 @@ async function viewEntdecken() {
   if (!p.aktiv) return netzEinstieg(p);
   app().innerHTML = `
     <h1 class="sr-only">Entdecken</h1>
-    <div class="search-bar">
-      <label class="sr-only" for="such">Suchen</label>
-      <input id="such" type="search" maxlength="80" autocomplete="off"
-        placeholder="Personen, Wachen oder #Themen">
-    </div>
-    <div id="such-ergebnis"></div>
+    <a class="search-bar link-plain such-link" href="#/suche">Personen, #Themen, Beiträge suchen</a>
     <div id="entdecken-raster"><p class="small muted" data-s="mt-md">Wird geladen …</p></div>
     <div id="entdecken-mehr"></div>
     ${pageFoot()}`;
-
-  let warte = null;
-  $("#such").addEventListener("input", (e) => {
-    clearTimeout(warte);
-    const w = e.target.value.trim();
-    const ziel = $("#such-ergebnis");
-    if (w.length < 2) { ziel.innerHTML = ""; $("#entdecken-raster").hidden = false; return; }
-    warte = setTimeout(async () => {
-      const [pers, tags] = await Promise.all([
-        w.startsWith("#") ? { personen: [] } : api("/api/netz/personen?q=" + encodeURIComponent(w)),
-        api("/api/netz/suche?q=" + encodeURIComponent(w)),
-      ]);
-      if (!$("#such-ergebnis")) return;
-      $("#entdecken-raster").hidden = true;
-      ziel.innerHTML = `
-        ${tags.tags.length ? `<ul class="person-list">${tags.tags.map((t) => `
-          <li class="person-row"><a class="link-plain row grow" href="#/tag/${encodeURIComponent(t.tag)}" data-s="gap-sm">
-            <span class="tag-disc" aria-hidden="true">#</span><span class="grow"><strong>#${esc(t.tag)}</strong>
-            <span class="tiny muted np-sub">${t.anzahl} ${t.anzahl === 1 ? "Beitrag" : "Beiträge"}</span></span></a></li>`)
-          .join("")}</ul>` : ""}
-        <ul class="person-list">${pers.personen.map((x) => personZeile(x)).join("")}</ul>
-        ${!tags.tags.length && !pers.personen.length ? `<p class="small muted">Nichts gefunden.
-          Gefunden wird nur, wer das Kompetenznetz eingeschaltet hat.</p>` : ""}`;
-      if (!ziel.dataset.gebunden) { ziel.dataset.gebunden = "1"; bindeFolgen(ziel, () => {}); }
-    }, 250);
-  });
 
   const lade = async (seite) => {
     const r = await api("/api/netz/entdecken?seite=" + seite);
@@ -864,11 +881,17 @@ async function viewTag(tag) {
     <div class="page-head">
       <a class="small muted link-plain" href="#/entdecken">Entdecken</a>
       <div class="row tag-head" data-s="gap-md mt-sm"><span class="tag-disc big" aria-hidden="true">#</span>
-        <div><h1>#${esc(r.tag)}</h1><p class="small muted">${r.anzahl} ${
-          r.anzahl === 1 ? "Beitrag" : "Beiträge"}</p></div></div>
+        <div class="grow"><h1>${r.thema ? esc(r.thema.name) : "#" + esc(r.tag)}</h1>
+          <p class="small muted">${r.thema ? `#${esc(r.tag)} · ${esc(r.thema.kategorie)} · ` : ""}${r.anzahl} ${
+          r.anzahl === 1 ? "Beitrag" : "Beiträge"}</p></div>
+        ${r.thema ? themaKnopf({ code: r.thema.code, folge_ich: r.thema.folge_ich }) : ""}</div>
+      ${r.thema ? `<button type="button" class="btn-soft small" data-s="mt-sm" id="tag-feed">Im Feed filtern</button>` : ""}
     </div>
     ${r.beitraege.length ? rasterHtml(r.beitraege) : `<p class="small muted">Keine sichtbaren Beiträge.</p>`}
     ${pageFoot()}`;
+  bindeThemen($(".page-head"));
+  const tf = $("#tag-feed");
+  if (tf) tf.addEventListener("click", () => { NETZ.feedThema = r.tag; location.hash = "#/"; });
 }
 
 // ---------------------------------------------------------------- Personen
@@ -892,7 +915,7 @@ function personZeile(p, grund) {
       <a class="row grow link-plain" href="#/person/${esc(p.id)}" data-s="gap-sm">
         ${avatarHtml(p, "m")}
         <span class="grow"><strong>${esc(p.name)}</strong>${p.privat
-          ? ` <span class="lock" title="Privates Konto">${NETZ_ICON.schloss}</span>` : ""}
+          ? ` <span class="lock" title="Privates Konto">${NETZ_ICON.schloss}</span>` : ""}${abzeichenHtml(p, 2)}
           <span class="tiny muted np-sub">${esc(grund || p.headline || "")}</span></span>
       </a>
       ${folgeKnopf(p)}
@@ -960,15 +983,15 @@ async function viewPerson(id) {
       </div>
       <div class="prof-bio">
         ${p.headline ? `<div class="small"><strong>${esc(p.headline)}</strong></div>` : ""}
+        ${p.abzeichen && p.abzeichen.length ? `<div>${abzeichenHtml(p, 6)}</div>` : ""}
         ${p.about ? `<div class="small np-text">${esc(p.about)}</div>` : ""}
-        ${p.voll && (p.organisation || p.location) ? `<div class="tiny muted">${
-          [p.organisation, p.location].filter(Boolean).map(esc).join(" · ")}</div>` : ""}
+        ${p.voll && ortText(p.ort, p) ? `<div class="tiny muted">${esc(ortText(p.ort, p))}</div>` : ""}
         ${!selbst && p.folgt_mir ? `<div class="tiny muted">Folgt dir</div>` : ""}
       </div>
       <div class="prof-actions">
         ${selbst ? `
           <a class="btn-soft link-plain" href="#/einstellungen" id="bearbeiten">Profil bearbeiten</a>
-          <a class="btn-soft link-plain" href="#/einsaetze">Logbuch</a>` : `
+          <a class="btn-soft link-plain" href="#/gespeichert">Gespeichert</a>` : `
           ${p.fragt_an ? `<button type="button" class="btn-primary" data-annehmen="${esc(p.id)}">Anfrage bestätigen</button>` : ""}
           ${folgeKnopf(p, false)}
           <a class="btn-soft link-plain" href="#/nachrichten/an/${esc(p.id)}">Nachricht</a>
@@ -1150,14 +1173,21 @@ function infoHtml(p) {
           : e.bis ? " – " + esc(monatJahr(e.bis)) : e.von ? " – heute" : ""}</div>` : ""}
         ${e.notiz ? `<div class="small muted">${esc(e.notiz)}</div>` : ""}</li>`).join("")}</ul></section>`;
   }).join("");
+  const o = p.ort || {};
+  const wache = o.wache && o.wache.name;
+  const org = (o.organisation && o.organisation.name) || p.organisation;
+  const region = o.kreis || p.location;
   return `
     <section class="info-sec"><h2>Persönliche Informationen</h2>
-      ${p.qualifikation || p.organisation || p.location ? `<dl class="info-dl">
-        ${p.qualifikation ? `<dt>Qualifikation</dt><dd>${esc(p.qualifikation)}</dd>` : ""}
-        ${p.organisation ? `<dt>Wache, Organisation</dt><dd>${esc(p.organisation)}</dd>` : ""}
-        ${p.location ? `<dt>Region</dt><dd>${esc(p.location)}</dd>` : ""}
+      ${p.qualifikation || org || region || wache ? `<dl class="info-dl">
+        ${p.qualifikation ? `<dt>Beruf</dt><dd>${esc(p.qualifikation)}</dd>` : ""}
+        ${wache ? `<dt>Wache</dt><dd>${esc(wache)}</dd>` : ""}
+        ${org ? `<dt>Organisation</dt><dd>${esc(org)}</dd>` : ""}
+        ${region ? `<dt>Region</dt><dd>${esc(region)}</dd>` : ""}
       </dl>` : `<p class="small muted">Keine Angaben.</p>`}
     </section>
+    ${(p.qualifikationen || []).length ? `<section class="info-sec"><h2>Qualifikationen und Kurse</h2>
+      ${qualListeHtml(p.qualifikationen, false)}</section>` : ""}
     ${gruppen}`;
 }
 
@@ -1173,6 +1203,16 @@ const NETZ_MITTEILUNG = {
   bestaetigung: "hat eine deiner Kompetenzen bestätigt.",
   entfernt: "hat einen Beitrag von dir entfernt. Der Grund steht am Beitrag.",
   meldung: "hat einen Beitrag gemeldet.",
+  hilfreich: "hat deine Antwort als hilfreich markiert.",
+  katalog: "hat einen Katalogeintrag vorgeschlagen.",
+  qualifikation: "",
+  bewerbung: "",
+  buergschaft: "",
+};
+const NETZ_MITTEILUNG_SYSTEM = {
+  qualifikation: ["Ablauf", "#/einstellungen"],
+  bewerbung: ["Bewerbung", "#/administration"],
+  buergschaft: ["Bürgschaft angefragt", "#/netzwerk"],
 };
 
 async function viewMitteilungen() {
@@ -1185,13 +1225,14 @@ async function viewMitteilungen() {
   };
   const gruppen = {};
   m.mitteilungen.forEach((x) => {
-    if (!NETZ_MITTEILUNG[x.art] || x.art === "folgeanfrage") return;
+    if (!(x.art in NETZ_MITTEILUNG) || x.art === "folgeanfrage") return;
     (gruppen[gruppe(x.erstellt)] = gruppen[gruppe(x.erstellt)] || []).push(x);
   });
   app().innerHTML = `
     <div class="page-head"><h1>Mitteilungen</h1></div>
     <div id="mt-seite" class="feed-col">
-    ${a.personen.length ? `<section class="mt-sec"><h2 class="sec">Folgeanfragen</h2>
+    ${a.personen.length ? `<section class="mt-sec"><h2 class="sec">Folgeanfragen
+      <a class="tiny link-plain" href="#/netzwerk">Im Netzwerk</a></h2>
       <ul class="person-list">${a.personen.map((p) => `
         <li class="person-row">
           <a class="row grow link-plain" href="#/person/${esc(p.id)}" data-s="gap-sm">${avatarHtml(p, "m")}
@@ -1202,15 +1243,20 @@ async function viewMitteilungen() {
     ${Object.keys(gruppen).length ? Object.entries(gruppen).map(([titel, liste]) => `
       <section class="mt-sec"><h2 class="sec">${esc(titel)}</h2>
       <ul class="person-list">${liste.map((x) => {
-        const wer = x.art === "entfernt" ? "Die Administration" : (x.von ? x.von.name : "Jemand");
-        const ziel = x.post_id ? "#/beitrag/" + x.post_id
+        const sys = NETZ_MITTEILUNG_SYSTEM[x.art];
+        const wer = sys ? sys[0] : x.art === "entfernt" ? "Die Administration"
+          : (x.von ? x.von.name : "Jemand");
+        const ziel = sys ? sys[1] : x.post_id ? "#/beitrag/" + x.post_id
           : x.art === "bestaetigung" ? "#/profil"
+          : x.art === "katalog" ? "#/administration"
           : x.von ? "#/person/" + x.von.id : "#/";
         return `<li class="note-row${x.gelesen ? "" : " neu"}">
           <a class="row grow link-plain" href="${esc(ziel)}" data-s="gap-sm">
             ${x.von && x.art !== "entfernt" ? avatarHtml(x.von, "m")
               : `<span class="av av-m ini" data-farbe="0" aria-hidden="true">!</span>`}
-            <span class="grow small"><strong>${esc(wer)}</strong> ${esc(NETZ_MITTEILUNG[x.art])}
+            <span class="grow small"><strong>${esc(wer)}</strong> ${esc(sys ? (x.art === "bewerbung"
+              ? `${x.text || "Jemand"} wartet auf eine Entscheidung.` : x.art === "buergschaft"
+              ? `${x.text || "Jemand"} hat dich als Kontakt genannt.` : x.text) : NETZ_MITTEILUNG[x.art])}
               <span class="muted">${esc(relZeit(x.erstellt, true))}</span></span>
           </a>
           ${x.art === "folgt" && x.von && x.von.ich_folge === "nein" ? folgeKnopf(x.von) : ""}
@@ -1240,8 +1286,12 @@ async function viewBeitrag(id) {
   const k = await api(`/api/netz/beitraege/${encodeURIComponent(id)}/kommentare`);
   const box = $("#k-inline");
   if (!box) return;
-  box.innerHTML = `<h2 class="sec">Kommentare</h2>${kommentarListeHtml(k.kommentare)}
-    ${canWrite() ? `<button type="button" class="btn-soft" data-s="mt-sm" id="k-schreiben">Kommentieren</button>` : ""}`;
+  box.innerHTML = `<h2 class="sec">${b.art === "fallvorstellung" ? "Antworten" : "Kommentare"}</h2>
+    ${kommentarListeHtml(k.kommentare)}
+    ${k.aus ? `<p class="small muted">Kommentare ausgeschaltet.</p>` : canWrite()
+      ? `<button type="button" class="btn-soft" data-s="mt-sm" id="k-schreiben">${
+        b.art === "fallvorstellung" ? (k.darf_markieren ? "Antworten ansehen und markieren" : "Antworten")
+        : "Kommentieren"}</button>` : ""}`;
   const s = $("#k-schreiben");
   if (s) s.addEventListener("click", () => kommentarSheet(id, $("[data-post]", $("#ein-beitrag"))));
 }
@@ -1479,6 +1529,7 @@ async function warteAufVideo(id) {
 function neuAuswahlSheet() {
   const optionen = [
     ["beitrag", "Beitrag", "Foto, Video oder Gedanke"],
+    ["fallvorstellung", "Fallvorstellung", "Fall vorstellen, Community fragen"],
     ["fall", "Fallbericht", "Seltene Situation, Komplikation, Lernfall"],
     ["algorithmus", "Algorithmus", "SOP oder Ablaufschema mit Quelle"],
     ["wissen", "Studie oder Leitlinie", "Link mit Kernaussage"],
@@ -1505,6 +1556,7 @@ function neuAuswahlSheet() {
 
 const NETZ_COMPOSER_TITEL = {
   beitrag: "Neuer Beitrag", fall: "Fallbericht", algorithmus: "Algorithmus teilen",
+  fallvorstellung: "Fallvorstellung",
   wissen: "Studie oder Leitlinie", kompetenz: "Kompetenz teilen",
 };
 
@@ -1514,6 +1566,8 @@ function composer(art, vorgabe = {}) {
   const medien = [];
   const mitMedien = art === "beitrag" || art === "fall" || art === "algorithmus";
   const auswahl = { a: new Set(), m: new Set(), zek: false, naca: false };
+  const themen = new Set(vorgabe.themen || []);
+  const fv = art === "fallvorstellung";
 
   sheet(NETZ_COMPOSER_TITEL[art] || "Teilen", `
     <form id="cp-form" class="stack composer-form">
@@ -1530,6 +1584,29 @@ function composer(art, vorgabe = {}) {
           <textarea id="cp-gut" maxlength="1500" rows="2"></textarea></div>
         <div class="field"><label for="cp-and">Was würdest du anders machen? (optional)</label>
           <textarea id="cp-and" maxlength="1500" rows="2"></textarea></div>` : ""}
+      ${fv ? `
+        <p class="small muted">Anonymisiert vorstellen und gezielt fragen. Kein Alter, nur die
+        Altersgruppe; kein Ort, keine Zeit. Antworten können Kolleg*innen als Kommentar geben, du
+        markierst die hilfreichste.</p>
+        <div class="field"><label for="cp-titel">Titel</label>
+          <input id="cp-titel" maxlength="160" required placeholder="z. B. Bewusstlose Person, unklare Ursache"></div>
+        <div class="field"><label for="cp-alter">Altersgruppe (optional)</label>
+          <select id="cp-alter"><option value="">keine Angabe</option>${Object.entries(NETZ_ALTER).map(([k, v]) =>
+            `<option value="${k}">${esc(v)}</option>`).join("")}</select></div>
+        <div class="field"><label for="cp-mb">Meldebild</label>
+          <textarea id="cp-mb" maxlength="800" rows="2" required
+            placeholder="Was wurde gemeldet, was fandet ihr vor?"></textarea></div>
+        <fieldset class="field xabcde-form"><legend class="small">Befund nach xABCDE
+          <span class="tiny muted">· mindestens ein Feld</span></legend>
+          ${NETZ_XABCDE.map(([k, b, name]) => `<div class="xab-row"><label for="cp-${k}"><abbr
+            title="${esc(name)}">${b}</abbr><span class="sr-only"> ${esc(name)}</span></label>
+            <input id="cp-${k}" maxlength="500" placeholder="${esc(name)}"></div>`).join("")}
+        </fieldset>
+        <div class="field"><label for="cp-mn">Maßnahmen (optional)</label>
+          <textarea id="cp-mn" maxlength="1500" rows="2"></textarea></div>
+        <div class="field"><label for="cp-frage">Frage an die Community</label>
+          <textarea id="cp-frage" maxlength="800" rows="2" required
+            placeholder="z. B. Was hättet ihr als Nächstes gemacht?"></textarea></div>` : ""}
       ${art === "algorithmus" ? `
         <div class="field"><label for="cp-titel">Titel</label>
           <input id="cp-titel" maxlength="160" required placeholder="z. B. Ablauf Anaphylaxie"></div>
@@ -1554,7 +1631,7 @@ function composer(art, vorgabe = {}) {
           <input id="cp-quelle" maxlength="120" list="cp-quellen" placeholder="Leitlinie, Studie …">
           <datalist id="cp-quellen"><option>Leitlinie</option><option>Studie</option>
             <option>Übersichtsarbeit</option><option>Fachartikel</option><option>Podcast</option></datalist></div>` : ""}
-      ${art === "kompetenz" || art === "fall" ? `<div id="cp-logbuch"></div>` : ""}
+      ${art === "kompetenz" || art === "fall" || fv ? `<div id="cp-logbuch"></div>` : ""}
       ${mitMedien ? `
         <div class="media-pick" id="cp-medien"></div>
         <label class="btn-soft file-btn" id="cp-medien-btn">${NETZ_ICON.bild}<span>Fotos oder Videos</span>
@@ -1565,13 +1642,16 @@ function composer(art, vorgabe = {}) {
           oder Monitorwerte mit Personenbezug zu erkennen.</span></label>` : ""}
       <div class="field"><label for="cp-text">${art === "beitrag" ? "Bildunterschrift oder Gedanke"
         : art === "algorithmus" ? "Kernaussage oder Schritte (optional)"
+        : fv ? "Weitere Angaben (optional)"
         : "Was nimmst du mit? (optional)"}</label>
         <textarea id="cp-text" maxlength="3000" rows="${art === "beitrag" ? 4 : 3}"
           placeholder="#Hashtags helfen anderen, es zu finden"></textarea></div>
-      ${art === "fall" ? `
+      <div class="field" id="cp-themen"></div>
+      <label class="check"><input type="checkbox" id="cp-kaus"> Kommentare ausschalten</label>
+      ${art === "fall" || fv ? `
         <div class="field"><label for="cp-delay">Veröffentlichen</label>
-          <select id="cp-delay"><option value="0">sofort</option><option value="1">in 1 Tag</option>
-            <option value="3">in 3 Tagen</option><option value="7" selected>in 7 Tagen (empfohlen)</option>
+          <select id="cp-delay"><option value="0" ${fv ? "selected" : ""}>sofort</option><option value="1">in 1 Tag</option>
+            <option value="3">in 3 Tagen</option><option value="7" ${fv ? "" : "selected"}>in 7 Tagen (empfohlen)</option>
             <option value="14">in 14 Tagen</option></select>
           <p class="tiny muted" data-s="mt-xs">Ein seltener Fall ist leicht wiederzuerkennen. Mit
           Abstand zum Einsatz geteilt, lässt er sich keinem Tag mehr zuordnen.</p></div>` : ""}
@@ -1580,6 +1660,8 @@ function composer(art, vorgabe = {}) {
       <p class="tiny muted" id="cp-err" role="alert"></p>
     </form>`, (body) => {
     body.closest(".sheet").classList.add("tall");
+    if (fv) themen.add("peer-hilfe");
+    themenWahlHtml($("#cp-themen", body), themen).catch(() => {});
     let kategorie = "selten";
     body.querySelectorAll("[data-kat]").forEach((b) => b.addEventListener("click", () => {
       body.querySelectorAll("[data-kat]").forEach((x) => x.setAttribute("aria-pressed", "false"));
@@ -1698,6 +1780,10 @@ function composer(art, vorgabe = {}) {
     if (logbuch) {
       if (vorgabe.enc) zeigeEinsatz(vorgabe.enc, vorgabe.vorauswahl);
       else if (art === "kompetenz") waehleEinsatz();
+      else if (fv) {
+        logbuch.innerHTML = `<button type="button" class="btn-soft" id="cp-log">Maßnahmen aus dem Logbuch anhängen (optional)</button>`;
+        $("#cp-log", logbuch).addEventListener("click", waehleEinsatz);
+      }
       else {
         logbuch.innerHTML = `<button type="button" class="btn-soft" id="cp-log">Einträge aus dem Logbuch anhängen</button>`;
         $("#cp-log", logbuch).addEventListener("click", waehleEinsatz);
@@ -1715,7 +1801,8 @@ function composer(art, vorgabe = {}) {
         return;
       }
       const wert = (sel) => { const n = $(sel, body); return n ? n.value : ""; };
-      const daten = { art, text: wert("#cp-text") };
+      const daten = { art, text: wert("#cp-text"), themen: [...themen],
+        kommentare_aus: !!($("#cp-kaus", body) || {}).checked };
       if (art === "fall") {
         daten.titel = wert("#cp-titel");
         daten.details = { kategorie, besonderheit: wert("#cp-bes"), gut: wert("#cp-gut"), anders: wert("#cp-and") };
@@ -1724,12 +1811,21 @@ function composer(art, vorgabe = {}) {
         daten.titel = wert("#cp-titel");
         daten.details = { quelle: wert("#cp-quelle"), stand: wert("#cp-stand"), geltung: wert("#cp-geltung") };
         if (wert("#cp-url")) daten.link_url = wert("#cp-url").trim();
+      } else if (fv) {
+        daten.titel = wert("#cp-titel");
+        daten.details = { meldebild: wert("#cp-mb"), massnahmen: wert("#cp-mn"),
+          frage: wert("#cp-frage"), altersgruppe: wert("#cp-alter") };
+        NETZ_XABCDE.forEach(([k]) => { daten.details[k] = wert("#cp-" + k); });
+        if (!NETZ_XABCDE.some(([k]) => daten.details[k].trim())) {
+          err.textContent = "Halte mindestens einen Befund nach xABCDE fest."; return;
+        }
+        daten.verzoegerung_tage = Number(wert("#cp-delay") || 0);
       } else if (art === "wissen") {
         daten.link_url = wert("#cp-url").trim();
         daten.link_titel = wert("#cp-titel");
         daten.link_quelle = wert("#cp-quelle");
       }
-      if (art === "kompetenz" || art === "fall") {
+      if (art === "kompetenz" || art === "fall" || fv) {
         daten.attempt_ids = [...auswahl.a];
         daten.medication_ids = [...auswahl.m];
         daten.mit_zek = auswahl.zek;
@@ -1751,7 +1847,7 @@ function composer(art, vorgabe = {}) {
       try {
         const b = await api("/api/netz/beitraege", { method: "POST", body: daten });
         closeSheet();
-        toast(b.geplant ? `Geplant. Der Fall erscheint ${relZeit(b.erstellt)}.` : "Geteilt.");
+        toast(b.geplant ? `Geplant. Der Beitrag erscheint ${relZeit(b.erstellt)}.` : "Geteilt.");
         if (location.hash === "#/" || location.hash === "") render(); else location.hash = "#/";
       } catch (er) { err.textContent = er.message; knopf.disabled = false; }
     });
@@ -1833,19 +1929,17 @@ function netzProfilKarten(p) {
         <div class="field"><label for="na">Über mich</label>
           <textarea id="na" maxlength="1500" rows="3"
             placeholder="Schwerpunkte, Fortbildungen, was dich interessiert">${esc(p.about)}</textarea></div>
-        <div class="field-row">
-          <div class="field"><label for="no">Wache oder Organisation</label>
-            <input id="no" maxlength="120" value="${esc(p.organisation)}"></div>
-          <div class="field"><label for="nl">Region</label>
-            <input id="nl" maxlength="80" value="${esc(p.location)}" placeholder="z. B. Region Hannover"></div>
-        </div>
         <button class="btn-primary" type="submit">Vorstellung speichern</button>
         <p class="tiny muted" id="vorst-err" role="alert"></p>
       </form>
     </div>
 
+    ${ortKarten(p)}
+
     <div class="card pad-lg" data-s="mt-md">
       <h2>Werdegang und Zertifikate</h2>
+      <p class="tiny muted" data-s="mt-xs">Kurse mit Ablaufdatum gehören unter „Qualifikationen
+      und Kurse“. Hier steht der Werdegang und alles, was es dort nicht gibt.</p>
       ${eintraege ? `<ul class="entry-list" data-s="mt-sm">${eintraege}</ul>` : ""}
       <form id="eintrag-form" class="stack" data-s="mt-md">
         <div class="field-row">
@@ -1913,8 +2007,7 @@ function bindeNetzProfil() {
     e.preventDefault();
     try {
       NETZ.profil = await api("/api/netz/profil", { method: "PUT", body: {
-        headline: $("#nh").value, about: $("#na").value,
-        organisation: $("#no").value, location: $("#nl").value } });
+        headline: $("#nh").value, about: $("#na").value } });
       $("#vorst-err").textContent = "";
       toast("Vorstellung gespeichert.");
     } catch (err) { $("#vorst-err").textContent = err.message; }

@@ -1680,3 +1680,131 @@ input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20
 .prof-head.mit-banner .prof-av { margin-top: -44px; }
 @media (min-width: 900px) { .prof-head.mit-banner .prof-av { margin-top: -80px; } }
 .g-body, .bubble, .np-text { hyphens: auto; overflow-wrap: break-word; }
+
+/* ------------------------------------------------------------------ 4.5.0 */
+
+/* Suche nahe dem Logo: in der Seitenleiste direkt darunter, auf dem
+   Telefon in der Kopfzeile jeder Seite. */
+.g-suche { position: relative; display: block; }
+.g-suche .lupe {
+  position: absolute; left: .7rem; top: 50%; width: 17px; height: 17px;
+  transform: translateY(-50%); color: var(--muted); pointer-events: none;
+}
+.g-suche input {
+  width: 100%; min-height: 38px; padding: .4rem .7rem .4rem 2.1rem;
+  border: none; border-radius: 10px; background: var(--surface-2); font-size: .92rem;
+}
+.nav-suche { display: none; }
+.g-top[hidden] { display: none !important; }
+@media (max-width: 899px) {
+  .g-top {
+    order: 0; flex: 0 0 auto; display: flex; align-items: center; gap: .5rem;
+    padding: .45rem .7rem; padding-top: max(.45rem, env(safe-area-inset-top));
+    background: var(--bar-bg); border-bottom: 1px solid var(--line);
+    -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px);
+  }
+  .g-top .g-logo { display: flex; flex: 0 0 auto; }
+  .g-top .mark { width: 30px; height: 30px; }
+  .g-top .icon-btn { flex: 0 0 auto; position: relative; }
+}
+@media (min-width: 900px) {
+  .g-top { display: none !important; }
+  nav.tabbar .nav-suche { display: block; margin: 0 .3rem 1rem; }
+  nav.tabbar .brand { padding-bottom: 1rem; }
+}
+
+/* Abzeichen: gültige Kurse und Funktionen. Bewusst klein und ruhig. */
+.abz-reihe { display: inline-flex; flex-wrap: wrap; gap: .25rem; margin-left: .35rem; vertical-align: middle; }
+.abz {
+  font-size: .64rem; font-weight: 650; line-height: 1; letter-spacing: .02em;
+  padding: .2rem .38rem; border-radius: 5px; white-space: nowrap;
+  color: var(--accent); background: var(--accent-tint);
+}
+[data-theme="dark"] .abz { color: var(--accent-bright); background: rgba(25, 166, 181, .14); }
+.prof-bio .abz-reihe { margin: .25rem 0 0; }
+
+/* Themen */
+.chip-scroll {
+  display: flex; gap: .4rem; overflow-x: auto; scrollbar-width: none;
+  padding: .1rem 0 .5rem; margin-bottom: .2rem;
+}
+.chip-scroll::-webkit-scrollbar { display: none; }
+.chip-scroll.wrap { flex-wrap: wrap; overflow: visible; }
+.chip-scroll .chip { flex: 0 0 auto; min-height: 32px; padding: .28rem .7rem; font-size: .8rem; }
+.chip.thema { text-decoration: none; }
+.np-themen { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .45rem; }
+.np-themen .chip { min-height: 0; padding: .15rem .55rem; font-size: .74rem; color: var(--accent); border-color: var(--line); }
+.feed-themen { margin-top: -.2rem; }
+
+/* Speichern rechts in der Aktionszeile, wie in Bildnetzwerken. */
+.np-actions .act.merken { margin-left: auto; }
+.np-actions .act.merken.an { color: var(--ink-strong); }
+.np-kaus { margin: .35rem 0 0; }
+
+/* Fallvorstellung */
+.np-fv { --kat: var(--abort); }
+.xabcde { display: grid; grid-template-columns: 1.6rem 1fr; gap: .2rem .5rem; margin: .25rem 0 0; }
+.xabcde dt abbr {
+  display: inline-flex; width: 1.35rem; height: 1.35rem; border-radius: 6px;
+  align-items: center; justify-content: center; font-weight: 750; font-size: .78rem;
+  text-decoration: none; color: #fff; background: var(--neutral);
+}
+.xabcde dt:nth-of-type(1) abbr { background: var(--cat-X); }
+.xabcde dd { margin: 0; font-size: .9rem; white-space: pre-line; overflow-wrap: anywhere; }
+.fv-frage p { font-size: .95rem; }
+.fv-geloest { color: var(--ok); font-weight: 650; margin: .5rem 0 0; }
+.xabcde-form { border: none; padding: 0; margin: 0; }
+.xab-row { display: flex; align-items: center; gap: .5rem; margin-top: .35rem; }
+.xab-row label { flex: 0 0 1.8rem; font-weight: 750; text-align: center; }
+.xab-row abbr { text-decoration: none; }
+.k-item.hilfreich { background: color-mix(in srgb, var(--ok) 8%, transparent); border-radius: 10px; }
+.k-hilf { color: var(--ok); font-weight: 650; }
+
+/* „Vorschläge für dich“ im Feed */
+.wtf { margin: .4rem 0 1rem; padding: .8rem .9rem; }
+.wtf-reihe { display: flex; gap: .6rem; overflow-x: auto; scrollbar-width: none; margin-top: .6rem; }
+.wtf-reihe::-webkit-scrollbar { display: none; }
+.wtf-karte {
+  flex: 0 0 150px; display: flex; flex-direction: column; align-items: center; gap: .35rem;
+  text-align: center; padding: .8rem .5rem; border: 1px solid var(--line); border-radius: 12px;
+}
+.wtf-karte a { display: flex; flex-direction: column; align-items: center; gap: .25rem; min-width: 0; }
+.wtf-karte strong, .wtf-karte .tiny { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Qualifikationen */
+.q-list { list-style: none; margin: 0; padding: 0; }
+.q-row { display: flex; align-items: center; gap: .6rem; padding: .55rem 0; border-bottom: 1px solid var(--line); }
+.q-row:last-child { border-bottom: none; }
+.q-status { font-size: .7rem; font-weight: 650; padding: .15rem .45rem; border-radius: 999px; background: var(--surface-2); }
+.q-row[data-status="bald"] .q-status { color: var(--abort-ink); background: color-mix(in srgb, var(--abort) 18%, transparent); }
+.q-row[data-status="abgelaufen"] .q-status { color: #fff; background: var(--fail); }
+.q-row[data-status="gueltig"] .q-status { color: var(--ok); }
+.fb-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: .4rem; }
+.fb-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+
+/* Suche, Netzwerk, Administration */
+.field-row.three { grid-template-columns: 1fr; }
+@media (min-width: 640px) { .field-row.three { grid-template-columns: 1fr 1fr 1fr; } }
+.s-filter { margin: -.3rem 0 .8rem; }
+.s-filter summary, .kat-gruppe summary { cursor: pointer; }
+.such-link { display: block; padding: .65rem .9rem; border-radius: 10px; background: var(--surface-2); color: var(--muted); }
+.bw-list { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .5rem; }
+.switch-row.compact { gap: .5rem; padding: 0; border: none; }
+.bew-hinweis { margin-top: .6rem; }
+.mt-sec h2.sec { display: flex; justify-content: space-between; align-items: baseline; }
+
+/* Nutzungsvereinbarung */
+.nutzung-text h3 { font-size: .95rem; margin: 1rem 0 .2rem; }
+.nutzung-text p { margin: .3rem 0 0; }
+.nutzung-box {
+  max-height: 46vh; overflow-y: auto; padding: .2rem .9rem .9rem;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface-inset);
+}
+
+/* Texttiles hoben sich bis 4.4.0 kaum vom Seitengrund ab. */
+.g-text { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.g-text[data-art="fallvorstellung"] { --kat: var(--abort); }
+.nt { font-style: normal; text-transform: none; letter-spacing: 0; }
+.feed-side .person-row { flex-wrap: nowrap; }
+.feed-side .person-row > a { flex: 1 1 auto; }
+.feed-side .person-row .btn-primary, .feed-side .person-row .btn-soft { flex: 0 0 auto; }

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 
+from . import nutzung
 from .db import conn, new_id, now_iso, q, row
 from .security import SESSION_COOKIE, resolve_session
 
@@ -58,6 +59,16 @@ def current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail="Nicht angemeldet.")
     if user.get("disabled_at"):
         raise HTTPException(status_code=403, detail="Dieses Konto ist gesperrt.")
+    # Ohne Zustimmung zur aktuellen Nutzungsvereinbarung bleibt nur das
+    # Nötigste erreichbar. Geprüft wird hier, damit keine Route es
+    # vergessen kann; die Oberfläche zeigt bei 428 die Vereinbarung an.
+    if not nutzung.frei(request.url.path):
+        with conn() as c:
+            if nutzung.offen(c, user["id"]):
+                raise HTTPException(
+                    status_code=428,
+                    detail="Bitte stimme zuerst der aktuellen "
+                           "Nutzungsvereinbarung zu.")
     return user
 
 

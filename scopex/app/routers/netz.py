@@ -20,6 +20,7 @@ from .. import medien
 from .. import netzkern as nk
 from ..core import audit, current_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
+from .kataloge import ablauf_erinnern, ort_aus, qualifikationen_von
 
 router = APIRouter(prefix="/api/netz", tags=["netz"])
 log = logging.getLogger("scopex.netz")
@@ -123,6 +124,8 @@ def eigenes_profil(user=Depends(current_user)):
             "kompetenzen": kompetenzen(c, user["id"], user["id"], alle=True),
             "eintraege": eintraege(c, user["id"]),
             "zahlen": _zaehlen(c, user["id"]),
+            "ort": ort_aus(c, p),
+            "qualifikationen": qualifikationen_von(c, user["id"], fuer_andere=False),
         }
 
 
@@ -155,6 +158,11 @@ def profil_speichern(data: ProfilIn, user=Depends(current_user)):
                 q(c, "UPDATE net_follows SET status = 'aktiv', accepted_at = :t "
                      "WHERE followee_id = :u AND status = 'angefragt'",
                   t=now_iso(), u=user["id"])
+                # Ignorierte Anfragen hingen bei einem öffentlichen Konto
+                # ewig auf „angefragt“. Sie fallen weg; wer möchte, kann
+                # nun einfach folgen.
+                q(c, "DELETE FROM net_follows WHERE followee_id = :u AND "
+                     "status = 'ignoriert'", u=user["id"])
     return eigenes_profil(user)
 
 
@@ -469,45 +477,6 @@ def personen_suchen(q_: str = Query("", alias="q", max_length=80),
                              if p["uid"] not in gesperrt][:30]}
 
 
-@router.get("/vorschlaege")
-def vorschlaege(user=Depends(current_user)):
-    """Personen, denen man folgen könnte: wer mir folgt, dann Gefolgte von
-    Gefolgten, dann übrige aktive Mitglieder. Höchstens acht."""
-    with conn() as c:
-        if not nk.aktiv(nk.profil(c, user["id"])):
-            return {"personen": []}
-        ich = user["id"]
-        gefolgt = nk.gefolgt_ids(c, ich)
-        meine_follower = nk.follower_ids(c, ich)
-        ausgeschlossen = gefolgt | nk.blockierte_ids(c, ich) | {ich} | {
-            f["followee_id"] for f in rows(
-                c, "SELECT followee_id FROM net_follows WHERE follower_id = :i",
-                i=ich)}
-        punkte: dict[str, float] = {}
-        for g in gefolgt:
-            for zweit in nk.gefolgt_ids(c, g):
-                if zweit not in ausgeschlossen:
-                    punkte[zweit] = punkte.get(zweit, 0) + 1.0
-        for f in meine_follower:
-            if f not in ausgeschlossen:
-                punkte[f] = punkte.get(f, 0) + 2.0
-        for r_ in rows(c, "SELECT p.user_id FROM user_profile p JOIN users u "
-                          "ON u.id = p.user_id WHERE p.net_active = 1 AND "
-                          "u.disabled_at IS NULL"):
-            if r_["user_id"] not in ausgeschlossen:
-                punkte.setdefault(r_["user_id"], 0.1)
-        aus = []
-        for uid, wert in sorted(punkte.items(), key=lambda x: -x[1])[:8]:
-            pp = nk.profil(c, uid)
-            if nk.aktiv(pp):
-                person = nk.person_kurz(c, ich, pp)
-                person["grund"] = ("Folgt dir" if uid in meine_follower
-                                   else "Gemeinsame Kontakte" if wert >= 1
-                                   else "Neu im Netz")
-                aus.append(person)
-        return {"personen": aus}
-
-
 @router.get("/personen/{uid}")
 def person(uid: str, user=Depends(current_user)):
     with conn() as c:
@@ -537,6 +506,9 @@ def person(uid: str, user=Depends(current_user)):
                 # andere es sehen.
                 "kompetenzen": kompetenzen(c, uid, user["id"], alle=False),
                 "eintraege": eintraege(c, uid),
+                "ort": ort_aus(c, p),
+                "qualifikationen": qualifikationen_von(c, uid,
+                                                       fuer_andere=uid != user["id"]),
             })
         return aus
 
@@ -614,7 +586,7 @@ def entfolgen(uid: str, user=Depends(current_user)):
 def anfrage_annehmen(uid: str, user=Depends(current_user)):
     with conn() as c:
         f = nk.follow(c, uid, user["id"])
-        if not f or f["status"] != "angefragt":
+        if not f or f["status"] not in ("angefragt", "ignoriert"):
             raise HTTPException(404, "Anfrage nicht gefunden.")
         q(c, "UPDATE net_follows SET status = 'aktiv', accepted_at = :t WHERE id = :i",
           t=now_iso(), i=f["id"])
@@ -751,6 +723,25 @@ def bestaetigung_zurueckziehen(bid: str, user=Depends(current_user)):
 # Mitteilungen
 # --------------------------------------------------------------------------
 
+def _mitteilungstext(c, uid: str, m: dict) -> str:
+    """Text für Mitteilungen ohne handelnde Person."""
+    if m["kind"] == "qualifikation" and m["ref_id"]:
+        uq = row(c, "SELECT k.kurz, k.name, u.gueltig_bis FROM "
+                    "net_user_qualifications u JOIN net_qualifications k ON "
+                    "k.id = u.qual_id WHERE u.id = :i AND u.user_id = :u",
+                 i=m["ref_id"].split(":")[0], u=uid)
+        if uq:
+            bis = uq["gueltig_bis"] or ""
+            return (f"{uq['kurz'] or uq['name']} gilt bis {bis[5:7]}/{bis[:4]}. "
+                    "Denk an die Rezertifizierung.")
+        return ""
+    if m["kind"] in ("bewerbung", "buergschaft") and m["ref_id"]:
+        b = row(c, "SELECT first_name, last_name FROM applications WHERE id = :i",
+                i=m["ref_id"])
+        return " ".join(x for x in (b["first_name"], b["last_name"]) if x) if b else ""
+    return ""
+
+
 @router.get("/mitteilungen")
 def mitteilungen(user=Depends(current_user)):
     with conn() as c:
@@ -764,6 +755,7 @@ def mitteilungen(user=Depends(current_user)):
                 "id": m["id"], "art": m["kind"], "erstellt": m["created_at"],
                 "gelesen": bool(m["read_at"]), "post_id": m["post_id"],
                 "von": nk.person_kurz(c, user["id"], akteur) if akteur else None,
+                "text": _mitteilungstext(c, user["id"], m),
             })
         return {"mitteilungen": aus,
                 "ungelesen": sum(1 for x in aus if not x["gelesen"])}
@@ -779,8 +771,13 @@ def mitteilungen_gelesen(user=Depends(current_user)):
 
 @router.get("/zaehler")
 def zaehler(user=Depends(current_user)):
-    """Ungelesene Mitteilungen und Nachrichten für die Leiste."""
+    """Ungelesene Mitteilungen und Nachrichten für die Leiste.
+
+    Legt nebenbei die Erinnerung an ablaufende Qualifikationen an: die
+    Leiste wird bei jedem Seitenwechsel abgefragt, höchstens alle 30
+    Sekunden, und braucht dafür keinen Hintergrunddienst."""
     with conn() as c:
+        ablauf_erinnern(c, user["id"])
         m = scalar(c, "SELECT COUNT(*) FROM net_notifications WHERE user_id = :u "
                       "AND read_at IS NULL", u=user["id"]) or 0
         n = scalar(c, "SELECT COUNT(DISTINCT n.conversation_id) FROM net_messages n "
@@ -835,7 +832,10 @@ def auskunft(c, uid: str) -> dict:
                               "WHERE author_id = :u", u=uid),
         "gefaellt_mir": rows(c, "SELECT post_id, created_at FROM net_likes "
                                 "WHERE user_id = :u", u=uid),
-        "folge_ich": [{"wem": name(f["followee_id"]), "status": f["status"],
+        # Dass eine Anfrage ignoriert wurde, ist die Entscheidung der
+        # anderen Person; auch die Auskunft zeigt sie als offen.
+        "folge_ich": [{"wem": name(f["followee_id"]),
+                       "status": "angefragt" if f["status"] == "ignoriert" else f["status"],
                        "seit": f["created_at"]}
                       for f in rows(c, "SELECT * FROM net_follows WHERE "
                                        "follower_id = :u", u=uid)],
@@ -847,6 +847,29 @@ def auskunft(c, uid: str) -> dict:
             c, "SELECT blocked_id FROM net_blocks WHERE blocker_id = :u", u=uid)],
         "kompetenzfreigaben": rows(c, "SELECT measure_id, visible FROM "
                                       "net_competencies WHERE user_id = :u", u=uid),
+        "ort": ort_aus(c, p),
+        "qualifikationen": qualifikationen_von(c, uid, fuer_andere=False),
+        "fortbildungen": rows(c, "SELECT titel, datum, stunden, qual_id FROM "
+                                 "net_fortbildungen WHERE user_id = :u", u=uid),
+        "gemerkt": rows(c, "SELECT post_id, created_at FROM net_saved "
+                           "WHERE user_id = :u", u=uid),
+        "themen_gefolgt": rows(c, "SELECT tag, created_at FROM net_topic_follows "
+                                  "WHERE user_id = :u", u=uid),
+        "vorschlaege_ausgeblendet": [name(d["other_id"]) for d in rows(
+            c, "SELECT other_id FROM net_dismissed WHERE user_id = :u", u=uid)],
+        "gesehen": rows(c, "SELECT post_id, times, last_at FROM net_seen "
+                           "WHERE user_id = :u", u=uid),
+        "nutzungsvereinbarung": rows(c, "SELECT version, accepted_at FROM "
+                                        "terms_acceptance WHERE user_id = :u", u=uid),
+        "eingereicht": {
+            "organisationen": rows(c, "SELECT name, status, created_at FROM "
+                                      "net_organisations WHERE created_by = :u", u=uid),
+            "wachen": rows(c, "SELECT name, status, created_at FROM net_wachen "
+                              "WHERE created_by = :u", u=uid),
+            "qualifikationen": rows(c, "SELECT name, status, created_at FROM "
+                                       "net_qualifications WHERE created_by = :u",
+                                    u=uid),
+        },
         "bestaetigungen_erhalten": [
             {"von": name(b["endorser_id"]), "measure_id": b["measure_id"],
              "rolle": b["role"], "am": b["created_at"]}
@@ -879,9 +902,21 @@ def loeschen(c, uid: str) -> None:
     for pid in [p["id"] for p in rows(c, "SELECT id FROM net_posts WHERE "
                                          "author_id = :u", u=uid)]:
         for tabelle in ("net_likes", "net_comments", "net_tags", "net_hidden",
-                        "net_notifications"):
+                        "net_notifications", "net_saved", "net_seen"):
             q(c, f"DELETE FROM {tabelle} WHERE post_id = :p", p=pid)
     q(c, "DELETE FROM net_posts WHERE author_id = :u", u=uid)
+    for tabelle in ("net_saved", "net_seen", "net_topic_follows",
+                    "net_user_qualifications", "net_fortbildungen",
+                    "terms_acceptance"):
+        q(c, f"DELETE FROM {tabelle} WHERE user_id = :u", u=uid)
+    q(c, "DELETE FROM net_dismissed WHERE user_id = :u OR other_id = :u", u=uid)
+    # Eingereichte Katalogeinträge bleiben (andere nutzen sie), verlieren
+    # aber den Bezug zur Person.
+    for tabelle in ("net_organisations", "net_wachen", "net_qualifications",
+                    "net_topics"):
+        q(c, f"UPDATE {tabelle} SET created_by = NULL WHERE created_by = :u", u=uid)
+    q(c, "UPDATE applications SET sponsor_id = NULL, sponsor_status = 'entfallen' "
+         "WHERE sponsor_id = :u", u=uid)
     q(c, "DELETE FROM net_comments WHERE author_id = :u", u=uid)
     q(c, "DELETE FROM net_likes WHERE user_id = :u", u=uid)
     q(c, "DELETE FROM net_hidden WHERE user_id = :u", u=uid)
