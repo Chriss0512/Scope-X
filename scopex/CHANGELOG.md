@@ -3,6 +3,96 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.6.0
+
+MINOR: neue Funktionen und eine Migration (`0012_schutz_empfehlungen`).
+Bestehende Endpunkte, Sicherungsformat und Add-on-Optionen bleiben
+erhalten; neu ist die optionale Option `schluessel`.
+
+### Bitte lesen: Verschlüsselung im Ruhezustand
+
+Beim ersten Start nach dem Update legt SCOPE X einen Schlüssel an
+(`/data/scopex.key`, nur für den Dienst lesbar) und verschlüsselt den
+vorhandenen Bestand. Das dauert bei großen Mediensammlungen einen Moment.
+
+- **Verschlüsselt mit AES-256-GCM:** Direktnachrichten, Namen,
+  E-Mail-Adressen, Profilangaben, Beiträge, Kommentare, Werdegang,
+  Fortbildungen, Einsatznummer, Fahrzeug, Schicht, Notizen zu Maßnahmen
+  und Medikamenten, Bewerbungen, Einladungen, die Werte im
+  Änderungsprotokoll sowie alle Bilder und Videos auf dem Datenträger.
+- **Nicht verschlüsselt**, weil Auswertung, Sortierung und Sichtbarkeit
+  sie brauchen: Datum und Uhrzeit von Einsätzen, Maßnahmen und Medikamente
+  samt Ergebnis, NACA, Benutzernamen, Schlagwörter, Zeitstempel.
+- **Wie bei großen Netzwerken:** Transport per TLS, Speicherung
+  verschlüsselt, Schlüssel beim Betreiber. Das ist keine
+  Ende-zu-Ende-Verschlüsselung; wer den laufenden Server und den
+  Schlüssel kontrolliert, könnte lesen.
+- **Den Schlüssel sichern.** Ohne ihn sind die geschützten Daten nicht
+  mehr lesbar. Er liegt neben der Datenbank und ist damit in jeder
+  Home-Assistant-Sicherung enthalten. Wer ihn getrennt verwahren will,
+  setzt die Option `schluessel` (32 Byte Base64) **vor** dem ersten Start
+  mit 4.6.0. Ein falscher oder fehlender Schlüssel lässt die Anwendung
+  nicht starten, statt Daten unlesbar zu machen.
+- E-Mail-Adressen werden über einen Blindindex (HMAC-SHA-256) gefunden;
+  Anmeldung per E-Mail funktioniert wie bisher.
+- Die JSON-Sicherung der Administration enthält weiterhin Klartext, damit
+  sie sich auf jeder Installation einspielen lässt; eingespielt wird
+  wieder verschlüsselt. Der Fingerabdruck des Schlüssels gehört nicht
+  hinein.
+
+### Kolleg*innen einladen
+
+- Mitglieder laden unter **Netzwerk → Kolleg*innen einladen** per E-Mail
+  ein. Daraus wird kein Konto, sondern eine **Bewerbung**: die
+  eingeladene Person füllt das Formular aus, das Mitglied steht schon als
+  Kontakt fest und wird **nicht noch einmal gefragt**, die
+  **Administration entscheidet**.
+- Kam die Bewerbung von der eingeladenen Adresse, entfällt die
+  Bestätigungsmail; der Link in der Einladung hat die Adresse bestätigt.
+- Höchstens fünf offene und zehn Einladungen in 30 Tagen je Mitglied,
+  nicht für Gäste. Gibt es zur Adresse schon ein Konto, geht keine Mail
+  raus; das Mitglied erfährt davon nichts. Einladungen lassen sich
+  zurückziehen und verschwinden 90 Tage nach Ablauf.
+- Die Einladungen der Administration bleiben, wie sie sind: direkt zur
+  Registrierung.
+
+### Korrekturen
+
+- **Zurück-Knopf auf „Impressum und Datenschutz“** führte ins Leere, wenn
+  die Seite der erste Eintrag des Tabs war, etwa aus dem Link im
+  Bewerbungsformular, der sich in einem neuen Tab öffnete. Zurück führt
+  jetzt immer zu einer Seite, und Rechtstexte öffnen sich aus Formularen
+  in einem Blatt über dem Formular, das dabei erhalten bleibt.
+- **Datums- und Monatsfelder auf iOS** liefen in das Nachbarfeld und
+  waren höher als die übrigen Felder (Fortbildung, Qualifikationen,
+  Werdegang, Einsatz). Felder im Raster halten jetzt ihre Spalte ein.
+- Verknüpfungen unter Feldern („Organisation fehlt?“, „Kurs fehlt?“) sind
+  als solche erkennbar.
+
+### Neu
+
+- **Abmelden auf jeder Seite:** in der Seitenleiste unten, auf dem
+  Telefon in der Kopfzeile, jeweils mit kurzer Rückfrage.
+- **„Über SCOPE X“** (`#/ueber`), öffentlich und von der Anmeldung, der
+  Bewerbung und dem Seitenfuß verlinkt: was SCOPE X ist, für wen, wie man
+  dazukommt, wie Daten geschützt sind.
+
+### Sicherheitsprüfung
+
+- Neue Prüfung in der Schleife und in der CI: **Semgrep** mit den
+  Regelsätzen für Python, JavaScript und die OWASP Top Ten – dasselbe
+  Werkzeug, das Cloudflare im Repository `cloudflare/advisories` für jeden
+  Pull Request einsetzt. Befunde der Stufe ERROR lassen die Prüfung
+  scheitern. Stand dieser Version: keine.
+- Das Advisory-Repository selbst listet Schwachstellen in Produkten von
+  Cloudflare. SCOPE X nutzt keines davon; die Abhängigkeiten werden wie
+  bisher mit `pip-audit` gegen die öffentlichen Datenbanken geprüft.
+- Neue Testreihe `test_schutz.py`: Markierwerte gehen über die API in
+  jede geschützte Spalte, danach werden Datenbankdatei und WAL als Bytes
+  durchsucht; jede geschützte Spalte muss das Präfix tragen; manipulierte
+  Mediendateien werden nicht ausgeliefert; falscher und fehlender
+  Schlüssel werden erkannt; Sicherung und Wiederherstellung; Empfehlungen.
+
 ## 4.5.0
 
 MINOR: neue Funktionen und eine Migration (`0011_bewerbung_kataloge`).

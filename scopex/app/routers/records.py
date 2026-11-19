@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from .. import schutz
 from ..core import (
     annotate_lock,
     audit,
@@ -116,10 +117,10 @@ def create_encounter(data: EncounterIn, user=Depends(require_writer)):
              "mission_number, naca, shift_code, vehicle_id, created_at, "
              "updated_at) VALUES (:i, :u, :d, :t, :m, :n, :s, :v, :c, :c)",
           i=eid, u=user["id"], d=data.enc_date, t=data.enc_time,
-          m=(data.mission_number or "").strip() or None,
+          m=schutz.v((data.mission_number or "").strip() or None),
           n=data.naca or None,
-          s=(data.shift_code or "").strip() or None,
-          v=(data.vehicle_id or "").strip() or None, c=now_iso())
+          s=schutz.v((data.shift_code or "").strip() or None),
+          v=schutz.v((data.vehicle_id or "").strip() or None), c=now_iso())
         audit(c, user["id"], "encounters", eid, "create")
         return annotate_lock(c, row(c, "SELECT * FROM encounters WHERE id = :i", i=eid),
                              user["id"])
@@ -213,8 +214,9 @@ def update_encounter(encounter_id: str, data: EncounterPatch,
              "mission_number = :m, naca = :n, shift_code = :s, "
              "vehicle_id = :v, updated_at = :ua WHERE id = :i",
           d=after["enc_date"], t=after["enc_time"],
-          m=(after.get("mission_number") or None), n=after.get("naca") or None,
-          s=(after.get("shift_code") or None), v=(after.get("vehicle_id") or None),
+          m=schutz.v(after.get("mission_number") or None), n=after.get("naca") or None,
+          s=schutz.v(after.get("shift_code") or None),
+          v=schutz.v(after.get("vehicle_id") or None),
           ua=now_iso(), i=encounter_id)
         return annotate_lock(c, row(c, "SELECT * FROM encounters WHERE id = :i",
                                     i=encounter_id), user["id"])
@@ -311,7 +313,7 @@ def create_attempt(encounter_id: str, data: AttemptIn, user=Depends(require_writ
           p=data.performed_at or f"{enc['enc_date']}T{enc['enc_time']}",
           o=data.outcome, d=data.delegation, pr=data.performer_role,
           pq=(data.performer_qualification or "").strip() or None,
-          nt=(data.note or "").strip() or None, c=now_iso())
+          nt=schutz.v((data.note or "").strip() or None), c=now_iso())
 
         defs = {d["pkey"]: d for d in rows(
             c, "SELECT * FROM measure_parameter_definitions WHERE measure_id = :m",
@@ -375,7 +377,7 @@ def update_attempt(attempt_id: str, data: AttemptPatch, user=Depends(require_wri
              "WHERE id = :i",
           p=after["performed_at"], o=after["outcome"], d=after["delegation"],
           pr=after["performer_role"], pq=after["performer_qualification"],
-          n=after["note"], u=now_iso(), i=attempt_id)
+          n=schutz.v(after["note"]), u=now_iso(), i=attempt_id)
 
         if payload.get("parameters") is not None:
             defs = {d["pkey"]: d for d in rows(
@@ -474,9 +476,9 @@ def create_administration(encounter_id: str, data: AdministrationIn,
           d=data.dose, u=data.unit, r=data.route,
           a=data.administered_at or f"{enc['enc_date']}T{enc['enc_time']}",
           dl=data.delegation, o=data.outcome,
-          ae=(data.adverse_effect or "").strip() or None,
-          fu=(data.follow_up or "").strip() or None,
-          nt=(data.note or "").strip() or None, c=now_iso())
+          ae=schutz.v((data.adverse_effect or "").strip() or None),
+          fu=schutz.v((data.follow_up or "").strip() or None),
+          nt=schutz.v((data.note or "").strip() or None), c=now_iso())
         _link_complications(c, "medication_complications", "administration_id",
                             mid, data.complications)
         audit(c, user["id"], "medication_administrations", mid, "create",
@@ -525,8 +527,8 @@ def update_administration(administration_id: str, data: AdministrationPatch,
              "updated_at = :ua WHERE id = :i",
           d=after["dose"], u=after["unit"], r=after["route"],
           a=after["administered_at"], dl=after["delegation"],
-          o=after["outcome"], ae=after["adverse_effect"],
-          fu=after["follow_up"], n=after["note"],
+          o=after["outcome"], ae=schutz.v(after["adverse_effect"]),
+          fu=schutz.v(after["follow_up"]), n=schutz.v(after["note"]),
           ua=now_iso(), i=administration_id)
         if data.complications is not None:
             _link_complications(c, "medication_complications", "administration_id",

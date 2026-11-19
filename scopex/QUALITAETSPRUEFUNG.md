@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 19.11.2026 um 11:15 Uhr für SCOPE X.
+Erzeugt am 19.11.2026 um 12:19 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 601 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 642 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | Übertragung 446 KB von 500 KB (Skript und Stil 102 KB komprimiert, Schrift 343 KB); einzulesen 393 KB von 480 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | Übertragung 449 KB von 500 KB (Skript und Stil 105 KB komprimiert, Schrift 343 KB); einzulesen 405 KB von 480 KB |
 
 ## Compatibility
 
@@ -39,7 +39,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Migrationen sind idempotent | bestanden | 11 angewendet, zweiter Durchlauf leer |
+| Migrationen sind idempotent | bestanden | 12 angewendet, zweiter Durchlauf leer |
 | Sicherung und Wiederherstellung als Kreis | bestanden | Kennzahlen vor und nach der Wiederherstellung gleich |
 | Überwachung im Betrieb | manuell offen | Ausfall derzeit nur über das Add-on-Protokoll erkennbar |
 
@@ -48,6 +48,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Bekannte Schwachstellen in Abhängigkeiten | bestanden | keine bekannten Schwachstellen |
+| Statische Sicherheitsanalyse (Semgrep, OWASP Top Ten) | bestanden | keine Befunde der Stufe ERROR, 1 Hinweis ohne Abbruch |
 | Sicherheitsheader vollständig | bestanden | vollständig |
 | Ausschließlich parametrisierte Abfragen | bestanden | nur Bezeichner interpoliert |
 | Berechtigungsmatrix über alle schreibenden Routen | bestanden | jede Route verweigert unberechtigte Zugriffe |
@@ -60,16 +61,16 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 80.3 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.5.0, 12 Fassungen dokumentiert |
-| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 142 Pfade, 0 neu, Sicherungsformat 1 |
+| Testabdeckung mindestens 70 Prozent | bestanden | 80.7 Prozent |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.6.0, 13 Fassungen dokumentiert |
+| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 145 Pfade, 0 neu, Sicherungsformat 1 |
 
 ## Flexibility
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.5.0, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.6.0, Änderungsprotokoll vorhanden |
 
 ## Safety
 

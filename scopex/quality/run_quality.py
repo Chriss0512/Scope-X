@@ -92,7 +92,7 @@ def have(tool: str) -> bool:
 
 SUITES = [ROOT / "quality" / "suites" / n for n in
           ("test_core.py", "test_access.py", "test_documentation.py",
-           "test_netz.py", "test_zugang.py")]
+           "test_netz.py", "test_zugang.py", "test_schutz.py")]
 
 
 @check("functional", "Funktionale Testreihen")
@@ -282,6 +282,33 @@ def check_dependencies():
     if p.returncode == 0:
         return True, "keine bekannten Schwachstellen"
     return False, p.stdout.strip().splitlines()[-1][:120]
+
+
+@check("security", "Statische Sicherheitsanalyse (Semgrep, OWASP Top Ten)")
+def check_semgrep():
+    """Dasselbe Werkzeug, das Cloudflare in seinem Advisory-Repository für
+    jeden Pull Request einsetzt, mit den öffentlichen Regelsätzen für
+    Python, JavaScript und die OWASP Top Ten. Befunde der Stufe ERROR
+    lassen die Prüfung scheitern; Warnungen werden genannt."""
+    if not have("semgrep"):
+        raise SkipCheck("semgrep nicht installiert")
+    p = sh("semgrep", "--config", "p/python", "--config", "p/javascript",
+           "--config", "p/owasp-top-ten", "--metrics", "off", "--json", "--quiet", "app")
+    try:
+        daten = json.loads(p.stdout or "{}")
+    except ValueError as exc:
+        raise SkipCheck("semgrep lieferte keine auswertbare Ausgabe") from exc
+    if not daten.get("results") and daten.get("errors") and not daten.get("paths"):
+        raise SkipCheck("Regelsätze nicht erreichbar")
+    fehler = [r for r in daten.get("results", []) if r["extra"]["severity"] == "ERROR"]
+    warn = [r for r in daten.get("results", []) if r["extra"]["severity"] != "ERROR"]
+    if fehler:
+        erster = fehler[0]
+        return False, (f"{len(fehler)} Befunde, erster: {erster['path']}:"
+                       f"{erster['start']['line']} {erster['check_id'].split('.')[-1]}")
+    hinweis = "1 Hinweis" if len(warn) == 1 else f"{len(warn)} Hinweise"
+    return True, ("keine Befunde der Stufe ERROR" + (
+        f", {hinweis} ohne Abbruch" if warn else ""))
 
 
 @check("security", "Sicherheitsheader vollständig")
@@ -582,7 +609,7 @@ def main() -> int:
         check_sql_portability, check_db_abstraction,
         check_accessibility, check_color_independence, check_no_inline_styles,
         check_migrations, check_backup_roundtrip,
-        check_dependencies, check_headers, check_sql_injection,
+        check_dependencies, check_semgrep, check_headers, check_sql_injection,
         check_rbac_matrix, check_no_secrets,
         check_export_formats, check_addon_manifest,
         check_purpose_statement, check_hazard_warnings,

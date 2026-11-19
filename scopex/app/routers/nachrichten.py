@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import netzkern as nk
+from .. import schutz
 from ..core import current_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from .beitraege import beitrag_aus
@@ -150,7 +151,7 @@ def _senden(c, user: dict, g: dict, data: NachrichtIn) -> dict:
     jetzt = _fein()
     q(c, "INSERT INTO net_messages (id, conversation_id, sender_id, body, post_id, "
          "created_at) VALUES (:i, :k, :s, :b, :p, :t)",
-      i=nid, k=g["id"], s=ich, b=text, p=data.post_id, t=jetzt)
+      i=nid, k=g["id"], s=ich, b=schutz.v(text), p=data.post_id, t=jetzt)
     if bild:
         q(c, "UPDATE net_media SET message_id = :n WHERE id = :i", n=nid, i=bild["id"])
     # Wer schreibt, holt ein ausgeblendetes Gespräch beim Gegenüber zurück.

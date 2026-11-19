@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from pydantic import BaseModel
 
 from .. import pdf as pdf_module
+from .. import schutz
 from ..analytics import (
     Filters,
     compute,
@@ -179,7 +180,12 @@ def export_backup(user=Depends(require_admin)):
                "created_at": now_iso(), "tables": {}}
     with conn() as c:
         for table in BACKUP_TABLES:
-            payload["tables"][table] = rows(c, f"SELECT * FROM {table}")
+            # Gelesen wird entschlüsselt: die Sicherung soll sich auf jeder
+            # Installation einspielen lassen, auch mit anderem Schlüssel.
+            # Der Fingerabdruck des Schlüssels gehört nicht hinein.
+            payload["tables"][table] = [
+                r_ for r_ in rows(c, f"SELECT * FROM {table}")
+                if not (table == "settings" and r_.get("skey") == "schluessel_kennung")]
         audit(c, user["id"], "exports", new_id(), "backup")
     body = json.dumps(payload, ensure_ascii=False, indent=1)
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
@@ -231,7 +237,10 @@ async def restore_backup(file: UploadFile = File(...),
     counts: dict[str, int] = {}
     with engine.begin() as c:
         for table in reversed(BACKUP_TABLES):
-            c.exec_driver_sql(f"DELETE FROM {table}")
+            if table == "settings":
+                c.exec_driver_sql("DELETE FROM settings WHERE skey <> 'schluessel_kennung'")
+            else:
+                c.exec_driver_sql(f"DELETE FROM {table}")
         for table in BACKUP_TABLES:
             records = tables.get(table) or []
             if not records:
@@ -242,6 +251,8 @@ async def restore_backup(file: UploadFile = File(...),
             sql = (f"INSERT INTO {table} ({', '.join(columns)}) "
                    f"VALUES ({placeholders})")
             for rec in records:
+                if table == "settings" and rec.get("skey") == "schluessel_kennung":
+                    continue
                 q(c, sql, **{col: rec.get(col) for col in columns})
             counts[table] = len(records)
         # Zuordnung erhalten. Bis 4.3.1 wurden hier ALLE Einsaetze und
@@ -272,6 +283,8 @@ async def restore_backup(file: UploadFile = File(...),
                   o=prof["user_id"])
         audit(c, user["id"], "exports", new_id(), "restore", "records",
               None, sum(counts.values()))
+        # Die Sicherung ist Klartext; eingespielt wird verschlüsselt.
+        schutz.pruefen_und_einpflegen(c)
     return {"ok": True, "restored": counts}
 
 

@@ -36,6 +36,8 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 
+from . import schutz
+
 log = logging.getLogger("scopex.medien")
 
 # Obergrenze für die dekodierte Fläche. Eine kleine PNG-Datei kann zu
@@ -146,7 +148,9 @@ def bild_verarbeiten(roh: bytes, art: str) -> tuple[bytes, int, int]:
 def speichere_bild(mid: str, roh: bytes, art: str) -> dict:
     daten, breite, hoehe = bild_verarbeiten(roh, art)
     datei = f"{mid}.jpg"
-    (ablage() / datei).write_bytes(daten)
+    # Verschlüsselt abgelegt, siehe schutz.py. Unverschlüsselt existiert das
+    # Bild nur im Speicher.
+    schutz.bytes_verschluesselt_schreiben(daten, ablage() / datei)
     return {"file": datei, "mime": "image/jpeg", "width": breite,
             "height": hoehe, "bytes": len(daten)}
 
@@ -261,11 +265,13 @@ def video_verarbeiten(mid: str, roh: Path) -> dict:
                 raise MedienFehler("Kein Vorschaubild erzeugbar.")
             bild = Image.open(io.BytesIO(erg.stdout)).convert("RGB")
             bild.thumbnail((BEITRAG_KANTE, BEITRAG_KANTE))
-            poster.write_bytes(_als_jpeg(bild))
+            schutz.bytes_verschluesselt_schreiben(_als_jpeg(bild), poster)
+            groesse = ziel.stat().st_size
+            schutz.datei_verschluesseln(ziel, ziel)
             return {"file": ziel.name, "poster": poster.name, "mime": "video/mp4",
                     "width": breite, "height": hoehe,
                     "duration": round(min(dauer, VIDEO_MAX_SEKUNDEN), 1),
-                    "bytes": ziel.stat().st_size}
+                    "bytes": groesse}
         except subprocess.TimeoutExpired as exc:
             raise MedienFehler("Die Verarbeitung hat zu lange gedauert.") from exc
         finally:

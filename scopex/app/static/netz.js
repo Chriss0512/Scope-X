@@ -1747,7 +1747,7 @@ function composer(art, vorgabe = {}) {
         ${hatZek ? `<label class="check"><input type="checkbox" id="cp-zek"> ZEK-Bezeichnungen mitteilen
           (ohne Bezug und Patientenschaden)</label>` : ""}
         ${enc.naca ? `<label class="check"><input type="checkbox" id="cp-naca"> NACA-Wert mitteilen</label>` : ""}
-        <button type="button" class="link-btn small" id="cp-anderer">Anderen Einsatz wählen</button>`;
+        <button type="button" class="link-btn small strong" id="cp-anderer">Anderen Einsatz wählen</button>`;
       logbuch.querySelectorAll("[data-typ]").forEach((i) => i.addEventListener("change", () => {
         const set = i.dataset.typ === "a" ? auswahl.a : auswahl.m;
         if (i.checked) set.add(i.value); else set.delete(i.value);

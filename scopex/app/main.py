@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 
 from . import kataloge as katalogdaten
+from . import schutz
 from .core import base_url, sweep_locks
 from .db import conn, migrate, normalize_legacy_outcomes, q
 from .routers import (
@@ -42,7 +43,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 # Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
 # vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
 # nichts den Abgleich erzwang.
-APP_VERSION = "4.5.0"
+APP_VERSION = "4.6.0"
 
 
 @asynccontextmanager
@@ -54,6 +55,17 @@ async def lifespan(_: FastAPI):
     if converted:
         log.info("%s Einträge von 'frustran' auf 'fehlgeschlagen' abgebildet, "
                  "jeweils im Änderungsprotokoll vermerkt.", converted)
+    # Vor allem anderen: Schlüssel prüfen und Bestand verschlüsseln. Passt
+    # der Schlüssel nicht, startet die Anwendung nicht, statt Daten
+    # unlesbar zu machen.
+    with conn() as c:
+        neu = schutz.pruefen_und_einpflegen(c)
+        if neu:
+            log.info("%s Werte verschlüsselt.", neu)
+    from .medien import ablage
+    dateien = schutz.medien_einpflegen(ablage())
+    if dateien:
+        log.info("%s Mediendateien verschlüsselt.", dateien)
     with conn() as c:
         if seed_if_empty(c):
             log.info("Stammdaten eingespielt.")

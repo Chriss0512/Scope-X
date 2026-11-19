@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from .. import kataloge as kat
 from .. import netzkern as nk
+from .. import schutz
 from ..core import audit, current_user, require_admin
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 
@@ -367,7 +368,8 @@ def fortbildung_eintragen(data: FortbildungIn, user=Depends(current_user)):
             raise HTTPException(404, "Qualifikation nicht gefunden.")
         q(c, "INSERT INTO net_fortbildungen (id, user_id, titel, datum, stunden, qual_id, "
              "created_at) VALUES (:i, :u, :ti, :d, :s, :q, :t)",
-          i=new_id(), u=user["id"], ti=" ".join(data.titel.split()), d=tag.isoformat(),
+          i=new_id(), u=user["id"], ti=schutz.v(" ".join(data.titel.split())),
+          d=tag.isoformat(),
           s=round(data.stunden, 2), q=data.qual_id, t=now_iso())
         return _fortbildungen(c, user["id"], tag.year)
 

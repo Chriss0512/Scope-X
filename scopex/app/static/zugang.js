@@ -21,13 +21,103 @@ async function viewNutzungsbedingungen() {
   const angemeldet = state.auth && state.auth.authenticated;
   if (!angemeldet) {
     authShell("Nutzungsvereinbarung", `${nutzungHtml(n)}
-      <a class="btn btn-lg link-plain" href="#/" data-s="mt-md">Zur Anmeldung</a>`);
+      <button type="button" class="btn btn-lg" id="nb-zurueck" data-s="mt-md">Zurück</button>`);
+  } else {
+    app().innerHTML = `
+      <div class="page-head"><h1>Nutzungsvereinbarung</h1></div>
+      <div class="card pad-lg">${nutzungHtml(n)}</div>
+      <button type="button" class="btn-quiet btn-lg" id="nb-zurueck" data-s="mt-md">Zurück</button>
+      ${pageFoot()}`;
+  }
+  $("#nb-zurueck").addEventListener("click", zurueck);
+}
+
+/* Rechtstexte aus einem Formular heraus: im Blatt statt in einem neuen
+   Tab. Im neuen Tab gab es kein Zurück, und das halb ausgefüllte
+   Formular war aus dem Blick. */
+document.addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-rechtstext]");
+  if (!a) return;
+  e.preventDefault();
+  try {
+    if (a.dataset.rechtstext === "nutzung") {
+      const n = await api("/api/oeffentlich/nutzungsbedingungen");
+      sheet("Nutzungsvereinbarung", nutzungHtml(n), (body) => body.closest(".sheet").classList.add("tall"));
+    } else {
+      const l = await api("/api/legal");
+      sheet("Impressum und Datenschutz", legalHtml(l), (body) => body.closest(".sheet").classList.add("tall"));
+    }
+  } catch (err) { toast(err.message); }
+});
+
+// ---------------------------------------------------------- Über SCOPE X
+
+const UEBER = `
+  <p class="small">SCOPE X ist ein Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst und
+  ein geschlossenes Fachnetzwerk für Lernen, Praxisanleitung und kollegiale Unterstützung.
+  Diese Installation wird privat betrieben, ohne Werbung, ohne Tracking und ohne Weitergabe
+  an Dritte.</p>
+
+  <h2>Warum</h2>
+  <p class="small">Die entscheidenden Maßnahmen im Rettungsdienst sind selten. Wer weiß, wann er
+  etwas zuletzt gemacht hat und wie oft es gelang, kann gezielt üben. Wer seltene Situationen
+  und Komplikationen teilt, macht sie für andere weniger selten.</p>
+
+  <h2>Das Logbuch</h2>
+  <ul class="small">
+    <li>Einsätze, Maßnahmen nach xABCDE, Medikamente mit DIVI-Etiketten, Ergebnis und
+      Komplikationen, schnell erfasst.</li>
+    <li>Auswertung und Nachweise für dich selbst, etwa für die Praxisanleitung.</li>
+    <li>Fortbildungsnachweis und Qualifikationen mit Ablaufdatum.</li>
+    <li>Einsatznummer, Ort, Fahrzeug und Zeitpunkt sieht niemand außer dir, auch nicht,
+      wenn du etwas daraus teilst.</li>
+  </ul>
+
+  <h2>Das Netzwerk</h2>
+  <ul class="small">
+    <li>Feed mit nachvollziehbarer Reihenfolge, die auf Lernen zielt statt auf Verweildauer.</li>
+    <li>Fallberichte, Fallvorstellungen mit Frage an die Community, Wissen mit Quelle.</li>
+    <li>Kompetenzen aus dem Logbuch, die Kolleg*innen bestätigen können.</li>
+    <li>Themen wie #Atemwegsmanagement, #Praxisanleitung oder #Peer-to-Peer-Hilfe.</li>
+    <li>Profil, Chronik, Direktnachrichten, Bilder und Videos.</li>
+  </ul>
+
+  <h2>Für wen</h2>
+  <p class="small">Notfallsanitäter*innen, Rettungssanitäter*innen, Praxisanleitungen,
+  Auszubildende, Notärztinnen und Notärzte, Pflegende in Notaufnahme und Intensivmedizin,
+  Luftrettung, Intensivtransport und Leitstelle.</p>
+
+  <h2>Wie man dazukommt</h2>
+  <p class="small">Mit einer Einladung der Administration oder über eine Bewerbung. Ein Mitglied
+  kann dich empfehlen; über die Aufnahme entscheidet die Administration.</p>
+
+  <h2>Datenschutz und Sicherheit</h2>
+  <ul class="small">
+    <li>Nachrichten und persönliche Angaben liegen verschlüsselt in der Datenbank.</li>
+    <li>Anmeldung nur mit Zwei-Faktor-Authentifizierung oder Passkey.</li>
+    <li>Keine Patientendaten: Texte werden auf Einsatznummern, Fahrzeuge, Daten und
+      Uhrzeiten geprüft. Es gilt die Schweigepflicht.</li>
+    <li>SCOPE X gibt keine Indikationen, Dosierungen oder Algorithmen vor. Maßgeblich bleiben
+      Leitlinien, die Vorgaben des ÄLRD und die SOPs vor Ort.</li>
+    <li>Datenauskunft und Kontolöschung jederzeit selbst im Profil.</li>
+  </ul>`;
+
+function viewUeber() {
+  const angemeldet = state.auth && state.auth.authenticated;
+  if (!angemeldet) {
+    authShell("Über SCOPE X", `<div class="ueber">${UEBER}</div>
+      <div class="sheet-actions two">
+        <a class="btn link-plain" href="#/">Anmelden</a>
+        <a class="btn btn-primary link-plain" href="#/bewerben">Um Zugang bewerben</a>
+      </div>`);
     return;
   }
   app().innerHTML = `
-    <div class="page-head"><h1>Nutzungsvereinbarung</h1></div>
-    <div class="card pad-lg">${nutzungHtml(n)}</div>
+    <div class="page-head"><h1>Über SCOPE X</h1></div>
+    <div class="card pad-lg ueber">${UEBER}</div>
+    <button type="button" class="btn-quiet btn-lg" id="ue-zurueck" data-s="mt-md">Zurück</button>
     ${pageFoot()}`;
+  $("#ue-zurueck").addEventListener("click", zurueck);
 }
 
 /* Nach einer neuen Fassung: vor allem anderen. Der Server lässt bis zur
@@ -65,7 +155,7 @@ async function viewNutzungZustimmen() {
 
 // --------------------------------------------------------------- Bewerbung
 
-async function viewBewerben(token) {
+async function viewBewerben(token, empfehlungCode = currentRoute().query.get("empfehlung")) {
   if (token) {
     try {
       const r = await api("/api/oeffentlich/bewerbung/bestaetigen", { method: "POST", body: { token } });
@@ -86,20 +176,35 @@ async function viewBewerben(token) {
     return;
   }
   const kreise = await api("/api/oeffentlich/kreise");
+  let empf = null;
+  if (empfehlungCode) {
+    try { empf = await api("/api/oeffentlich/empfehlung/" + encodeURIComponent(empfehlungCode)); }
+    catch (err) {
+      authShell("Einladung abgelaufen", `<p class="small">${esc(err.message)}</p>
+        <p class="small muted">Du kannst dich trotzdem bewerben, dann ohne Empfehlung.</p>
+        <a class="btn btn-lg btn-primary link-plain" href="#/bewerben" data-s="mt-md">Ohne Empfehlung bewerben</a>`);
+      return;
+    }
+  }
   authShell("Um Zugang bewerben", `
-    <p class="small">SCOPE X ist ein geschlossenes Netz für Menschen in der Notfallversorgung.
+    ${empf ? `<div class="notice"><strong>${esc(empf.von)}</strong> hat dich eingeladen und ist
+      als Kontakt schon eingetragen. Über die Aufnahme entscheidet die Administration.</div>`
+    : `<p class="small">SCOPE X ist ein geschlossenes Netz für Menschen in der Notfallversorgung.
     Erzähl kurz, wer du bist. Wenn du ein Mitglied kennst, nenn es: es wird gefragt, ob es
-    dich kennt. Die Administration entscheidet und schickt dir bei Zusage eine Einladung.</p>
+    dich kennt. Die Administration entscheidet und schickt dir bei Zusage eine Einladung.</p>`}
+    <p class="small"><a href="#/ueber">Was ist SCOPE X?</a></p>
     <form id="bw-form" class="stack" data-s="mt-lg">
       <div class="field-row">
         <div class="field"><label for="bf">Vorname</label><input id="bf" name="first_name" required
-          maxlength="80" autocomplete="given-name"></div>
+          maxlength="80" autocomplete="given-name"
+          value="${esc(empf && empf.name ? empf.name.split(" ")[0] : "")}"></div>
         <div class="field"><label for="bl">Nachname</label><input id="bl" name="last_name" required
-          maxlength="80" autocomplete="family-name"></div>
+          maxlength="80" autocomplete="family-name"
+          value="${esc(empf && empf.name ? empf.name.split(" ").slice(1).join(" ") : "")}"></div>
       </div>
       <div class="field"><label for="be">E-Mail-Adresse</label>
         <input id="be" type="email" name="email" required maxlength="200" autocomplete="email"
-          autocapitalize="none" spellcheck="false"></div>
+          autocapitalize="none" spellcheck="false" value="${esc(empf ? empf.email : "")}"></div>
       <div class="field"><label for="bq">Beruf oder Ausbildung</label>
         <input id="bq" name="qualification" required maxlength="80" list="bq-liste"
           placeholder="z. B. Notfallsanitäter*in"><datalist id="bq-liste">${z.berufe.map((b) =>
@@ -115,16 +220,16 @@ async function viewBewerben(token) {
       </div>
       <div class="field"><label for="bm">Warum möchtest du dabei sein? (optional)</label>
         <textarea id="bm" name="motivation" maxlength="1000" rows="3"></textarea></div>
-      <div class="field"><label for="bb">Mitglied, das dich kennt (optional)</label>
+      ${empf ? "" : `<div class="field"><label for="bb">Mitglied, das dich kennt (optional)</label>
         <input id="bb" name="buerge" maxlength="200" autocapitalize="none" spellcheck="false"
           placeholder="Benutzername oder E-Mail-Adresse">
         <p class="tiny muted" data-s="mt-xs">Das Mitglied sieht Name, Beruf, Region und deine
-        Begründung, nicht deine E-Mail-Adresse.</p></div>
+        Begründung, nicht deine E-Mail-Adresse.</p></div>`}
       <label class="check confirm"><input type="checkbox" name="datenschutz" required>
         <span>Ich bin einverstanden, dass meine Angaben für die Entscheidung über den Zugang
         gespeichert werden. Unbestätigte Bewerbungen werden nach 48 Stunden gelöscht,
         entschiedene 30 Tage nach der Entscheidung. Mehr unter
-        <a href="#/rechtliches" target="_blank" rel="noopener">Datenschutz</a>.</span></label>
+        <a href="#/rechtliches" data-rechtstext="datenschutz">Datenschutz</a>.</span></label>
       <button class="btn-primary btn-lg" type="submit">Bewerbung absenden</button>
       <p class="tiny muted" id="bw-err" role="alert"></p>
       <a class="btn-quiet small link-plain" href="#/" data-s="center">Zurück zur Anmeldung</a>
@@ -136,6 +241,7 @@ async function viewBewerben(token) {
     const k = kreise.kreise.find((x) => x.name === $("#bk").value.trim());
     if ($("#bk").value.trim() && !k) { $("#bw-err").textContent = "Bitte einen Kreis aus der Liste wählen."; return; }
     fd.kreis_ags = k ? k.ags : null;
+    if (empf) fd.empfehlung = empfehlungCode;
     const knopf = e.target.querySelector("[type=submit]");
     knopf.disabled = true;
     try {
@@ -150,7 +256,7 @@ async function viewBewerben(token) {
 // ---------------------------------------------- Administration: Bewerbungen
 
 const BW_STATUS = { offen: "offen", angenommen: "angenommen", abgelehnt: "abgelehnt" };
-const BW_BUERGE = { wartet: "wartet auf Bestätigung der Adresse", angefragt: "angefragt",
+const BW_BUERGE = { empfohlen: "hat die Person eingeladen", wartet: "wartet auf Bestätigung der Adresse", angefragt: "angefragt",
   bestaetigt: "kennt die Person", abgelehnt: "kennt die Person nicht",
   nicht_gefunden: "nicht gefunden", entfallen: "Konto gelöscht" };
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from .. import schutz
 from ..core import (
     audit,
     current_user,
@@ -69,7 +70,7 @@ def update_profile(data: ProfileIn, user=Depends(current_user)):
             if str(current.get(field) or "") == str(value or ""):
                 continue
             q(c, f"UPDATE user_profile SET {field} = :v WHERE user_id = :u",
-              v=value, u=user["id"])
+              v=schutz.fuer("user_profile", field, value), u=user["id"])
             audit(c, user["id"], "user_profile", user["id"], "update", field,
                   current.get(field), value)
         return {"profile": row(c, "SELECT * FROM user_profile WHERE user_id = :u",

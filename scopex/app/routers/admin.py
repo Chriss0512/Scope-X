@@ -15,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import gate, mailer
+from .. import gate, mailer, schutz
 from ..core import (
     ROLE_LABELS,
     ROLES,
@@ -203,14 +203,15 @@ def create_invitation(data: InvitationIn, admin=Depends(require_admin)):
     code = _new_code()
     expires = datetime.now(timezone.utc) + timedelta(days=data.valid_days)
     with conn() as c:
-        if email and row(c, "SELECT id FROM users WHERE email = :e", e=email):
+        if email and row(c, "SELECT id FROM users WHERE email_idx = :x",
+                         x=schutz.index(email)):
             raise HTTPException(409, "Zu dieser Adresse gibt es bereits ein Konto.")
         iid = new_id()
         q(c, "INSERT INTO invitations (id, code_hash, email, role, note, "
              "created_by, created_at, expires_at) "
              "VALUES (:i, :h, :e, :r, :n, :cb, :c, :x)",
-          i=iid, h=token_hash(code), e=email, r=data.role,
-          n=(data.note or "").strip()[:200] or None, cb=admin["id"],
+          i=iid, h=token_hash(code), e=schutz.v(email), r=data.role,
+          n=schutz.v((data.note or "").strip()[:200] or None), cb=admin["id"],
           c=now_iso(), x=expires.replace(microsecond=0).isoformat())
         audit(c, admin["id"], "invitations", iid, "create", "role", None, data.role)
 

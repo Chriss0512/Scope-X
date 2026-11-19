@@ -36,7 +36,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .. import algorithmus
+from .. import algorithmus, schutz
 from .. import netzkern as nk
 from ..core import audit, current_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
@@ -398,10 +398,10 @@ def beitrag_erstellen(data: BeitragIn, user=Depends(current_user)):
              "link_url, link_title, link_source, snapshot, repost_of, created_at, "
              "published_at, comments_off, comments_off_by) VALUES (:i, :a, :k, :ti, "
              ":b, :d, :lu, :lt, :ls, :s, :r, :c, :p, :co, :cb)",
-          i=pid, a=ich, k=data.art, ti=titel, b=text,
-          d=json.dumps(details, ensure_ascii=False) if details else None,
-          lu=link_url, lt=link_titel, ls=link_quelle,
-          s=json.dumps(schnapp, ensure_ascii=False) if schnapp else None,
+          i=pid, a=ich, k=data.art, ti=schutz.v(titel), b=schutz.v(text),
+          d=schutz.v(json.dumps(details, ensure_ascii=False)) if details else None,
+          lu=link_url, lt=schutz.v(link_titel), ls=link_quelle,
+          s=schutz.v(json.dumps(schnapp, ensure_ascii=False)) if schnapp else None,
           r=repost_of, c=jetzt.isoformat(), p=veroeffentlicht,
           co=1 if data.kommentare_aus else 0,
           cb="autor" if data.kommentare_aus else None)
@@ -460,7 +460,7 @@ def beitrag_moderieren(post_id: str, data: ModerationIn, user=Depends(current_us
         if len(grund) < 5:
             raise HTTPException(400, "Bitte einen Grund angeben.")
         q(c, "UPDATE net_posts SET removed_at = :t, removed_reason = :g "
-             "WHERE id = :p", t=now_iso(), g=grund, p=post_id)
+             "WHERE id = :p", t=now_iso(), g=schutz.v(grund), p=post_id)
         audit(c, user["id"], "net_posts", post_id, "moderiert",
               "removed_reason", None, grund)
         nk.melde(c, post["author_id"], "entfernt", user["id"], post_id)
@@ -580,7 +580,7 @@ def kommentieren(post_id: str, data: KommentarIn, user=Depends(current_user)):
         nk.pruefe_text(c, user["id"], text)
         q(c, "INSERT INTO net_comments (id, post_id, author_id, body, created_at) "
              "VALUES (:i, :p, :a, :b, :t)",
-          i=new_id(), p=post_id, a=user["id"], b=text, t=now_iso())
+          i=new_id(), p=post_id, a=user["id"], b=schutz.v(text), t=now_iso())
         nk.melde(c, post["author_id"], "kommentar", user["id"], post_id)
     return kommentare(post_id, user)
 
@@ -605,8 +605,8 @@ def kommentar_entfernen(comment_id: str, user=Depends(current_user)):
         else:
             q(c, "UPDATE net_comments SET removed_at = :t, removed_reason = :g "
                  "WHERE id = :i", t=now_iso(),
-              g="vom Beitragsautor entfernt" if post["author_id"] == user["id"]
-              else "moderiert", i=comment_id)
+              g=schutz.v("vom Beitragsautor entfernt" if post["author_id"] == user["id"]
+                         else "moderiert"), i=comment_id)
             audit(c, user["id"], "net_comments", comment_id, "entfernt")
     return {"ok": True}
 
