@@ -148,16 +148,27 @@ def check_response_times():
 
 @check("performance", "Auslieferungsgröße der Oberfläche")
 def check_asset_budget():
+    """Zwei Grenzen: was übertragen wird und was der Browser parsen muss.
+
+    Bis 4.4.0 zählten die unkomprimierten Bytes gegen 700 KB. Seit 4.5.0
+    liefert der Server Skripte und Stile komprimiert aus; übertragen wird
+    damit ein Viertel. Gemessen wird deshalb die Übertragung (komprimierte
+    Skripte und Stile plus Schrift, die als WOFF2 bereits komprimiert ist)
+    und getrennt davon die Menge an Skript und Stil, die der Browser
+    einlesen muss – die bestimmt auf schwachen Telefonen die Startzeit.
+    """
+    import gzip
     static = APP / "static"
-    # Seit 4.4.0 zwei Skripte: app.js und netz.js. Beide zählen.
-    js = sum(p.stat().st_size for p in static.glob("*.js"))
-    css = (static / "app.css").stat().st_size
+    dateien = list(static.glob("*.js")) + [static / "app.css"]
+    roh = sum(p.stat().st_size for p in dateien)
+    komprimiert = sum(len(gzip.compress(p.read_bytes(), 9)) for p in dateien)
     font = (static / "fonts" / "InterVariable.woff2").stat().st_size
-    total = js + css + font
-    budget = 700 * 1024
-    return total <= budget, (f"JS {js//1024} KB, CSS {css//1024} KB, "
-                             f"Schrift {font//1024} KB, gesamt {total//1024} KB "
-                             f"von {budget//1024} KB")
+    uebertragung = komprimiert + font
+    grenze_uebertragung, grenze_roh = 500 * 1024, 480 * 1024
+    ok = uebertragung <= grenze_uebertragung and roh <= grenze_roh
+    return ok, (f"Übertragung {uebertragung//1024} KB von {grenze_uebertragung//1024} KB "
+                f"(Skript und Stil {komprimiert//1024} KB komprimiert, Schrift {font//1024} KB); "
+                f"einzulesen {roh//1024} KB von {grenze_roh//1024} KB")
 
 
 # --------------------------------------------------------------------------

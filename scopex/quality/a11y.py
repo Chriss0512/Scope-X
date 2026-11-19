@@ -63,7 +63,10 @@ def audit() -> list[str]:
                 for route in ["#/", "#/entdecken", "#/nachrichten",
                               "#/mitteilungen", "#/einsaetze", "#/dashboard",
                               "#/nachweise", "#/profil", "#/einstellungen",
-                              "#/verwaltung", "#/rechtliches"]:
+                              "#/administration", "#/rechtliches",
+                              "#/netzwerk", "#/suche", "#/suche?q=reanimation",
+                              "#/themen", "#/gespeichert", "#/fortbildung",
+                              "#/nutzungsbedingungen"]:
                     page.goto(f"http://127.0.0.1:8199/{route}",
                               wait_until="networkidle")
                     page.wait_for_timeout(900)
@@ -90,6 +93,10 @@ def audit() -> list[str]:
                       let unten = 0;
                       for (const e of app.querySelectorAll('*')) {
                         if (!e.offsetParent) continue;
+                        // Inhalt geschlossener Aufklappbereiche hat in
+                        // Chromium ein Layout, ist aber nicht zu sehen.
+                        const zu = e.closest('details:not([open])');
+                        if (zu && !e.closest('summary')) continue;
                         unten = Math.max(unten, e.getBoundingClientRect().bottom);
                       }
                       return Math.round(unten - nav.getBoundingClientRect().top);

@@ -359,6 +359,22 @@ eigene Reihenfolge.
 Nachrichten liegen wie alle Daten unverschlüsselt in der Datenbank des
 Add-ons. Mediendateien liegen unter `/data/media`.
 
+### Zugang, Nutzungsvereinbarung, Kataloge (ab 4.5.0)
+
+- **Bewerbung**: `#/bewerben`, verlinkt von der Anmeldung. Braucht einen
+  eingerichteten Mailversand (Bestätigungslink). Ein genanntes Mitglied
+  wird gefragt, ob es die Person kennt; die Administration entscheidet
+  unter **Administration → Bewerbungen** und braucht dafür einen Code aus
+  der Authenticator-App. Abschaltbar am selben Ort.
+- **Nutzungsvereinbarung**: Text und Fassung in `app/nutzung.py`. Eine neue
+  `VERSION` führt dazu, dass alle Mitglieder bei der nächsten Anfrage erneut
+  zustimmen. Der Text ist eine Vorlage, keine Rechtsberatung.
+- **Kataloge**: Kreise aus dem Gemeindeverzeichnis des Statistischen
+  Bundesamtes (`app/data/kreise.json`, neu erzeugbar mit
+  `tools/kreise_erzeugen.py`), Organisationen als Grundliste mit
+  Einreichungen, Wachen nur aus Einreichungen, Qualifikationen und Themen
+  kuratiert. Pflege unter **Administration → Kataloge**.
+
 ## 10. Technische Eckpunkte
 
 Python 3.12, FastAPI, SQLite über SQLAlchemy Core, Frontend ohne Framework

@@ -44,6 +44,12 @@ async function api(path, options = {}) {
     boot();
     throw new Error("Nicht angemeldet.");
   }
+  // Neue Fassung der Nutzungsvereinbarung: der Server lässt bis zur
+  // Zustimmung nur das Nötigste durch. boot() zeigt die Vereinbarung.
+  if (res.status === 428) {
+    boot();
+    throw new Error((data && data.detail) || "Bitte stimme der Nutzungsvereinbarung zu.");
+  }
   if (!res.ok) throw new Error((data && data.detail) || "Es ist ein Fehler aufgetreten.");
   return data;
 }
@@ -406,11 +412,23 @@ async function passkeyRegister(label) {
 function setShell(authenticated) {
   document.body.classList.toggle("auth", !authenticated);
   document.getElementById("nav").hidden = !authenticated;
-  // Der Verwaltungspunkt existiert nur, wenn er auch benutzbar ist. Ein
+  // Der Punkt Administration existiert nur, wenn er auch benutzbar ist. Ein
   // sichtbarer, aber abgewiesener Punkt wäre eine Einladung zum Rätseln.
   const adminTab = document.getElementById("tab-admin");
   if (adminTab) adminTab.hidden = !(authenticated && isAdmin());
+  const top = document.getElementById("g-top");
+  if (top) top.hidden = !authenticated;
 }
+
+/* Das Suchfeld unter dem Logo (breit) und in der Kopfzeile (schmal):
+   auf jeder Seite, führt zur Suche. */
+document.querySelectorAll("[data-suche]").forEach((f) => f.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const w = new FormData(f).get("q").trim();
+  f.reset();
+  f.querySelector("input").blur();
+  location.hash = "#/suche" + (w ? "?q=" + encodeURIComponent(w) : "");
+}));
 
 function authShell(title, inner) {
   setShell(false);
@@ -426,7 +444,8 @@ function authShell(title, inner) {
       </div>
       <p class="tiny muted" data-s="mt-xl center">
         Kompetenz. Erfahrung. Sicherheit.<br>
-        <a href="#/rechtliches">Impressum und Datenschutz</a></p>
+        <a href="#/rechtliches">Impressum und Datenschutz</a> ·
+        <a href="#/nutzungsbedingungen">Nutzungsvereinbarung</a></p>
     </div>`;
 }
 
@@ -455,6 +474,8 @@ function viewLogin() {
       <a class="btn-quiet small link-plain" href="#/passwort-vergessen"
          data-s="center link-plain">Passwort vergessen</a>
       <p class="tiny muted" id="login-error"></p>
+      <p class="small muted bew-hinweis" data-s="center">Noch kein Zugang?
+        <a href="#/bewerben">Um Zugang bewerben</a></p>
     </form>`);
 
   /* Ist dieses Gerät hinterlegt, wird gar kein Code gebraucht. Dann bleibt
@@ -569,8 +590,10 @@ function viewRegister(inviteCode, invite) {
          danach nur noch per Einladung dazukommen.</p>`}
     <form id="reg-form" class="stack" data-s="mt-lg">
       <div class="field-row">
-        <div class="field"><label for="rf">Vorname</label><input id="rf" name="first_name"></div>
-        <div class="field"><label for="rl">Nachname</label><input id="rl" name="last_name"></div>
+        <div class="field"><label for="rf">Vorname</label><input id="rf" name="first_name"
+          value="${esc((invite && invite.first_name) || "")}"></div>
+        <div class="field"><label for="rl">Nachname</label><input id="rl" name="last_name"
+          value="${esc((invite && invite.last_name) || "")}"></div>
       </div>
       <div class="field"><label for="rq">Qualifikation</label>
         <select id="rq" name="qualification">
@@ -592,6 +615,10 @@ function viewRegister(inviteCode, invite) {
         dich wahlweise damit anmelden.</p></div>
       <div class="field"><label for="rp">Passwort, mindestens 12 Zeichen</label>
         <input id="rp" type="password" name="password" autocomplete="new-password" required minlength="12"></div>
+      <label class="check confirm"><input type="checkbox" name="nutzung" required>
+        <span>Ich habe die <a href="#/nutzungsbedingungen" target="_blank" rel="noopener">Nutzungsvereinbarung</a>
+        gelesen und stimme ihr zu. Insbesondere teile ich nichts, was Patient*innen erkennbar
+        macht.</span></label>
       <button class="btn-primary btn-lg" type="submit">Konto anlegen</button>
       <p class="tiny muted" id="reg-error"></p>
     </form>`);
@@ -599,6 +626,8 @@ function viewRegister(inviteCode, invite) {
   $("#reg-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const fd = Object.fromEntries(new FormData(e.target));
+    fd.nutzung_akzeptiert = fd.nutzung === "on";
+    delete fd.nutzung;
     if (inviteCode) fd.invite_code = inviteCode;
     try {
       fd.pow = await arbeitsnachweis(fd.username);
@@ -733,7 +762,16 @@ const routes = {
   "/dashboard": viewDashboard,
   "/nachweise": viewProofs,
   "/profil": viewEigenesProfil,
-  "/verwaltung": viewAdmin,
+  "/administration": viewAdmin,
+  // Alte Lesezeichen aus der Zeit vor 4.5.0.
+  "/verwaltung": () => { location.replace("#/administration"); },
+  "/netzwerk": viewNetzwerk,
+  "/suche": viewSuche,
+  "/gespeichert": viewGespeichert,
+  "/themen": viewThemen,
+  "/fortbildung": viewFortbildung,
+  "/nutzungsbedingungen": viewNutzungsbedingungen,
+  "/bewerben": () => { location.replace("#/"); },
 };
 
 function currentRoute() {
@@ -766,9 +804,12 @@ async function render() {
   const markiert = {
     "/einsatz": "/einsaetze", "/neu": "/einsaetze", "/nachweise": "/einsaetze",
     "/dashboard": breit ? "/dashboard" : "/einsaetze",
-    "/beitrag": "/", "/tag": "/entdecken", "/einstellungen": "/profil",
+    "/beitrag": "/", "/tag": breit ? "/entdecken" : "/netzwerk",
+    "/einstellungen": "/profil", "/gespeichert": "/profil",
+    "/suche": breit ? "/entdecken" : "", "/themen": breit ? "/entdecken" : "/netzwerk",
+    "/fortbildung": "/einsaetze",
     "/person": params[0] && params[0] === (state.auth.user || {}).id ? "/profil" : "/entdecken",
-    "/protokoll": "/verwaltung",
+    "/protokoll": "/administration",
   }[path] || path;
   document.querySelectorAll("nav.tabbar a").forEach((a) => {
     if (a.dataset.route === markiert) a.setAttribute("aria-current", "page");
@@ -992,7 +1033,7 @@ async function viewLegal() {
    sie sitzt eine Ebene tiefer. */
 function logbuchKopf(aktiv) {
   const punkte = [["/einsaetze", "Einsätze"], ["/dashboard", "Auswertung"],
-    ["/nachweise", "Nachweise"]];
+    ["/nachweise", "Nachweise"], ["/fortbildung", "Fortbildung"]];
   return `<nav class="seg seg-links" aria-label="Logbuch">${punkte.map(([r, t]) =>
     `<a class="seg-item link-plain" href="#${r}"${r === aktiv
       ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>`;
@@ -2430,11 +2471,13 @@ async function viewAdmin() {
      serverseitig selbst und verlangt für Eingriffe einen frischen Code. */
   if (!isAdmin()) { location.hash = "#/"; return; }
   app().innerHTML = `
-    <div class="page-head"><h1>Verwaltung</h1>
-      <p class="muted small">Konten, Einladungen und Betrieb. Jeder Eingriff
-      verlangt einen aktuellen Code aus der Authenticator-App und landet im
-      Änderungsprotokoll.</p></div>
+    <div class="page-head"><h1>Administration</h1>
+      <p class="muted small">Konten, Bewerbungen, Kataloge und Betrieb. Jeder Eingriff
+      in fremde Zugänge verlangt einen aktuellen Code aus der Authenticator-App und
+      landet im Änderungsprotokoll.</p></div>
+    <div id="admin-bewerbungen"></div>
     <div id="admin-area"></div>
+    <div id="admin-katalog"></div>
     <div class="card pad-lg" data-s="mt-md">
       <h2>Stammdaten</h2>
       <p class="small muted" data-s="mt-sm">Änderungen wirken nur auf neue
@@ -2489,6 +2532,8 @@ async function viewAdmin() {
     ${pageFoot()}`;
   bindeAdminWerkzeuge();
   renderAdmin();
+  renderBewerbungen();
+  renderKatalogAdmin();
 }
 
 /* Stammdaten, rechtliche Angaben und Sicherung standen bis 4.3 im Profil
@@ -2578,8 +2623,8 @@ async function viewEinstellungen() {
       <p class="muted small">${esc(anzeigename)} · ${o.encounters} Einsätze ·
         ${o.attempts} Maßnahmen im Logbuch</p>
     </div>
-    ${isAdmin() ? `<a class="settings-link link-plain" href="#/verwaltung">
-      <strong>Verwaltung</strong><span class="tiny muted">Konten, Einladungen, Stammdaten,
+    ${isAdmin() ? `<a class="settings-link link-plain" href="#/administration">
+      <strong>Administration</strong><span class="tiny muted">Konten, Bewerbungen, Kataloge, Stammdaten,
       Sicherung</span></a>` : ""}
 
     <div class="seg" role="tablist" aria-label="Einstellungsbereiche" id="prof-seg">
@@ -2882,6 +2927,7 @@ async function viewEinstellungen() {
 
   renderPasskeys();
   bindeNetzProfil();
+  bindeOrt(np);
 
   /* Die Karten tragen ihre Gruppe nach Überschrift, nicht nach Position:
      eine eingeschobene Karte sortiert sich über ihre Überschrift richtig
@@ -2893,6 +2939,7 @@ async function viewEinstellungen() {
     "Erfassung": "erfassung",
     "Änderungsprotokoll": "daten", "Deine Daten": "daten",
     "Kompetenznetz": "netz", "Profilbilder": "netz", "Vorstellung": "netz",
+    "Region und Wache": "netz", "Qualifikationen und Kurse": "netz",
     "Kompetenzen freigeben": "netz", "Werdegang und Zertifikate": "netz",
     "Blockiert": "netz",
   };
@@ -3306,6 +3353,8 @@ function publicRoute() {
     return true;
   }
   if (path === "/passwort-vergessen") { viewForgotPassword(); return true; }
+  if (path === "/bewerben") { viewBewerben(query.get("token")); return true; }
+  if (path === "/nutzungsbedingungen") { viewNutzungsbedingungen(); return true; }
   if (path === "/rechtliches") {
     setShell(false);
     viewLegal();
@@ -3327,6 +3376,7 @@ async function boot() {
     const totp = await api("/api/auth/totp/setup");
     return viewTotpSetup(totp);
   }
+  if (auth.nutzung_offen) return viewNutzungZustimmen();
   setShell(true);
   await loadCatalogs();
   resetIdleTimer();

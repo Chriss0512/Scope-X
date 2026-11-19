@@ -13,7 +13,9 @@ from fastapi.responses import (
     PlainTextResponse,
 )
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
+from . import kataloge as katalogdaten
 from .core import base_url, sweep_locks
 from .db import conn, migrate, normalize_legacy_outcomes, q
 from .routers import (
@@ -32,7 +34,6 @@ from .routers import (
     stats,
     zugang,
 )
-from . import kataloge as katalogdaten
 from .seed import seed_if_empty
 
 log = logging.getLogger("scopex")
@@ -41,7 +42,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 # Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
 # vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
 # nichts den Abgleich erzwang.
-APP_VERSION = "4.4.0"
+APP_VERSION = "4.5.0"
 
 
 @asynccontextmanager
@@ -162,7 +163,12 @@ def security_txt():
     return PlainTextResponse("\n".join(zeilen) + "\n")
 
 
-app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="assets")
+# Komprimiert wird nur unter /assets: Skripte und Stile schrumpfen auf ein
+# Viertel. API-Antworten bleiben unkomprimiert, weil Kompression bei
+# Antworten, die Geheimnisse und Eingaben zugleich enthalten, Angriffe nach
+# Art von BREACH erlaubt.
+app.mount("/assets", GZipMiddleware(StaticFiles(directory=STATIC_DIR), minimum_size=1024),
+          name="assets")
 
 
 @app.get("/{full_path:path}")

@@ -56,10 +56,14 @@ def _darf_ort_sehen(c, ich: str, p: dict) -> bool:
 
 
 def _quals(c, uid: str) -> set[str]:
+    """Gültige Kurse und Funktionen. Abgelaufene zählen nicht: andere
+    sollen aus einem Vorschlag nicht auf sie schließen können."""
+    monat = datetime.now(timezone.utc).strftime("%Y-%m")
     return {r_["qual_id"] for r_ in rows(
         c, "SELECT u.qual_id FROM net_user_qualifications u JOIN net_qualifications k "
            "ON k.id = u.qual_id WHERE u.user_id = :u AND k.kategorie <> "
-           "'Berufsabschluss'", u=uid)}
+           "'Berufsabschluss' AND (u.gueltig_bis IS NULL OR u.gueltig_bis >= :m)",
+        u=uid, m=monat)}
 
 
 def vorschlaege_fuer(c, ich: str, anzahl: int = 12) -> list[dict]:
@@ -127,7 +131,7 @@ def vorschlaege_fuer(c, ich: str, anzahl: int = 12) -> list[dict]:
         bewertet.append((punkte, p, [g[1] for g in gruende[:2]]))
     bewertet.sort(key=lambda x: (-x[0], nk.anzeigename(x[1])))
     aus = []
-    for punkte, p, gruende in bewertet[:anzahl]:
+    for _, p, gruende in bewertet[:anzahl]:
         person = nk.person_kurz(c, ich, p)
         person["gruende"] = gruende
         person["grund"] = gruende[0] if gruende else "Im Netz"

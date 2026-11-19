@@ -20,7 +20,7 @@ from .. import medien
 from .. import netzkern as nk
 from ..core import audit, current_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
-from .kataloge import ort_aus, qualifikationen_von
+from .kataloge import ablauf_erinnern, ort_aus, qualifikationen_von
 
 router = APIRouter(prefix="/api/netz", tags=["netz"])
 log = logging.getLogger("scopex.netz")
@@ -158,6 +158,11 @@ def profil_speichern(data: ProfilIn, user=Depends(current_user)):
                 q(c, "UPDATE net_follows SET status = 'aktiv', accepted_at = :t "
                      "WHERE followee_id = :u AND status = 'angefragt'",
                   t=now_iso(), u=user["id"])
+                # Ignorierte Anfragen hingen bei einem öffentlichen Konto
+                # ewig auf „angefragt“. Sie fallen weg; wer möchte, kann
+                # nun einfach folgen.
+                q(c, "DELETE FROM net_follows WHERE followee_id = :u AND "
+                     "status = 'ignoriert'", u=user["id"])
     return eigenes_profil(user)
 
 
@@ -766,8 +771,13 @@ def mitteilungen_gelesen(user=Depends(current_user)):
 
 @router.get("/zaehler")
 def zaehler(user=Depends(current_user)):
-    """Ungelesene Mitteilungen und Nachrichten für die Leiste."""
+    """Ungelesene Mitteilungen und Nachrichten für die Leiste.
+
+    Legt nebenbei die Erinnerung an ablaufende Qualifikationen an: die
+    Leiste wird bei jedem Seitenwechsel abgefragt, höchstens alle 30
+    Sekunden, und braucht dafür keinen Hintergrunddienst."""
     with conn() as c:
+        ablauf_erinnern(c, user["id"])
         m = scalar(c, "SELECT COUNT(*) FROM net_notifications WHERE user_id = :u "
                       "AND read_at IS NULL", u=user["id"]) or 0
         n = scalar(c, "SELECT COUNT(DISTINCT n.conversation_id) FROM net_messages n "
@@ -822,7 +832,10 @@ def auskunft(c, uid: str) -> dict:
                               "WHERE author_id = :u", u=uid),
         "gefaellt_mir": rows(c, "SELECT post_id, created_at FROM net_likes "
                                 "WHERE user_id = :u", u=uid),
-        "folge_ich": [{"wem": name(f["followee_id"]), "status": f["status"],
+        # Dass eine Anfrage ignoriert wurde, ist die Entscheidung der
+        # anderen Person; auch die Auskunft zeigt sie als offen.
+        "folge_ich": [{"wem": name(f["followee_id"]),
+                       "status": "angefragt" if f["status"] == "ignoriert" else f["status"],
                        "seit": f["created_at"]}
                       for f in rows(c, "SELECT * FROM net_follows WHERE "
                                        "follower_id = :u", u=uid)],

@@ -215,12 +215,12 @@ def bewerben(data: BewerbungIn, request: Request):
                 # sichtbar, die Person erfährt nichts davon.
                 buerge_status, buerge_text = "nicht_gefunden", data.buerge.strip()[:200]
 
-        felder = dict(
-            f=data.first_name.strip(), l=data.last_name.strip(), e=email,
-            q=data.qualification.strip(), k=data.kreis_ags or None,
-            o=data.organisation.strip() or None, w=data.wache.strip() or None,
-            m=data.motivation.strip() or None, si=buerge_id, ss=buerge_status,
-            st=buerge_text, h=token_hash(token), ip=ip, t=now_iso())
+        felder = {
+            "f": data.first_name.strip(), "l": data.last_name.strip(), "e": email,
+            "q": data.qualification.strip(), "k": data.kreis_ags or None,
+            "o": data.organisation.strip() or None, "w": data.wache.strip() or None,
+            "m": data.motivation.strip() or None, "si": buerge_id, "ss": buerge_status,
+            "st": buerge_text, "h": token_hash(token), "ip": ip, "t": now_iso()}
         if vorhanden:
             # Erneut abgeschickt, bevor bestätigt wurde: Angaben und Link
             # werden erneuert, der alte Link verfällt.

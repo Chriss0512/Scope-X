@@ -107,7 +107,7 @@ QUALIFIKATIONEN = [
     ("pflege", "Pflegefachfrau/Pflegefachmann", "Pflege", "Berufsabschluss", "", None, None, ""),
     ("fk-ai", "Fachpflege Anästhesie und Intensivpflege", "Fachpflege A/I",
      "Berufsabschluss", "", None, None, ""),
-    ("pal", "Praxisanleiter*in Rettungsdienst", "PAL", "Funktion und Zusatzqualifikation",
+    ("pal", "Praxisanleiter*in Rettungsdienst", "Praxisanleitung", "Funktion und Zusatzqualifikation",
      "", None, 24, "NotSan-APrV § 3: 300 Std. Zusatzqualifikation, "
      "24 Std. berufspädagogische Fortbildung jährlich"),
     ("orgl", "Organisatorische*r Leiter*in Rettungsdienst", "OrgL",

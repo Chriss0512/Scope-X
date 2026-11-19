@@ -168,6 +168,14 @@ check("Andere sehen keine Ablaufdaten",
 check("Abzeichen im Profilkopf", "PHTLS" in p["abzeichen"] and "ERC ALS" not in
       p["abzeichen"], p["abzeichen"])
 
+anna.get("/api/netz/zaehler")
+check("Erinnerung an abgelaufene Qualifikation", any(
+    m["art"] == "qualifikation" and "ERC ALS" in m["text"]
+    for m in anna.get("/api/netz/mitteilungen").json()["mitteilungen"]))
+anna.get("/api/netz/zaehler")
+check("Erinnerung nur einmal", sum(
+    m["art"] == "qualifikation"
+    for m in anna.get("/api/netz/mitteilungen").json()["mitteilungen"]) == 1)
 r = anna.post("/api/netz/fortbildungen", json={"titel": "Pädagogischer Fachtag",
     "datum": f"{_t.gmtime().tm_year}-02-10", "stunden": 8, "qual_id": PAL})
 check("Fortbildung eingetragen", r.json()["summe"] == 8, r.json())
@@ -217,6 +225,9 @@ check("Ignoriert: für Dora weiter „angefragt“",
       dora.get(f"/api/netz/personen/{BEN}").json()["ich_folge"] == "angefragt")
 check("Ignoriert: kein Signal in Doras Netzwerk",
       "ignoriert" not in dora.get("/api/netz/netzwerk").text.replace('"ignoriert":[]', ""))
+check("Ignoriert: Auskunft der Anfragenden zeigt „angefragt“", all(
+    f["status"] != "ignoriert"
+    for f in dora.get("/api/exports/my-data").json()["netzwerk"]["folge_ich"]))
 r = ben.post(f"/api/netz/follower/{DORA}/annehmen")
 check("Ignorierte Anfrage später annehmbar", r.status_code == 200)
 
@@ -405,6 +416,7 @@ r = anna.post("/api/account/delete", json={"password": "einsatzprotokoll2026",
                                            "confirm": "LÖSCHEN"})
 check("Konto gelöscht", r.status_code == 200, r.text[:120])
 from app.db import conn, scalar  # noqa: E402
+
 with conn() as c:
     rest = sum(scalar(c, f"SELECT COUNT(*) FROM {t} WHERE user_id = :u", u=ANNA) or 0
                for t in ("net_user_qualifications", "net_fortbildungen",
