@@ -15,6 +15,7 @@ from ..seed import (
     DELEGATIONS,
     DIVI_GROUPS,
     DIVI_LABELS,
+    DIVI_WEISSE_SCHRIFT,
     NACA_LEVELS,
     OUTCOMES,
     PATIENT_HARM,
@@ -48,6 +49,7 @@ def constants():
         "qualifications": QUALIFICATIONS,
         "divi_groups": DIVI_GROUPS,
         "divi_labels": DIVI_LABELS,
+        "divi_weisse_schrift": DIVI_WEISSE_SCHRIFT,
     }
 
 

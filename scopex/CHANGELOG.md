@@ -3,6 +3,59 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.7.0
+
+MINOR: neues Erscheinungsbild nach dem Markenhandbuch 2.0 und eine
+Migration (`0013_divi_relaxantien`). Endpunkte, Sicherungsformat und
+Add-on-Optionen bleiben unverändert.
+
+### Markenhandbuch 2.0
+
+- Das Handbuch liegt überarbeitet im Repo unter `brand/`
+  (`SCOPE_X_Markenhandbuch.pdf`, Quelle in `brand/handbuch/`). Berichtigt
+  sind Inhaltsverzeichnis, DIVI-Darstellung, Kontrastwerte, Kontakt und
+  die Beschreibung der Module; Dosierungs- und SOP-Beispiele sind
+  entfernt, nicht gebaute Funktionen als geplant markiert.
+- Neues Logo als Vektordatei in allen Varianten (Primär, horizontal,
+  kompakt, Zeichen, App-Icon, einfarbig, hell und dunkel), Favicons in
+  16 bis 64 px, App-Icons, Bilder für den Add-on-Store. Alles erzeugt
+  `tools/marke_erzeugen.py`.
+
+### Oberfläche
+
+- **Neues Zeichen** in Navigation, Kopfzeile, leeren Zuständen und als
+  Favicon; Wortmarke in Inter ExtraBold.
+- **Größere Schrift:** Fließtext 16 px, Seitentitel 32 px, Kartentitel
+  20 px. Kein Text in der Oberfläche ist mehr kleiner als 14 px.
+- **Farben nach Handbuch:** jede Signalfarbe mit Textwert (mindestens 5 : 1)
+  und Flächenwert, neue Werte für den Dunkelmodus. Frustran trägt jetzt
+  weiße Schrift auf dunklerem Orange. Alle xABCDE-Buchstaben in der
+  Fallvorstellung tragen ihre Kategoriefarbe.
+- Radien 2 / 4 / 8 / 12 / 16 px, Schatten und Abstände als Tokens; Icons
+  einheitlich mit 2 px Strich.
+- Anmeldeseite und „Über SCOPE X“ kennzeichnen die erweiterte Beta und
+  die private Initiative.
+
+### DIVI-Etiketten
+
+- **Rocuronium und Vecuronium** stehen in der neuen Gruppe
+  „Muskelrelaxantien, nichtdepolarisierend“: obere Hälfte weiß, untere
+  warmrot, schwarze Schrift. Vorher waren die Hälften vertauscht.
+  Bestehende Installationen werden umgestellt, sofern die Zuordnung im
+  Katalog nicht selbst geändert wurde.
+- **Relaxans-Antagonisten** tragen zusätzlich den schwarzen Querstrich,
+  **Protamin** weißen Grund mit schwarz-weiß gestreiftem Rand.
+- **Weiße Schrift** nur noch bei Suxamethonium und Midazolam, mit feiner
+  dunkler Kontur für die Lesbarkeit. Auf Streifen liegt der Name auf einer
+  Unterlage in der Grundfarbe.
+- Mindestgröße der Etikettenschrift 12 px.
+
+### Nachweis als PDF
+
+- Schrift Inter statt Helvetica, damit auch Namen mit Zeichen außerhalb
+  von Latin-1 richtig erscheinen; neues Logo im Kopf.
+- Fußzeile „Selbstdokumentation, erstellt mit SCOPE X“ mit Seite x von y.
+
 ## 4.6.0
 
 MINOR: neue Funktionen und eine Migration (`0012_schutz_empfehlungen`).

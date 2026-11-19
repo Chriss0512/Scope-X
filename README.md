@@ -5,7 +5,8 @@
 Das Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst – mit einem
 geschlossenen Fachnetzwerk für Lernen, Praxisanleitung und kollegiale
 Unterstützung. Selbst betrieben als Add-on für Home Assistant, ohne Cloud,
-ohne Werbung, ohne Tracking.
+ohne Werbung, ohne Tracking. Eine private Initiative, derzeit in der
+erweiterten Beta.
 
 ---
 
@@ -88,8 +89,9 @@ Installation ist ein geschlossener Kreis.
   portablem SQL; Migrationen laufen beim Start automatisch.
 - **Frontend**: Vanilla JavaScript ohne Build-Schritt und ohne Framework –
   die Anwendung soll in fünf Jahren noch starten, ohne dass jemand eine
-  Abhängigkeitskette aktualisieren muss. Gestaltung nach einem eigenen
-  Designsystem, mobil wie am Rechner.
+  Abhängigkeitskette aktualisieren muss. Gestaltung nach dem eigenen
+  Markenhandbuch (`brand/SCOPE_X_Markenhandbuch.pdf`), mobil wie am
+  Rechner. Logo, Icons und Farben liegen als Dateien in `brand/`.
 - **Medien**: Bilder werden neu berechnet (Metadaten wie Aufnahmeort
   verschwinden), Videos mit ffmpeg neu codiert, Eingabeformate und
   Protokolle streng begrenzt.

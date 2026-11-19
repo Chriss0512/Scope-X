@@ -231,28 +231,19 @@ function lockChip(lock) {
   return `<span class="lock-chip open" title="Bearbeitbar bis zum Ablauf der Frist">${esc(label)} änderbar</span>`;
 }
 
-/* Unvollständiger Scope-Ring. Als Wortmarke links neben der Schrift, als
-   Hintergrundmotiv mit niedriger Deckkraft, als ruhiges Zeichen in leeren
-   Zuständen. Immer dieselbe Geometrie, nie dekorativ überlagert. */
+/* Das Zeichen aus dem Markenhandbuch: Fadenkreuz aus vier Ringsegmenten
+   mit Strichmarken, in der Mitte das X aus zwei Winkeln. Die Farben kommen
+   über Klassen aus dem Stylesheet, damit es auf Navy, Weiß und im
+   Dunkelmodus ohne zweite Fassung funktioniert. */
 function markSvg(cls = "mark") {
-  return `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true">
-    <g fill="none" stroke-width="10" stroke-linecap="round" transform="rotate(-90 50 50)">
-      <circle cx="50" cy="50" r="38" stroke="var(--petrol)" stroke-dasharray="68 170.76"/>
-      <circle cx="50" cy="50" r="38" stroke="var(--cyan)" stroke-dasharray="52 186.76"
-              stroke-dashoffset="-96"/>
-      <circle cx="50" cy="50" r="38" stroke="var(--cyan)" opacity=".45"
-              stroke-dasharray="26 212.76" stroke-dashoffset="-172"/>
-    </g></svg>`;
+  return `<svg class="${cls}" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke-width="7"><path class="ma" d="M17.01 41.77A34 34 0 0 1 41.77 17.01"/><path class="mb" d="M58.23 17.01A34 34 0 0 1 82.99 41.77"/><path class="ma" d="M82.99 58.23A34 34 0 0 1 58.23 82.99"/><path class="mb" d="M41.77 82.99A34 34 0 0 1 17.01 58.23"/></g><path class="mt" d="M50 3V22M50 78V97M3 50H22M78 50H97" fill="none" stroke-width="5"/><polygon class="mi" points="27,30 39,30 49.4,50 39,70 27,70 37.4,50"/><polygon class="mx" points="73,30 61,30 50.6,50 61,70 73,70 62.6,50"/></svg>`;
 }
 
 function ringBg() {
   return `<svg class="ring-bg" viewBox="0 0 100 100" aria-hidden="true">
-    <g fill="none" stroke-width="3.4" stroke-linecap="round" transform="rotate(-90 50 50)">
-      <circle cx="50" cy="50" r="44" stroke="currentColor" stroke-dasharray="80 196.4"/>
-      <circle cx="50" cy="50" r="44" stroke="currentColor" stroke-dasharray="60 216.4"
-              stroke-dashoffset="-110"/>
-      <circle cx="50" cy="50" r="33" stroke="currentColor" stroke-dasharray="44 163.4"
-              stroke-dashoffset="-58"/>
+    <g fill="none" stroke="currentColor" stroke-width="4">
+      <path d="M8.20 39.58A44 44 0 0 1 39.58 8.20"/><path d="M60.42 8.20A44 44 0 0 1 91.80 39.58"/>
+      <path d="M91.80 60.42A44 44 0 0 1 60.42 91.80"/><path d="M39.58 91.80A44 44 0 0 1 8.20 60.42"/>
     </g></svg>`;
 }
 
@@ -271,10 +262,16 @@ const STATUS_CLASS = {
 /* Bildet das Spritzenetikett ab, wie es auf der Spritze aussieht:
    Hintergrundfarbe der Wirkungsgruppe, Wirkstoffname in Versalien, darunter
    optional die Konzentration. Schrägstreifen kennzeichnen Antagonisten,
-   zweifarbige Etiketten die nichtdepolarisierenden Relaxanzien.
+   der schwarze Querstrich die Relaxans-Antagonisten, die weiße obere Hälfte
+   die nichtdepolarisierenden Relaxantien. Weiße Schrift nur bei den
+   Wirkstoffen, die die DIVI-Empfehlung nennt (Markenhandbuch, Kapitel 07).
 
    Reine Abbildung zur Wiedererkennung. SCOPE X erzeugt keine druckbaren
    Etiketten und ist keine Etikettierungsreferenz. */
+function diviHell(med) {
+  return (state.constants.divi_weisse_schrift || []).includes(med.name);
+}
+
 function diviLabel(med, strength) {
   const style = (state.constants.divi_labels || {})[med.divi_group];
   if (!style) {
@@ -283,7 +280,7 @@ function diviLabel(med, strength) {
   }
   // Farbe kommt über data-divi aus dem Stylesheet. Ein style-Attribut wäre
   // von der Content-Security-Policy blockiert und stillschweigend wirkungslos.
-  return `<span class="divi-label pattern-${esc(style.pattern)}"
+  return `<span class="divi-label pattern-${esc(style.pattern)}${diviHell(med) ? " hell" : ""}"
     data-divi="${esc(style.slug)}" title="${esc(med.divi_group)}">
     <span class="name">${esc(med.name.toUpperCase())}</span>${
       strength ? `<span class="strength">${esc(strength)}</span>` : ""}
@@ -438,13 +435,14 @@ function authShell(title, inner) {
       <div class="auth-head">
         ${wordmark("lg")}
         <p class="claim">Das Maßnahmen- und Kompetenzlogbuch<br>für den Rettungsdienst</p>
+        <span class="beta-badge">Erweiterte Beta</span>
       </div>
       <div class="card pad-lg">
         <h2>${esc(title)}</h2>
         <div data-s="mt-lg">${inner}</div>
       </div>
       <p class="tiny muted" data-s="mt-xl center">
-        Kompetenz. Erfahrung. Sicherheit.<br>
+        SCOPE X ist eine private Initiative in der erweiterten Beta.<br>
         <a href="#/ueber">Über SCOPE X</a> ·
         <a href="#/rechtliches">Impressum und Datenschutz</a> ·
         <a href="#/nutzungsbedingungen">Nutzungsvereinbarung</a></p>
@@ -1943,7 +1941,9 @@ function medicationPicker(enc) {
         return `
         <button class="picktile" data-med="${esc(m.id)}"
           ${stil ? `data-divi="${esc(stil.slug)}"` : ""}>
-          <span class="t-divi">${esc(m.divi_group || "ohne Etikettengruppe")}</span>
+          <span class="t-divi${stil ? ` pattern-${esc(stil.pattern)}` : ""}${
+            stil && diviHell(m) ? " hell" : ""}"><span>${
+            esc(m.divi_group || "ohne Etikettengruppe")}</span></span>
           <span class="t-name">${esc(m.name)}</span>
         </button>`;
       }).join("") ||

@@ -955,6 +955,16 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         "CREATE UNIQUE INDEX ix_ref_code ON referrals(code_hash)",
         "CREATE INDEX ix_ref_creator ON referrals(created_by, created_at)",
     ]),
+    # Markenhandbuch 2.0, Kapitel 07: nichtdepolarisierende Relaxantien
+    # bekommen ihre eigene Etikettengruppe (obere Haelfte weiss). Nur dort,
+    # wo noch die ausgelieferte Zuordnung steht; eigene Aenderungen im
+    # Katalog bleiben unberuehrt.
+    ("0013_divi_relaxantien", [
+        "UPDATE medications SET divi_group = "
+        "'Muskelrelaxantien, nichtdepolarisierend' "
+        "WHERE divi_group = 'Muskelrelaxantien' "
+        "AND name IN ('Rocuronium', 'Vecuronium')",
+    ]),
 ]
 
 

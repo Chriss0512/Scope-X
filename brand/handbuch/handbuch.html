@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>SCOPE X Markenhandbuch</title>
+<link rel="stylesheet" href="handbuch.css">
+</head>
+<body>
+
+<!-- ============================================================ 1 Titel -->
+<section class="seite titel">
+  {{motiv}}
+  <div class="titel-logo">{{svg:logo_primary_dark}}</div>
+  <div class="strich" style="margin-top:14mm"></div>
+  <h1 style="font-size:34pt">Markenhandbuch</h1>
+  <p class="lead" style="font-size:12pt;color:var(--petrol);font-weight:600;margin-bottom:3mm">
+    Das Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst</p>
+  <p class="klein" style="margin-bottom:8mm">Version 2.0 · November 2026 · gilt ab SCOPE X 4.7.0 ·
+    ersetzt Version 1.0</p>
+
+  <p class="lead">Dieses Handbuch legt die verbindlichen Regeln für die Marke <strong>SCOPE X</strong>
+    fest: Logo, Farben, Schrift, Komponenten, Sprache und die Abbildung von Spritzenetiketten
+    nach DIVI. Es gilt für die App, für Nachweise und für alles, was über SCOPE X nach außen
+    geht. Die Werte in diesem Handbuch sind dieselben, die in der App hinterlegt sind.</p>
+
+  <div class="raster r2" style="margin-top:6mm">
+    <div class="karte">
+      <h2>SCOPE X – die Marke</h2>
+      <div class="inhalt">
+        <p>SCOPE X steht für einen ganzheitlichen, kompetenzorientierten Blick auf die Arbeit im
+          Rettungsdienst. Der Name trägt sechs Dimensionen:</p>
+        <table class="dimensionen">
+          <tr><td><b class="buchst">S</b></td><td><strong>Skills</strong><br><span class="klein">praktische Fertigkeiten und einsatzrelevante Fähigkeiten</span></td></tr>
+          <tr><td><b class="buchst">C</b></td><td><strong>Competencies</strong><br><span class="klein">fachliche und nicht-fachliche Handlungskompetenzen</span></td></tr>
+          <tr><td><b class="buchst">O</b></td><td><strong>Outcomes</strong><br><span class="klein">messbare Ergebnisse und Qualität der Versorgung</span></td></tr>
+          <tr><td><b class="buchst">P</b></td><td><strong>Procedures</strong><br><span class="klein">Maßnahmen, so dokumentiert, wie sie durchgeführt wurden</span></td></tr>
+          <tr><td><b class="buchst">E</b></td><td><strong>Emergency</strong><br><span class="klein">der Einsatz als Bezugsrahmen, nicht als Datensatz</span></td></tr>
+          <tr><td><b class="buchst x">X</b></td><td><strong>eXperience</strong><br><span class="klein">Erfahrung, Erkenntnisse und kontinuierliches Lernen</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Inhalt</h2>
+      <div class="inhalt">
+        <table class="toc">
+          <tr><td class="n">01</td><td>Markenidentität &amp; Logo</td><td class="r">02</td></tr>
+          <tr><td class="n">02</td><td>Farbwelt</td><td class="r">03</td></tr>
+          <tr><td class="n">03</td><td>Typografie, Raster &amp; Form</td><td class="r">04</td></tr>
+          <tr><td class="n">04</td><td>UI-Komponenten</td><td class="r">05</td></tr>
+          <tr><td class="n">05</td><td>Module der App</td><td class="r">06</td></tr>
+          <tr><td class="n">06</td><td>Sprache &amp; Inhalte</td><td class="r">07</td></tr>
+          <tr><td class="n">07</td><td>Medikamentenkennzeichnung nach DIVI</td><td class="r">08</td></tr>
+          <tr><td class="n">08</td><td>Nachweise, PDF &amp; Barrierefreiheit</td><td class="r">09</td></tr>
+          <tr><td class="n">09</td><td>Implementierungsanhang</td><td class="r">10</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="hinweis lime"><strong>Private Initiative · erweiterte Beta.</strong>
+      SCOPE X wird privat entwickelt und betrieben, ohne Werbung, ohne Tracking und ohne
+      Weitergabe an Dritte. Funktionen können sich in der Beta noch ändern.</div>
+    <div class="hinweis"><strong>Was SCOPE X nicht ist.</strong> SCOPE X gibt keine Indikationen,
+      Dosierungen oder Algorithmen vor und ersetzt keine SOP, Leitlinie oder ärztliche
+      Anordnung. Es dokumentiert, was getan wurde.</div>
+  </div>
+  {{fuss:01}}
+</section>
+
+<!-- ============================================================ 2 Logo -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">01</span>Markenidentität &amp; Logo</h1>
+  <div class="strich"></div>
+  <p class="lead">Das Logo ist der wichtigste Wiedererkennungspunkt von SCOPE X. Es wird nur aus
+    den Originaldateien verwendet, nie nachgebaut, und nie verändert.</p>
+
+  <div class="raster r12">
+    <div class="karte">
+      <h2>Kernidee</h2>
+      <div class="inhalt">
+        <div class="flaeche cool" style="height:30mm;margin-bottom:2.5mm">{{svg:logo_symbol_dark}}</div>
+        <p><strong>Fadenkreuz</strong> – der Fokus auf die einzelne Maßnahme. Die vier Strichmarken
+          richten den Blick, die vier Ringsegmente stehen für Erfahrung, Kompetenz, Dokumentation
+          und Austausch.</p>
+        <p><strong>Das X</strong> entsteht aus zwei Winkeln: der eigene Weg in Navy, der Fortschritt
+          in Lime. Sie berühren sich in der Mitte, ohne zu verschmelzen.</p>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Logo-System <small>Dateien in brand/, Benennung siehe Kapitel 09</small></h2>
+      <div class="inhalt">
+        <div class="raster" style="grid-template-columns:1.55fr 1fr;gap:3mm">
+          <div><div class="flaeche weiss" style="height:25mm;padding:3mm 5mm">{{svg:logo_primary_dark}}</div>
+            <div class="unter">Primärlogo mit Claim · logo_primary</div></div>
+          <div><div class="flaeche weiss" style="height:25mm;padding:3mm 6mm">{{svg:logo_compact_dark}}</div>
+            <div class="unter">Kompaktlogo · logo_compact</div></div>
+          <div><div class="flaeche weiss" style="height:17mm;padding:3mm 9mm">{{svg:logo_horizontal_dark}}</div>
+            <div class="unter">Horizontal ohne Claim · logo_horizontal</div></div>
+          <div class="raster" style="grid-template-columns:1fr 1fr 1fr;gap:2mm">
+            <div><div class="flaeche weiss" style="height:17mm;padding:2mm">{{svg:logo_symbol_dark}}</div>
+              <div class="unter">Zeichen</div></div>
+            <div><div class="flaeche weiss" style="height:17mm;padding:2mm">{{svg:icon_app}}</div>
+              <div class="unter">App-Icon</div></div>
+            <div><div class="flaeche weiss" style="height:17mm;padding:2mm">{{svg:logo_symbol_mono}}</div>
+              <div class="unter">Monochrom</div></div>
+          </div>
+          <div><div class="flaeche navy" style="height:17mm;padding:3mm 9mm">{{svg:logo_horizontal_light}}</div>
+            <div class="unter">Negativ auf Deep Navy · Variante light</div></div>
+          <div><div class="flaeche weiss" style="height:17mm;padding:3mm 9mm">{{svg:logo_horizontal_mono}}</div>
+            <div class="unter">Einfarbig · Variante mono</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r3" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Schutzzone</h2>
+      <div class="inhalt">
+        <div class="schutz">
+          <div class="schutz-rahmen">{{svg:logo_horizontal_dark}}</div>
+        </div>
+        <p class="klein" style="margin-top:2mm">Rundum frei bleibt mindestens die halbe Höhe des
+          Zeichens (<b>½ Z</b>). In der Navigation darf die Schutzzone auf ¼ Z schrumpfen.</p>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Mindestgrößen</h2>
+      <div class="inhalt">
+        <table>
+          <tr><th>Variante</th><th class="r">Bildschirm</th><th class="r">Druck</th></tr>
+          <tr><td>Primär mit Claim</td><td class="r">240 px</td><td class="r">50 mm</td></tr>
+          <tr><td>Horizontal</td><td class="r">120 px</td><td class="r">30 mm</td></tr>
+          <tr><td>Kompakt</td><td class="r">64 px</td><td class="r">18 mm</td></tr>
+          <tr><td>Zeichen, Icon</td><td class="r">24 px</td><td class="r">8 mm</td></tr>
+          <tr><td>Favicon</td><td class="r">16 / 32 px</td><td class="r">–</td></tr>
+        </table>
+        <p class="mini" style="margin-top:1.5mm">Unter 32 px gilt das vereinfachte Favicon ohne
+          Strichmarken (icon_favicon.svg).</p>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Claim</h2>
+      <div class="inhalt">
+        <p><strong>„Das Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst“</strong></p>
+        <ul class="liste">
+          <li>mit dem Primärlogo, auf der Anmeldeseite, unter „Über SCOPE X“ und auf Nachweisen</li>
+          <li>nie in Navigation, App-Icon oder Favicon</li>
+          <li>„Erweiterte Beta“ steht als Badge neben dem Logo, nie im Logo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" style="margin-top:4mm">
+    <h2>Richtig und falsch</h2>
+    <div class="inhalt">
+      <div class="dont-raster">
+        <div class="do"><div class="flaeche weiss">{{svg:logo_horizontal_dark}}</div><span class="ok">✓ Original auf Weiß</span></div>
+        <div class="do"><div class="flaeche navy">{{svg:logo_horizontal_light}}</div><span class="ok">✓ Negativ auf Navy</span></div>
+        <div class="dont"><div class="flaeche weiss"><div class="verzerrt">{{svg:logo_horizontal_dark}}</div></div><span>✕ verzerren</span></div>
+        <div class="dont"><div class="flaeche weiss"><div class="umgefaerbt">{{svg:logo_horizontal_dark}}</div></div><span>✕ umfärben</span></div>
+        <div class="dont"><div class="flaeche weiss"><div class="schatten">{{svg:logo_horizontal_dark}}</div></div><span>✕ Effekte</span></div>
+        <div class="dont"><div class="flaeche cyan">{{svg:logo_horizontal_dark}}</div><span>✕ zu wenig Kontrast</span></div>
+        <div class="dont"><div class="flaeche weiss"><div class="gedreht">{{svg:logo_horizontal_dark}}</div></div><span>✕ drehen</span></div>
+      </div>
+    </div>
+  </div>
+  {{fuss:02}}
+</section>
+
+<!-- ============================================================ 3 Farbe -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">02</span>Farbwelt</h1>
+  <div class="strich"></div>
+  <p class="lead">Die Farben tragen Orientierung und Bedeutung. Jede Signalfarbe hat zwei Werte:
+    den <strong>Flächenwert</strong> für Balken, Punkte, Icons und große Flächen und den
+    <strong>Textwert</strong>, der auf Weiß und unter weißer Schrift mindestens 5 : 1 erreicht.</p>
+
+  <div class="karte">
+    <h2>Primärfarben</h2>
+    <div class="inhalt">
+      <div class="raster" style="grid-template-columns:repeat(9,1fr);gap:2mm">
+        <div class="swatch"><div class="f" style="background:#102533"></div><div class="t"><b>Deep Navy</b>#102533<br>Navigation, Titel</div></div>
+        <div class="swatch"><div class="f" style="background:#126878"></div><div class="t"><b>Medical Petrol</b>#126878<br>Primäraktion</div></div>
+        <div class="swatch"><div class="f" style="background:#19A6B5"></div><div class="t"><b>Clinical Cyan</b>#19A6B5<br>Fokus, Akzent</div></div>
+        <div class="swatch"><div class="f" style="background:#B9D936"></div><div class="t"><b>Signal Lime</b>#B9D936<br>Markenakzent</div></div>
+        <div class="swatch"><div class="f" style="background:#F6F8F9"></div><div class="t"><b>Cool White</b>#F6F8F9<br>Hintergrund</div></div>
+        <div class="swatch"><div class="f" style="background:#FFFFFF"></div><div class="t"><b>White</b>#FFFFFF<br>Karten, Flächen</div></div>
+        <div class="swatch"><div class="f" style="background:#17242C"></div><div class="t"><b>Charcoal</b>#17242C<br>Fließtext</div></div>
+        <div class="swatch"><div class="f" style="background:#667680"></div><div class="t"><b>Slate</b>#667680<br>Nebentext</div></div>
+        <div class="swatch"><div class="f" style="background:#DCE3E6"></div><div class="t"><b>Soft Grey</b>#DCE3E6<br>Linien</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Status <small>Ergebnis einer Maßnahme, Rückmeldungen</small></h2>
+      <div class="inhalt">
+        <table>
+          <tr><th>Status</th><th>Fläche</th><th>Text</th><th>Dunkel</th></tr>
+          {{status}}
+        </table>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>xABCDE und Bereiche <small>Kategorien der Maßnahmen</small></h2>
+      <div class="inhalt">
+        <table>
+          <tr><th>Kategorie</th><th>Fläche</th><th>Text</th><th>Dunkel</th></tr>
+          {{kategorien}}
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r3" style="margin-top:4mm">
+    <div class="karte hell">
+      <h2>Regeln</h2>
+      <div class="inhalt">
+        <ul class="liste">
+          <li>Farbe trägt nie allein Bedeutung: Status mit Symbol und Wort, Kategorien mit
+            Buchstaben.</li>
+          <li>Textwert für Schrift und Badges, Flächenwert für Balken, Punkte, Icons.</li>
+          <li>Die vier Rottöne stehen nie ohne Wort oder Buchstaben.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="karte hell">
+      <h2>Signal Lime</h2>
+      <div class="inhalt">
+        <div class="zeile" style="margin-bottom:2mm">
+          <span class="flaeche navy" style="padding:1.5mm 3mm;color:#B9D936;font-weight:800">SCOPE X</span>
+          <span class="flaeche" style="background:#B9D936;padding:1.5mm 3mm;color:#102533;font-weight:700">Neu</span>
+        </div>
+        <ul class="liste">
+          <li>Akzent im Logo, auf Navy und als Fläche mit Navy-Schrift (9 : 1)</li>
+          <li>nie als Textfarbe auf Weiß (1,6 : 1)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="karte hell">
+      <h2>Dunkelmodus</h2>
+      <div class="inhalt">
+        <div class="flaeche" style="background:#0c1820;justify-content:flex-start;gap:2mm;flex-wrap:wrap;margin-bottom:2mm">
+          <span class="badge" style="background:#5CA589;color:#08181f">✓ Erfolgreich</span>
+          <span class="badge" style="background:#D87C7C;color:#08181f">✕ Fehlgeschlagen</span>
+          <span class="badge" style="background:#6E99CC;color:#08181f">i Information</span>
+        </div>
+        <p class="klein">Aufgehellte Werte mit dunkler Schrift. Hintergrund #0C1820, Karten #14242F.
+          Die Spalte „Dunkel“ nennt die Werte.</p>
+      </div>
+    </div>
+  </div>
+  {{fuss:03}}
+</section>
+
+<!-- ============================================================ 4 Typo -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">03</span>Typografie, Raster &amp; Form</h1>
+  <div class="strich"></div>
+  <p class="lead">Eine Schrift, ein 8er-Raster, wenige Radien. Inter ist lokal in der App
+    eingebunden; es werden keine Schriften von fremden Servern geladen.</p>
+
+  <div class="raster r21">
+    <div class="karte">
+      <h2>Schriftskala <small>Inter, Werte für Bildschirm in px</small></h2>
+      <div class="inhalt">
+        <table class="skala">
+          <tr><th>Stufe</th><th>Muster</th><th class="r">Größe / Zeile</th><th class="r">Gewicht</th><th>Einsatz</th></tr>
+          <tr><td>H1</td><td><span style="font-size:20pt;font-weight:700;color:#102533">Logbuch</span></td><td class="r">32 / 40</td><td class="r">700</td><td>Seitentitel</td></tr>
+          <tr><td>H2</td><td><span style="font-size:15pt;font-weight:700;color:#102533">Maßnahmen</span></td><td class="r">24 / 32</td><td class="r">700</td><td>Abschnitte</td></tr>
+          <tr><td>H3</td><td><span style="font-size:12.5pt;font-weight:600;color:#102533">Atemweg</span></td><td class="r">20 / 28</td><td class="r">600</td><td>Kartentitel</td></tr>
+          <tr><td>Text</td><td><span style="font-size:10pt">Fließtext und Eingaben</span></td><td class="r">16 / 24</td><td class="r">400</td><td>Standard</td></tr>
+          <tr><td>Label</td><td><span style="font-size:8.8pt;font-weight:600">Datum der Maßnahme</span></td><td class="r">14 / 20</td><td class="r">600</td><td>Feldbeschriftung</td></tr>
+          <tr><td>Klein</td><td><span style="font-size:8.8pt;color:#667680">vor 3 Stunden · Feed</span></td><td class="r">14 / 20</td><td class="r">400</td><td>Metadaten</td></tr>
+          <tr><td>Kennzahl</td><td><span style="font-size:17pt;font-weight:700;color:#102533">128</span></td><td class="r">28 / 32</td><td class="r">700</td><td>Auswertung</td></tr>
+        </table>
+        <p class="hinweis" style="margin-top:2.5mm"><strong>Untergrenze 14 px.</strong> Kein
+          Text in der Oberfläche ist kleiner als 14 px, auch nicht Zeitstempel, Zähler oder
+          Badges. Ausnahme: der Wirkstoffname im DIVI-Etikett, das sich an der Spritze orientiert
+          (mindestens 12 px, fett).</p>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Schrift</h2>
+      <div class="inhalt">
+        <div style="font-size:30pt;font-weight:800;color:#102533;line-height:1">Aa</div>
+        <div style="font-size:9pt;margin:1mm 0 2mm">Inter Variable · 100 – 900</div>
+        <div style="font-size:8pt;letter-spacing:.02em;margin-bottom:2mm">ABCDEFGHIJKLMNOPQRSTUVWXYZ ÄÖÜ<br>abcdefghijklmnopqrstuvwxyz äöüß<br>0123456789 · % / – „“</div>
+        <ul class="liste">
+          <li>Tabellenziffern für Zahlen, Uhrzeiten und Spalten</li>
+          <li>Ersatz: System-UI-Schrift des Geräts</li>
+          <li>Lizenz: SIL Open Font License 1.1</li>
+          <li>Versalien nur für DIVI-Etiketten und Kürzel</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r3" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Abstände <small>8er-Raster</small></h2>
+      <div class="inhalt">
+        <table>
+          {{abstaende}}
+        </table>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Radien</h2>
+      <div class="inhalt">
+        <div class="radien">{{radien}}</div>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Schatten</h2>
+      <div class="inhalt" style="background:#F6F8F9">
+        <div class="schatten-reihe">
+          <div style="box-shadow:0 1px 2px rgba(16,37,51,.10)"><b>sm</b><span>Karten, Felder</span></div>
+          <div style="box-shadow:0 4px 12px rgba(16,37,51,.12)"><b>md</b><span>Menüs, schwebend</span></div>
+          <div style="box-shadow:0 8px 24px rgba(16,37,51,.16)"><b>lg</b><span>Dialoge, Sheets</span></div>
+        </div>
+        <p class="mini" style="margin-top:2mm">Farbe immer Deep Navy, nie Schwarz. Im
+          Dunkelmodus ersetzt eine hellere Fläche den Schatten.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" style="margin-top:4mm">
+    <h2>Ikonografie <small>24-px-Raster, 2 px Strich, runde Enden, 4 px Eckradius</small></h2>
+    <div class="inhalt">
+      <div class="icons">{{icons}}</div>
+      <p class="klein" style="margin-top:2mm">Linien-Icons aus einem Satz, gleiche Strichstärke
+        in allen Größen. In der Navigation stehen Icons immer mit Beschriftung; ein Icon ohne
+        Wort braucht eine Bezeichnung für Screenreader. Keine Logos oder Symbole fremder
+        Plattformen.</p>
+    </div>
+  </div>
+  {{fuss:04}}
+</section>
+
+<!-- ============================================================ 5 Komponenten -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">04</span>UI-Komponenten</h1>
+  <div class="strich"></div>
+  <p class="lead">Komponenten sehen überall gleich aus und verhalten sich gleich. Jede bedienbare
+    Fläche ist mindestens 44 × 44 px groß und mit der Tastatur erreichbar.</p>
+
+  <div class="raster r2">
+    <div class="karte">
+      <h2>Buttons</h2>
+      <div class="inhalt">
+        <div class="zeile"><span class="lbl">Primär</span><span class="knopf p">Speichern</span><span class="knopf p hover">Hover</span><span class="knopf p druck">Gedrückt</span></div>
+        <div class="zeile"><span class="lbl">Sekundär</span><span class="knopf s">Abbrechen</span><span class="knopf p fokus">Fokus</span></div>
+        <div class="zeile"><span class="lbl">Tertiär</span><span class="knopf t">Details anzeigen</span></div>
+        <div class="zeile"><span class="lbl">Gefährlich</span><span class="knopf g">Konto löschen</span></div>
+        <div class="zeile"><span class="lbl">Deaktiviert</span><span class="knopf d">Speichern</span></div>
+        <p class="mini" style="margin-top:2mm">Höhe 44 px, Radius md (8 px). Eine Primäraktion
+          je Ansicht. Gefährliche Aktionen fragen in einem Sheet nach.</p>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Formularfelder</h2>
+      <div class="inhalt">
+        <div class="raster r2" style="gap:3mm">
+          <div>
+            <div class="feld"><label>Datum der Maßnahme</label><div class="box">19.11.2026</div>
+              <div class="hilfe">Uhrzeit wird nicht geteilt.</div></div>
+            <div class="feld"><label>Maßnahme</label><div class="box fokus">Larynxtubus</div></div>
+          </div>
+          <div>
+            <div class="feld"><label>Stunden</label><div class="box fehler">−2</div>
+              <div class="fehlertext">⚠ Bitte eine Zahl ab 0 eingeben.</div></div>
+            <div class="feld"><label>Notiz <span class="mini">optional</span></label><div class="box leer">Was hast du gelernt?</div></div>
+          </div>
+        </div>
+        <p class="mini">Beschriftung immer über dem Feld, nie nur als Platzhalter. Fehler nennen
+          die Ursache und den Weg zur Lösung. Höhe 46 px.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Badges &amp; Chips</h2>
+      <div class="inhalt">
+        <div class="zeile"><span class="lbl">Status</span>
+          <span class="badge" style="background:#297D5E">✓ Erfolgreich</span>
+          <span class="badge" style="background:#BD4747">✕ Fehlgeschlagen</span>
+          <span class="badge" style="background:#9C6020">◐ Frustran</span>
+          <span class="badge" style="background:#A63D4A">! ZEK</span></div>
+        <div class="zeile"><span class="lbl">Kategorie</span>
+          <span class="badge" style="background:#B14149">x</span>
+          <span class="badge" style="background:#7A59A6">A</span>
+          <span class="badge" style="background:#1D7B7E">B</span>
+          <span class="badge" style="background:#BB4848">C</span>
+          <span class="badge" style="background:#996126">D</span>
+          <span class="badge" style="background:#387C51">E</span>
+          <span class="badge" style="background:#4E719E">Diagnostik</span></div>
+        <div class="zeile"><span class="lbl">Filter</span>
+          <span class="chip an">Alle</span><span class="chip">Fallberichte</span><span class="chip">Wissen</span><span class="chip">#Praxisanleitung</span></div>
+        <div class="zeile"><span class="lbl">Beta</span>
+          <span class="chip" style="border-color:#B9D936;background:#f6f9e6;color:#102533">Erweiterte Beta</span></div>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Karten</h2>
+      <div class="inhalt" style="background:#F6F8F9">
+        <div class="ui-karte">
+          <div class="ui-kopf"><span class="avatar">JS</span><div><b>J. Sommer</b><br><span class="mini">Notfallsanitäterin · vor 2 Std.</span></div><span class="chip" style="margin-left:auto">Fallbericht</span></div>
+          <div class="ui-titel">Erste i.o.-Punktion am Humerus</div>
+          <div class="mini" style="color:#3d4b54">Was mir beim Aufsuchen der Landmarken geholfen hat – und was ich beim nächsten Mal anders mache.</div>
+          <div class="ui-fuss"><span>♡ 12 Hilfreich</span><span>◌ 4 Kommentare</span></div>
+        </div>
+        <p class="mini" style="margin-top:2mm">Radius lg (12 px), Schatten sm, Innenabstand
+          16 px. Karten sind nie ineinander geschachtelt.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Navigation</h2>
+      <div class="inhalt">
+        <div class="nav-muster">
+          <div class="nav-seite">
+            <div class="nav-logo">{{svg:logo_horizontal_light}}</div>
+            {{navliste}}
+          </div>
+          <div class="nav-text">
+            <p><strong>Breite Ansicht:</strong> Seitenleiste in Deep Navy mit Logo, neun Ziele,
+              Abmelden immer unten sichtbar.</p>
+            <p><strong>Schmale Ansicht:</strong> Kopfzeile mit Zeichen, Suche, Mitteilungen,
+              Nachrichten und Abmelden; unten fünf Ziele: Feed, Netzwerk, Neu, Logbuch, Profil.</p>
+            <p class="mini">Aktives Ziel: helle Fläche mit Lime-Markierung links. Zähler als
+              Badge am Icon.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Rückmeldung</h2>
+      <div class="inhalt">
+        <div class="toast">✓ Maßnahme gespeichert. Du kannst sie 15 Minuten lang ändern.</div>
+        <div class="hinweis" style="margin:2mm 0">Einsatznummer, Ort, Fahrzeug und Zeitpunkt
+          siehst nur du.</div>
+        <div class="sheet">
+          <b>Abmelden?</b>
+          <span class="mini">Ungespeicherte Eingaben gehen verloren.</span>
+          <div class="zeile" style="margin-top:2mm"><span class="knopf s">Abbrechen</span><span class="knopf p">Abmelden</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{fuss:05}}
+</section>
+
+<!-- ============================================================ 6 Module -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">05</span>Module der App</h1>
+  <div class="strich"></div>
+  <p class="lead">SCOPE X besteht aus einem privaten Logbuch und einem geschlossenen Fachnetz.
+    Diese Seite beschreibt, was es gibt und wie es aussieht. Funktionen, die noch nicht gebaut
+    sind, sind als <span class="offen">geplant</span> gekennzeichnet.</p>
+
+  <div class="karte akzent">
+    <h2>Grundregel Datenschutz</h2>
+    <div class="inhalt">
+      <div class="raster" style="grid-template-columns:auto 1fr;gap:4mm;align-items:center">
+        <div class="schloss">{{ico:schloss}}</div>
+        <p style="font-size:9pt"><strong>Einsatznummer, Einsatzort, Fahrzeug und Zeitpunkt sieht
+          nur die Person, die sie erfasst hat.</strong> Sie erscheinen nie im Feed, in Beiträgen,
+          im Profil, in Nachrichten oder bei anderen Mitgliedern, auch nicht, wenn eine Maßnahme
+          geteilt wird. Gespeichert werden sie verschlüsselt.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r3" style="margin-top:4mm">
+    {{module}}
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="karte warn">
+      <h2>Geplant, Entscheidung offen</h2>
+      <div class="inhalt">
+        <p class="klein">Aus Version 1 übernommen, in der App noch nicht vorhanden. Gestaltung
+          folgt den Komponenten aus Kapitel 04, sobald entschieden ist.</p>
+        <ul class="liste">
+          <li>Gruppenunterhaltungen <span class="offen">geplant</span></li>
+          <li>PDF-Anhänge in Nachrichten <span class="offen">geplant</span></li>
+          <li>@Erwähnungen in Beiträgen und Kommentaren <span class="offen">geplant</span></li>
+          <li>Lesebestätigungen, nur wenn beide Seiten zustimmen <span class="offen">geplant</span></li>
+          <li>Foren mit Kategorien und Moderation <span class="offen">geplant</span></li>
+          <li>Öffentliche Informationsseiten außerhalb der App <span class="offen">geplant</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="karte hell">
+      <h2>Bewusst nicht vorgesehen</h2>
+      <div class="inhalt">
+        <ul class="liste no">
+          <li>Telefonie und Video im Messenger</li>
+          <li>Logbuch-Aktivität im Feed oder in der Chronik („hat heute intubiert“)</li>
+          <li>Ranglisten, Punkte und Abzeichen für Maßnahmen</li>
+          <li>Werbung, Tracking, Weitergabe an Dritte</li>
+          <li>Indikationen, Dosierungen, Algorithmen, SOP-Bibliotheken</li>
+        </ul>
+        <p class="mini" style="margin-top:2mm">Die Chronik eines Profils zeigt Beiträge,
+          Werdegang und Fortbildungen, die die Person selbst veröffentlicht.</p>
+      </div>
+    </div>
+  </div>
+  {{fuss:06}}
+</section>
+
+<!-- ============================================================ 7 Sprache -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">06</span>Sprache &amp; Inhalte</h1>
+  <div class="strich"></div>
+  <p class="lead">SCOPE X spricht wie eine erfahrene Kollegin: klar, ruhig, ehrlich. Die App
+    duzt. Geschlechtergerechte Sprache mit Genderstern: Kolleg*innen, Notfallsanitäter*innen.</p>
+
+  <div class="raster r3 grundsaetze">
+    <div class="karte"><h2>Klar</h2><div class="inhalt"><p>Kurze Sätze, aktive Verben, ein Gedanke
+      je Satz. Fachbegriffe ja, Abkürzungen nur, wenn sie im Rettungsdienst üblich sind.</p></div></div>
+    <div class="karte"><h2>Kollegial</h2><div class="inhalt"><p>Auf Augenhöhe, ohne Belehrung.
+      Fehler und Komplikationen sind Lernanlässe; niemand wird bewertet oder verglichen.</p></div></div>
+    <div class="karte"><h2>Ehrlich</h2><div class="inhalt"><p>Wir sagen, was die App kann und was
+      nicht. Beta heißt Beta. Datenschutz wird erklärt, nicht beschworen.</p></div></div>
+  </div>
+
+  <div class="karte akzent" style="margin-top:4mm">
+    <h2>Produktregel</h2>
+    <div class="inhalt">
+      <p style="font-size:10pt;margin-bottom:2mm"><strong>SCOPE X dokumentiert, was getan wurde –
+        nie, was getan werden soll.</strong></p>
+      <div class="raster r2">
+        <ul class="liste ok">
+          <li>Erfahrungen, Lernpunkte, Fragen an die Community</li>
+          <li>Hinweis auf Quellen: Leitlinien, Fachliteratur, SOP des eigenen Trägers</li>
+          <li>Maßnahmen und Medikamente so, wie sie gegeben wurden, als eigene Dokumentation</li>
+        </ul>
+        <ul class="liste no">
+          <li>keine Indikationen, Dosierungen oder Therapieempfehlungen</li>
+          <li>keine Algorithmen, SOP-Sammlungen oder Freigabelisten</li>
+          <li>keine Bewertung, ob eine Maßnahme richtig war</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" style="margin-top:4mm">
+    <h2>So und nicht so</h2>
+    <div class="inhalt">
+      <table class="beispiele">
+        <tr><th style="width:22%">Anlass</th><th style="width:39%">So</th><th>Nicht so</th></tr>
+        <tr><td>Speichern</td><td class="ja">Maßnahme gespeichert. Du kannst sie 15 Minuten lang ändern.</td><td class="nein">Erfolgreich!!! Super gemacht!</td></tr>
+        <tr><td>Fehlermeldung</td><td class="ja">Das Datum liegt in der Zukunft. Bitte prüfe die Eingabe.</td><td class="nein">Ungültige Eingabe.</td></tr>
+        <tr><td>Beitrag</td><td class="ja">Erste i.o.-Punktion am Humerus. Was hat euch beim Aufsuchen der Landmarken geholfen?</td><td class="nein">Konkrete Dosis- oder Therapieanweisung für alle</td></tr>
+        <tr><td>Fallvorstellung</td><td class="ja">Frau, etwa 70 Jahre, häusliche Umgebung, Atemnot seit dem Morgen.</td><td class="nein">Name, Adresse, Datum, Einsatznummer oder Wache</td></tr>
+        <tr><td>Datenschutz</td><td class="ja">Diese Angaben siehst nur du.</td><td class="nein">Ihre Daten sind 100 % sicher.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="raster r2" style="margin-top:4mm">
+    <div class="karte hell">
+      <h2>Beta und private Initiative</h2>
+      <div class="inhalt">
+        <p>Standardsatz für Anmeldeseite, „Über SCOPE X“, Bewerbung und Beiträge in sozialen
+          Netzwerken:</p>
+        <p class="hinweis lime">„SCOPE X ist eine private Initiative und befindet sich in der
+          erweiterten Beta. Funktionen können sich noch ändern; Rückmeldungen fließen direkt in
+          die Entwicklung.“</p>
+        <p class="mini" style="margin-top:2mm">Nicht verwenden: „Plattform des Rettungsdienstes“,
+          „offiziell“, „zertifiziert“, Namen von Trägern oder Behörden.</p>
+      </div>
+    </div>
+    <div class="karte hell">
+      <h2>Begriffe</h2>
+      <div class="inhalt">
+        <table>
+          <tr><th>Wir sagen</th><th>Statt</th></tr>
+          <tr><td>Maßnahme</td><td>Skill, Task</td></tr>
+          <tr><td>Nachweis</td><td>Zertifikat</td></tr>
+          <tr><td>Mitglied, Kolleg*in</td><td>User, Follower</td></tr>
+          <tr><td>Fallvorstellung</td><td>Patientenfall (mit Daten)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  {{fuss:07}}
+</section>
+
+<!-- ============================================================ 8 DIVI -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">07</span>Medikamentenkennzeichnung nach DIVI</h1>
+  <div class="strich"></div>
+  <p class="lead">SCOPE X bildet Spritzenetiketten ab, damit die Auswahl in der App der Spritze
+    in der Hand entspricht. Grundlage ist die DIVI-Empfehlung zur Kennzeichnung von Spritzen
+    in der Intensiv- und Notfallmedizin (2012), die sich auf ISO 26825 stützt.</p>
+
+  <div class="hinweis rot" style="margin-bottom:4mm"><strong>Nur zur Wiedererkennung.</strong>
+    SCOPE X ist keine Etikettierungsreferenz und erzeugt keine druckbaren Etiketten. Die
+    Farbwerte sind Annäherungen an die Pantone-Vorgaben. Die Zuordnung eines Wirkstoffs ist im
+    Katalog änderbar und gegen die jeweils gültige Veröffentlichung zu prüfen.</div>
+
+  <div class="raster r2">
+    <div class="karte">
+      <h2>Aufbau eines Etiketts</h2>
+      <div class="inhalt">
+        <ul class="liste">
+          <li>Grundfarbe der Wirkstoffgruppe</li>
+          <li>Wirkstoffname in Versalien, fett, nie abgekürzt; darunter optional die Konzentration</li>
+          <li>Schrift schwarz; weiß nur bei <strong>Suxamethonium</strong> und <strong>Midazolam</strong></li>
+          <li>Antagonisten: Farbe der Bezugsgruppe mit weißen Schrägstreifen</li>
+          <li>Nichtdepolarisierende Relaxantien: obere Hälfte weiß</li>
+          <li>Relaxans-Antagonisten: zusätzlicher schwarzer Querstrich zur Unterscheidung vom
+            Benzodiazepin-Antagonisten</li>
+        </ul>
+        <p class="mini" style="margin-top:2mm">Weiße Schrift auf Orange und Warmrot erreicht nicht
+          4,5 : 1. In der App erhält sie deshalb eine feine dunkle Kontur; der Wirkstoffname
+          steht zusätzlich als Text für Screenreader bereit.</p>
+      </div>
+    </div>
+    <div class="karte akzent">
+      <h2>Korrigiert gegenüber Version 1</h2>
+      <div class="inhalt">
+        <table class="korrektur">
+          <tr><td><span class="etikett split" style="--bg:#f9423a;--fg:#111"><span>ROCURONIUM</span><small>10 mg/ml</small></span></td>
+            <td><strong>Rocuronium, Vecuronium:</strong> obere Hälfte weiß, untere warmrot. V1
+              zeigte die Hälften vertauscht.</td></tr>
+          <tr><td><span class="etikett hell" style="--bg:#f9423a;--fg:#fff"><span>SUXAMETHONIUM</span><small>20 mg/ml</small></span></td>
+            <td><strong>Suxamethonium</strong> (Succinylcholin): warmrot, weiße Schrift.</td></tr>
+          <tr><td><span class="etikett streifen balken" style="--bg:#f9423a;--fg:#111"><span>SUGAMMADEX</span><small>100 mg/ml</small></span></td>
+            <td><strong>Relaxans-Antagonisten:</strong> warmrot, weiße Schrägstreifen, schwarzer
+              Querstrich. V1 zeigte Sugammadex lime gestreift.</td></tr>
+          <tr><td><span class="etikett streifrand" style="--bg:#fff;--fg:#111"><span>PROTAMIN</span><small>1000 I.E./ml</small></span></td>
+            <td><strong>Protamin:</strong> weißer Grund, schwarz-weiß quergestreifter Rand.</td></tr>
+        </table>
+        <p class="mini" style="margin-top:1.5mm">Sugammadex und die Gruppe Elektrolyte nennt die
+          Empfehlung von 2012 nicht namentlich; ihre Darstellung ist eine Festlegung von SCOPE X
+          nach Wirkgruppe.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" style="margin-top:4mm">
+    <h2>Wirkstoffgruppen in der App <small>schematisch, Beispielwirkstoffe aus dem Katalog</small></h2>
+    <div class="inhalt">
+      <div class="etiketten">{{etiketten}}</div>
+    </div>
+  </div>
+  {{fuss:08}}
+</section>
+
+<!-- ============================================================ 9 Nachweise, a11y -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">08</span>Nachweise, PDF &amp; Barrierefreiheit</h1>
+  <div class="strich"></div>
+  <p class="lead">Nachweise sind Selbstdokumentation. Sie zeigen, was eine Person erfasst hat,
+    in einer Form, die sich ausdrucken, ablegen und in der Praxisanleitung besprechen lässt.</p>
+
+  <div class="raster r12">
+    <div class="karte">
+      <h2>Nachweis als PDF</h2>
+      <div class="inhalt" style="background:#F6F8F9">
+        <div class="pdf-muster">
+          <div class="pdf-kopf">{{svg:logo_horizontal_dark}}<span>Tätigkeits- und Kompetenznachweis</span></div>
+          <div class="pdf-meta"><b>Jana Sommer</b> · Notfallsanitäterin<br>01.01.2026 – 30.06.2026</div>
+          <div class="pdf-kpi"><div><b>128</b><span>Maßnahmen</span></div><div><b>94 %</b><span>erfolgreich</span></div><div><b>37</b><span>Einsätze</span></div></div>
+          <div class="pdf-tab"><div></div><div></div><div></div><div></div><div></div></div>
+          <div class="pdf-fuss">Selbstdokumentation, erstellt mit SCOPE X · Seite 1 von 3</div>
+        </div>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Regeln für Nachweise</h2>
+      <div class="inhalt">
+        <div class="raster r2" style="gap:4mm">
+          <ul class="liste">
+            <li>A4 hochformatig, Ränder 15 mm, Logo horizontal oben links</li>
+            <li>Schrift Inter; Titel 16 pt, Text 9,5 pt, Tabellen 9 pt</li>
+            <li>Name, Qualifikation und Zeitraum auf der ersten Seite</li>
+            <li>Kennzahlen zuerst, Einzelaufstellung danach</li>
+            <li>Fußzeile: „Selbstdokumentation, erstellt mit SCOPE X“, Seitenzahl, Erstellungsdatum</li>
+          </ul>
+          <ul class="liste">
+            <li>Tabellen mit Kopfzeile auf jeder Seite, Zahlen rechtsbündig</li>
+            <li>Status mit Wort, nicht nur mit Farbe; Ausdruck in Graustufen bleibt lesbar</li>
+            <li>Übersicht ohne Einsatzdaten. Einsatznummer und Uhrzeit nur in der
+              Detailaufstellung, die die Person selbst einschaltet; Ort und Fahrzeug nie</li>
+            <li>Kein Siegel, kein „zertifiziert“: ein Nachweis bestätigt nichts Fremdes</li>
+            <li>Dateiname: <code>scopex-nachweis-JJJJMMTT.pdf</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte" style="margin-top:4mm">
+    <h2>Barrierefreiheit <small>Ziel WCAG 2.2, Stufe AA</small></h2>
+    <div class="inhalt">
+      <div class="raster r3" style="gap:4mm">
+        <div><strong>Kontrast</strong><p class="klein">Text mindestens 4,5 : 1, große Schrift und
+          Bedienelemente 3 : 1. Die Textwerte aus Kapitel 02 erreichen 5 : 1.</p>
+          <strong>Fokus</strong><p class="klein">Sichtbarer Rahmen in Clinical Cyan, 2 px, 2 px Abstand.
+          Nie entfernen, nie nur farblich andeuten.</p></div>
+        <div><strong>Bedienung</strong><p class="klein">Alles mit Tastatur erreichbar, logische
+          Reihenfolge, Ziele ab 44 × 44 px, kein Zeitlimit ohne Verlängerung.</p>
+          <strong>Screenreader</strong><p class="klein">Echte Überschriften, Beschriftungen an
+          jedem Feld, Icons ohne Wort mit Bezeichnung, Zähler als Text.</p></div>
+        <div><strong>Darstellung</strong><p class="klein">Zoom auf 200 % ohne Verlust, Text ab 14 px,
+          heller und dunkler Modus nach Systemeinstellung, reduzierte Bewegung wird respektiert.</p>
+          <strong>Prüfung</strong><p class="klein">Automatisch mit axe in der Qualitätsschleife,
+          dazu Sichtprüfung mit Tastatur und Screenreader vor jeder Version.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte hell" style="margin-top:4mm">
+    <h2>Checkliste vor der Freigabe</h2>
+    <div class="inhalt">
+      <div class="raster r3 checkliste">
+        <ul class="liste ok">
+          <li>Logo aus brand/, richtige Variante</li>
+          <li>Farben als Token, keine freien Hexwerte</li>
+          <li>Kein Text unter 14 px</li>
+        </ul>
+        <ul class="liste ok">
+          <li>Kontrast geprüft, Fokus sichtbar</li>
+          <li>Status mit Symbol und Wort</li>
+          <li>Hell und dunkel angesehen</li>
+        </ul>
+        <ul class="liste ok">
+          <li>Keine Einsatzdaten für andere sichtbar</li>
+          <li>Keine Dosierungen oder Indikationen</li>
+          <li>Beta und private Initiative erkennbar</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  {{fuss:09}}
+</section>
+
+<!-- ============================================================ 10 Anhang -->
+<section class="seite">
+  {{motiv}}{{kopf}}
+  <h1><span class="nr">09</span>Implementierungsanhang</h1>
+  <div class="strich"></div>
+  <p class="lead">Die Werte dieses Handbuchs stehen als Design-Tokens in
+    <code>app/static/app.css</code>. Komponenten verwenden ausschließlich Tokens, damit
+    heller und dunkler Modus aus einer Quelle kommen.</p>
+
+  <div class="raster r2">
+    <div class="karte">
+      <h2>Design-Tokens</h2>
+      <div class="inhalt">
+        <table class="tokens">
+          <tr><th>Gruppe</th><th>Token</th><th>Werte</th></tr>
+          <tr><td>Marke</td><td><code>--navy --petrol --cyan --lime</code></td><td>siehe Kapitel 02</td></tr>
+          <tr><td>Status</td><td><code>--ok --ok-fill</code> usw.</td><td>Text, Fläche</td></tr>
+          <tr><td>Kategorien</td><td><code>--cat-A --cat-A-fill</code> usw.</td><td>Text, Fläche</td></tr>
+          <tr><td>Radius</td><td><code>--radius-xs … --radius-xl</code></td><td>2 · 4 · 8 · 12 · 16 px</td></tr>
+          <tr><td>Abstand</td><td><code>--space-1 … --space-6</code></td><td>4 · 8 · 12 · 16 · 24 · 32 px</td></tr>
+          <tr><td>Schatten</td><td><code>--shadow-sm --shadow-md --shadow-lg</code></td><td>siehe Kapitel 03</td></tr>
+          <tr><td>Schrift</td><td><code>--fs-h1 … --fs-small</code></td><td>32 · 24 · 20 · 16 · 14 px</td></tr>
+          <tr><td>Fokus</td><td><code>--focus</code></td><td>Clinical Cyan, 2 px</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Dateien und Benennung</h2>
+      <div class="inhalt">
+        <p><code>&lt;typ&gt;_&lt;inhalt&gt;_&lt;variante&gt;.&lt;format&gt;</code> · Variante
+          <b>dark</b> = dunkle Zeichen für helle Flächen, <b>light</b> = helle Zeichen für dunkle
+          Flächen, <b>mono</b> = einfarbig.</p>
+        <table class="dateien">
+          <tr><td><code>logo_primary_{dark,light,mono}.svg</code></td><td>mit Claim</td></tr>
+          <tr><td><code>logo_horizontal_{…}.svg</code></td><td>ohne Claim</td></tr>
+          <tr><td><code>logo_compact_{…}.svg</code></td><td>gestapelt</td></tr>
+          <tr><td><code>logo_symbol_{…}.svg</code></td><td>nur Zeichen</td></tr>
+          <tr><td><code>icon_app.svg</code>, <code>icon_app_{180,192,512}.png</code></td><td>App-Icon</td></tr>
+          <tr><td><code>icon_favicon.svg</code>, <code>favicon_{16,32,48,64}.png</code></td><td>Favicons</td></tr>
+          <tr><td><code>logo_addon_store.svg</code></td><td>Add-on-Store</td></tr>
+        </table>
+        <p class="mini" style="margin-top:1.5mm">Alle Dateien erzeugt
+          <code>scopex/tools/marke_erzeugen.py</code>; Schrift ist in Pfade umgewandelt.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="raster r3" style="margin-top:4mm">
+    <div class="karte">
+      <h2>Versionierung</h2>
+      <div class="inhalt">
+        <ul class="liste">
+          <li>Handbuch: Hauptversion bei neuen Regeln, Nebenversion bei Korrekturen</li>
+          <li>App: semantische Versionen, Änderungen im CHANGELOG</li>
+          <li>Jede Handbuchversion nennt die App-Version, ab der sie gilt</li>
+        </ul>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Freigabe</h2>
+      <div class="inhalt">
+        <table class="schritte">
+          <tr><td class="n">1</td><td>Änderung als Pull Request auf GitHub</td></tr>
+          <tr><td class="n">2</td><td>Qualitätsschleife: Kontrast, axe, Tests, Sicherheit</td></tr>
+          <tr><td class="n">3</td><td>Sichtprüfung hell, dunkel, schmal, breit</td></tr>
+          <tr><td class="n">4</td><td>Zusammenführen = Veröffentlichung als Update</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="karte">
+      <h2>Kontakt</h2>
+      <div class="inhalt">
+        <p><strong>SCOPE X</strong><br>Private Initiative von Christian Faust</p>
+        <p>Fragen zu Marke, Gestaltung und Entwicklung:<br><strong>info@cd-faust.de</strong></p>
+        <p class="mini">Quellcode und Änderungen: github.com/Chriss0512/Scope-X</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="karte hell" style="margin-top:4mm">
+    <h2>Änderungen gegenüber Version 1.0</h2>
+    <div class="inhalt">
+      <div class="raster r2" style="gap:5mm">
+        <ul class="liste">
+          <li>Logo als Vektordateien mit fester Geometrie; Favicon in eigener, vereinfachter Fassung</li>
+          <li>Inhaltsverzeichnis und Seitenzahlen berichtigt</li>
+          <li>Textwerte für alle Signalfarben mit mindestens 5 : 1, Werte für den Dunkelmodus</li>
+          <li>Schriftskala mit Untergrenze 14 px; Radien, Schatten und Abstände als Tokens</li>
+          <li>Kapitel 05 beschreibt die vorhandenen Module statt Chat, Forum und Chronik;
+            nicht gebaute Funktionen sind als geplant markiert</li>
+        </ul>
+        <ul class="liste">
+          <li>Tonalität ohne Dosierungs- und SOP-Beispiele, Produktregel ergänzt</li>
+          <li>DIVI: nichtdepolarisierende Relaxantien, Relaxans-Antagonisten, Protamin und
+            weiße Schrift bei Suxamethonium und Midazolam berichtigt</li>
+          <li>Elektrolyte und Sugammadex als Festlegung von SCOPE X ausgewiesen</li>
+          <li>Kontakt über info@cd-faust.de statt nicht vorhandener Adressen</li>
+          <li>Private Initiative und erweiterte Beta durchgängig benannt</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  {{fuss:10}}
+</section>
+
+</body>
+</html>

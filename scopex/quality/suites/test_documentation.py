@@ -2,6 +2,7 @@ import json
 import os
 import sys
 import time as _t
+from pathlib import Path
 
 os.environ["SCOPEX_DATABASE_URL"] = "sqlite:////tmp/scopex_q_doc.db"
 if os.path.exists("/tmp/scopex_q_doc.db"): os.remove("/tmp/scopex_q_doc.db")
@@ -35,7 +36,7 @@ check("DIVI-Etiketten vollständig definiert",
       all(g in const["divi_labels"] for g in const["divi_groups"]) and
       all({"bg","fg","pattern","slug"} <= set(v) for v in const["divi_labels"].values()),
       list(const["divi_labels"].values())[:1])
-check("DIVI-Gruppen vorhanden", len(const["divi_groups"]) == 22, const["divi_groups"])
+check("DIVI-Gruppen vorhanden", len(const["divi_groups"]) == 23, const["divi_groups"])
 
 cat = c.get("/api/catalog/measures").json()["measures"]
 iv = next(m for m in cat if m["name"] == "Intravenöser Zugang")
@@ -50,8 +51,8 @@ check("DIVI-Gruppe vorbelegt",
 roc = next(m for m in meds if m["name"] == "Rocuronium")
 suc = next(m for m in meds if m["name"] == "Succinylcholin")
 nal = next(m for m in meds if m["name"] == "Naloxon")
-check("Relaxanzien zugeordnet",
-      roc["divi_group"] == "Muskelrelaxantien" and
+check("Relaxanzien nach Wirkprinzip getrennt",
+      roc["divi_group"] == "Muskelrelaxantien, nichtdepolarisierend" and
       suc["divi_group"] == "Muskelrelaxantien", (roc["divi_group"], suc["divi_group"]))
 check("Antagonist in eigener Gruppe",
       nal["divi_group"] == "Opioid-Antagonisten", nal["divi_group"])
@@ -178,7 +179,7 @@ check("PDF weiterhin erzeugbar", r.status_code == 200 and r.content[:4] == b"%PD
 
 # --- Update 4: Etiketten und Passkeys -----------------------------------
 const = c.get("/api/catalog/constants").json()
-check("Alle 22 Etikettengruppen definiert", len(const["divi_groups"]) == 22,
+check("Alle 23 Etikettengruppen definiert", len(const["divi_groups"]) == 23,
       len(const["divi_groups"]))
 meds_all = c.get("/api/catalog/medications").json()["medications"]
 ohne = [m["name"] for m in meds_all if not m["divi_group"]]
@@ -198,7 +199,23 @@ falsch = {k: (by_name.get(k), v) for k, v in erwartet.items() if by_name.get(k) 
 check("Zuordnung entspricht der DIVI-Tabelle", not falsch, falsch)
 check("Antagonisten tragen Schrägstreifen",
       const["divi_labels"]["Opioid-Antagonisten"]["pattern"] == "stripes" and
-      const["divi_labels"]["Muskelrelaxans-Antagonisten"]["pattern"] == "stripes")
+      const["divi_labels"]["Muskelrelaxans-Antagonisten"]["pattern"] == "stripes-bar")
+# Markenhandbuch 2.0, Kapitel 07
+dl = const["divi_labels"]
+check("Nichtdepolarisierende Relaxantien: obere Hälfte weiß, schwarze Schrift",
+      dl["Muskelrelaxantien, nichtdepolarisierend"]["pattern"] == "split" and
+      dl["Muskelrelaxantien, nichtdepolarisierend"]["fg"] == "#17242c")
+check("Protamin: weißer Grund mit gestreiftem Rand",
+      dl["Protamin"]["bg"] == "#ffffff" and dl["Protamin"]["pattern"] == "striped-frame")
+check("Weiße Schrift nur für Suxamethonium und Midazolam",
+      set(const["divi_weisse_schrift"]) >= {"Midazolam", "Succinylcholin"} and
+      "Rocuronium" not in const["divi_weisse_schrift"])
+css = Path(__file__).resolve().parents[2].joinpath("app/static/app.css").read_text(encoding="utf-8")
+fehlend = [v["slug"] for v in dl.values() if f'[data-divi="{v["slug"]}"]' not in css]
+check("Jede Etikettengruppe hat Farben im Stylesheet", not fehlend, fehlend)
+muster = {v["pattern"] for v in dl.values()} - {"solid"}
+ohne = [m for m in muster if f".pattern-{m}" not in css]
+check("Jedes Etikettenmuster ist gestaltet", not ohne, ohne)
 
 # Passkeys
 r = c.get("/api/auth/passkeys")

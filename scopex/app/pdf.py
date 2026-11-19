@@ -6,13 +6,20 @@ leer und werden nicht ergaenzt.
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
 
+from fontTools.ttLib import TTFont
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
-# Designsystem 1.0: Deep Navy trägt, Petrol akzentuiert, Signal Lime bleibt
-# dem X der Wortmarke vorbehalten.
+# Markenhandbuch 2.0, Kapitel 08: Inter, Logo horizontal oben links,
+# Fußzeile mit Hinweis auf Selbstdokumentation. Die Schriften erzeugt
+# tools/marke_erzeugen.py aus derselben Inter-Datei wie die Oberfläche.
+SCHRIFTEN = Path(__file__).resolve().parent / "data" / "fonts"
+SCHRIFT = "Inter"
 NAVY = (16, 37, 51)
 PETROL = (18, 104, 120)
 CYAN = (25, 166, 181)
@@ -25,15 +32,18 @@ ACCENT = PETROL
 ZEK = (166, 61, 74)
 
 
+@lru_cache(maxsize=1)
+def _zeichenvorrat() -> frozenset[int]:
+    cmap = TTFont(str(SCHRIFTEN / "Inter-Regular.ttf"))["cmap"].getBestCmap()
+    return frozenset(cmap)
+
+
 def _safe(text) -> str:
-    """Die eingebauten Schriften decken Latin-1 ab. Alles darueber hinaus
-    wird ersetzt, damit die Erzeugung nie an einem Sonderzeichen scheitert."""
+    """Ersetzt Zeichen, die die eingebettete Schrift nicht kennt, etwa
+    Emojis aus einer Notiz, damit die Erzeugung nie daran scheitert."""
     s = "" if text is None else str(text)
-    replacements = {"\u2013": "-", "\u2014": "-", "\u2019": "'",
-                    "\u201e": '"', "\u201c": '"', "\u00a0": " "}
-    for a, b in replacements.items():
-        s = s.replace(a, b)
-    return s.encode("latin-1", "replace").decode("latin-1")
+    vorrat = _zeichenvorrat()
+    return "".join(z if ord(z) in vorrat or z in "\n\t" else "?" for z in s)
 
 
 class Nachweis(FPDF):
@@ -41,25 +51,35 @@ class Nachweis(FPDF):
         super().__init__(orientation="P", unit="mm", format="A4")
         self.profile = profile
         self.period_label = period_label
-        self.set_auto_page_break(auto=True, margin=18)
-        self.set_margins(18, 16, 18)
+        self.add_font(SCHRIFT, "", str(SCHRIFTEN / "Inter-Regular.ttf"))
+        self.add_font(SCHRIFT, "B", str(SCHRIFTEN / "Inter-Bold.ttf"))
+        self.set_auto_page_break(auto=True, margin=20)
+        self.set_margins(15, 15, 15)
 
     def header(self):
         if self.page_no() == 1:
             return
-        self.set_font("Helvetica", "B", 9)
+        zeichen(self, self.l_margin, self.get_y(), 5.2)
+        self.set_xy(self.l_margin + 7, self.get_y())
+        self.set_font(SCHRIFT, "B", 9)
         self.set_text_color(*MUTED)
-        self.cell(0, 6, _safe("SCOPE X   Tätigkeits- und Kompetenznachweis"),
+        self.cell(0, 5.2, _safe("SCOPE X · Tätigkeits- und Kompetenznachweis"),
                   align="L")
-        self.ln(8)
+        self.ln(9)
 
     def footer(self):
-        self.set_y(-14)
-        self.set_font("Helvetica", "", 8)
+        self.set_y(-15)
+        self.set_draw_color(*RULE)
+        self.set_line_width(0.2)
+        self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
+        self.ln(1.5)
+        self.set_font(SCHRIFT, "", 7.5)
         self.set_text_color(*MUTED)
         name = f"{self.profile.get('first_name','')} {self.profile.get('last_name','')}".strip()
-        self.cell(0, 5, _safe(f"{name}   {self.period_label}"), align="L")
-        self.cell(0, 5, _safe(f"Seite {self.page_no()}"), align="R")
+        self.cell(0, 4, _safe(f"Selbstdokumentation, erstellt mit SCOPE X · {name} · "
+                              f"{self.period_label}"), align="L")
+        self.set_x(self.l_margin)
+        self.cell(0, 4, _safe(f"Seite {self.page_no()} von {{nb}}"), align="R")
 
     # -- Bausteine -------------------------------------------------------
     def rule(self, gap: float = 3):
@@ -73,13 +93,13 @@ class Nachweis(FPDF):
         if self.get_y() > self.h - 45:
             self.add_page()
         self.ln(3)
-        self.set_font("Helvetica", "B", 11)
+        self.set_font(SCHRIFT, "B", 11)
         self.set_text_color(*INK)
         self.cell(0, 6, _safe(title))
         self.ln(7)
 
     def kv_table(self, pairs: list[tuple[str, str]], label_w: float = 70):
-        self.set_font("Helvetica", "", 9.5)
+        self.set_font(SCHRIFT, "", 9.5)
         for label, value in pairs:
             self.set_text_color(*MUTED)
             self.cell(label_w, 5.6, _safe(label))
@@ -90,7 +110,7 @@ class Nachweis(FPDF):
     def table(self, headers: list[str], widths: list[float],
               data: list[list[str]], align: list[str] | None = None):
         align = align or ["L"] * len(headers)
-        self.set_font("Helvetica", "B", 8.5)
+        self.set_font(SCHRIFT, "B", 8.5)
         self.set_text_color(*MUTED)
         for h, w, a in zip(headers, widths, align, strict=False):
             self.cell(w, 5.5, _safe(h), align=a)
@@ -98,30 +118,51 @@ class Nachweis(FPDF):
         self.set_draw_color(*RULE)
         self.line(self.l_margin, self.get_y(), self.w - self.r_margin, self.get_y())
         self.ln(1.2)
-        self.set_font("Helvetica", "", 9)
+        self.set_font(SCHRIFT, "", 9)
         self.set_text_color(*INK)
         for r in data:
             if self.get_y() > self.h - 26:
                 self.add_page()
-                self.set_font("Helvetica", "", 9)
+                self.set_font(SCHRIFT, "", 9)
             for value, w, a in zip(r, widths, align, strict=False):
                 self.cell(w, 5.2, _safe(value), align=a)
             self.ln(5.2)
 
 
-def scope_ring(pdf: FPDF, cx: float, cy: float, r: float,
-               width: float = 1.9) -> None:
-    """Zeichnet den unvollständigen Scope-Ring aus drei Bögen.
+def zeichen(pdf: FPDF, x: float, y: float, groesse: float) -> None:
+    """Zeichnet das Logo-Zeichen (Variante dark) in ein Quadrat.
 
-    Dieselbe Geometrie wie in der Oberfläche: drei Segmente, eine bewusst
-    größere Öffnung. Rein vektoriell, damit der Nachweis auch beim Drucken
-    scharf bleibt.
+    Dieselbe Geometrie wie brand/logo_symbol_dark.svg im 100er-Raster:
+    vier Ringsegmente, Strichmarken, das X aus zwei Winkeln. Rein
+    vektoriell, damit der Nachweis auch gedruckt scharf bleibt.
     """
-    pdf.set_line_width(width)
-    segments = [(-84, 6, PETROL), (34, 116, CYAN), (152, 202, CYAN)]
-    for start, end, color in segments:
-        pdf.set_draw_color(*color)
-        pdf.arc(cx - r, cy - r, r * 2, start, end, style="D")
+    s = groesse / 100
+
+    def punkt(px: float, py: float) -> tuple[float, float]:
+        return x + px * s, y + py * s
+
+    def bogen(a0: float, a1: float, r: float = 34) -> list[tuple[float, float]]:
+        schritte = 18
+        return [punkt(50 + r * math.cos(math.radians(a - 90)),
+                      50 + r * math.sin(math.radians(a - 90)))
+                for a in (a0 + (a1 - a0) * i / schritte for i in range(schritte + 1))]
+
+    pdf.set_line_width(7 * s)
+    for i, farbe in enumerate((PETROL, CYAN, PETROL, CYAN)):
+        a = i * 90 - 90
+        pdf.set_draw_color(*farbe)
+        pdf.polyline(bogen(a + 14, a + 76), style="D")
+    pdf.set_draw_color(*NAVY)
+    pdf.set_line_width(5 * s)
+    for (x0, y0), (x1, y1) in (((50, 3), (50, 22)), ((50, 78), (50, 97)),
+                               ((3, 50), (22, 50)), ((78, 50), (97, 50))):
+        pdf.line(*punkt(x0, y0), *punkt(x1, y1))
+    pdf.set_fill_color(*NAVY)
+    pdf.polygon([punkt(*p) for p in ((27, 30), (39, 30), (49.4, 50), (39, 70),
+                                     (27, 70), (37.4, 50))], style="F")
+    pdf.set_fill_color(*LIME)
+    pdf.polygon([punkt(*p) for p in ((73, 30), (61, 30), (50.6, 50), (61, 70),
+                                     (73, 70), (62.6, 50))], style="F")
     pdf.set_line_width(0.2)
 
 
@@ -152,22 +193,23 @@ def build(profile: dict, stats: dict, period_label: str,
     pdf = Nachweis(profile, period_label)
     pdf.add_page()
 
-    # Kopf: Ring, Wortmarke mit Signal-Lime-X, Claim
+    # Kopf: Zeichen, Wortmarke mit Signal-Lime-X, Claim (Primärlogo)
     top = pdf.get_y()
-    scope_ring(pdf, pdf.l_margin + 6.4, top + 6.6, 6.2, 1.9)
+    zeichen(pdf, pdf.l_margin, top, 16)
 
-    pdf.set_xy(pdf.l_margin + 15, top)
-    pdf.set_font("Helvetica", "B", 21)
+    pdf.set_xy(pdf.l_margin + 19, top + 0.5)
+    pdf.set_font(SCHRIFT, "B", 21)
     pdf.set_text_color(*NAVY)
-    pdf.cell(pdf.get_string_width("SCOPE") + 1, 12, "SCOPE")
+    pdf.cell(pdf.get_string_width("SCOPE") + 2.2, 11, "SCOPE")
     pdf.set_text_color(*LIME)
-    pdf.cell(10, 12, "X")
+    pdf.cell(10, 11, "X")
 
-    pdf.set_xy(pdf.l_margin + 15, top + 11)
-    pdf.set_font("Helvetica", "", 9.5)
+    pdf.set_xy(pdf.l_margin + 19, top + 10.5)
+    pdf.set_font(SCHRIFT, "", 9.5)
     pdf.set_text_color(*MUTED)
     pdf.cell(0, 5, _safe("Das Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst"))
-    pdf.ln(9)
+    pdf.set_xy(pdf.l_margin, top + 16)
+    pdf.ln(4)
 
     pdf.set_draw_color(*PETROL)
     pdf.set_line_width(1.1)
@@ -190,7 +232,7 @@ def build(profile: dict, stats: dict, period_label: str,
     # Eintrag nachträglich änderbar war. Genau das bestimmt, wie belastbar
     # der Nachweis ist.
     head.append(("Bearbeitungsfrist je Eintrag", _window_label(edit_window_minutes)))
-    pdf.kv_table(head, label_w=38)
+    pdf.kv_table(head, label_w=48)
     pdf.rule(4)
 
     # Überblick
@@ -215,7 +257,7 @@ def build(profile: dict, stats: dict, period_label: str,
 
     # Abgeleitete Kategorien
     pdf.section("Ergebnis im Zusammenhang mit Komplikationen")
-    pdf.set_font("Helvetica", "", 8)
+    pdf.set_font(SCHRIFT, "", 8)
     pdf.set_text_color(*MUTED)
     pdf.multi_cell(0, 4, new_x=XPos.LMARGIN, new_y=YPos.NEXT, text=_safe(
         "Berechnet aus dem Ergebnis und dem dokumentierten Bezug der "
@@ -304,7 +346,7 @@ def build(profile: dict, stats: dict, period_label: str,
     if details:
         pdf.add_page()
         pdf.section("Detaillierter Nachweis: Maßnahmen")
-        pdf.set_font("Helvetica", "", 8)
+        pdf.set_font(SCHRIFT, "", 8)
         pdf.set_text_color(*MUTED)
         pdf.multi_cell(0, 4, new_x=XPos.LMARGIN, new_y=YPos.NEXT, text=_safe(
             "Einzelne dokumentierte Maßnahmen im gewählten Zeitraum. "
@@ -318,16 +360,16 @@ def build(profile: dict, stats: dict, period_label: str,
                 meta.append(f"Einsatz {d['mission_number']}")
             if d.get("naca"):
                 meta.append(f"NACA {d['naca']}")
-            pdf.set_font("Helvetica", "", 8)
+            pdf.set_font(SCHRIFT, "", 8)
             pdf.set_text_color(*MUTED)
             pdf.cell(0, 4.4, _safe(" | ".join(meta)))
             pdf.ln(4.4)
-            pdf.set_font("Helvetica", "B", 9.5)
+            pdf.set_font(SCHRIFT, "B", 9.5)
             pdf.set_text_color(*INK)
             pdf.cell(0, 5, _safe(
                 f"{d['measure_category']}  {d['measure_name']}"))
             pdf.ln(5)
-            pdf.set_font("Helvetica", "", 9)
+            pdf.set_font(SCHRIFT, "", 9)
             line = [f"Ergebnis: {d['outcome']}"]
             if d.get("performer_role"):
                 role = d["performer_role"]
