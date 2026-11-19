@@ -29,6 +29,7 @@ mapping = {
     "smtp_password": "SCOPEX_SMTP_PASSWORD",
     "smtp_from": "SCOPEX_SMTP_FROM",
     "kontakt": "SCOPEX_KONTAKT",
+    "schluessel": "SCOPEX_SCHLUESSEL",
 }
 for key, env in mapping.items():
     value = opts.get(key)

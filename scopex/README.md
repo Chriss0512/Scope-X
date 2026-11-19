@@ -359,6 +359,24 @@ eigene Reihenfolge.
 Nachrichten liegen wie alle Daten unverschlüsselt in der Datenbank des
 Add-ons. Mediendateien liegen unter `/data/media`.
 
+### Verschlüsselung im Ruhezustand (ab 4.6.0)
+
+Nachrichten, persönliche Angaben, Beiträge, Einsatzkennungen, Notizen und
+alle Mediendateien liegen mit AES-256-GCM verschlüsselt vor. Der Schlüssel
+entsteht beim ersten Start als `/data/scopex.key` und ist damit Teil jeder
+Home-Assistant-Sicherung. Wer ihn getrennt verwahren will, trägt vor dem
+ersten Start mit 4.6.0 unter der Option `schluessel` einen eigenen Wert ein
+(`openssl rand -base64 32`) und bewahrt ihn sicher auf. Ohne passenden
+Schlüssel startet SCOPE X nicht, statt Daten unlesbar zu machen. Details
+in `app/schutz.py`.
+
+### Kolleg*innen einladen (ab 4.6.0)
+
+Mitglieder laden unter **Netzwerk** per E-Mail ein. Die eingeladene Person
+bewirbt sich über den Link, das Mitglied steht als Kontakt fest, die
+Administration entscheidet. Funktioniert nur, wenn Bewerbungen offen sind
+und der Mailversand eingerichtet ist.
+
 ### Zugang, Nutzungsvereinbarung, Kataloge (ab 4.5.0)
 
 - **Bewerbung**: `#/bewerben`, verlinkt von der Anmeldung. Braucht einen

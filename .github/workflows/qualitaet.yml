@@ -29,7 +29,7 @@ jobs:
       - name: Abhängigkeiten installieren
         run: |
           pip install -r requirements.txt
-          pip install ruff coverage pip-audit pyyaml httpx playwright
+          pip install ruff coverage pip-audit pyyaml httpx playwright semgrep
 
       - name: Browser für die Barrierefreiheitsprüfung
         run: playwright install --with-deps chromium

@@ -295,6 +295,7 @@ function diviLabel(med, strength) {
    im Fuß jeder Seite, nicht nur auf der Startseite. */
 function pageFoot() {
   return `<div class="page-foot">
+    <a href="#/ueber">Über SCOPE X</a>
     <a href="#/rechtliches">Impressum</a>
     <a href="#/rechtliches">Datenschutz</a>
     <a href="#/rechtliches">Barrierefreiheit</a>
@@ -444,6 +445,7 @@ function authShell(title, inner) {
       </div>
       <p class="tiny muted" data-s="mt-xl center">
         Kompetenz. Erfahrung. Sicherheit.<br>
+        <a href="#/ueber">Über SCOPE X</a> ·
         <a href="#/rechtliches">Impressum und Datenschutz</a> ·
         <a href="#/nutzungsbedingungen">Nutzungsvereinbarung</a></p>
     </div>`;
@@ -475,7 +477,8 @@ function viewLogin() {
          data-s="center link-plain">Passwort vergessen</a>
       <p class="tiny muted" id="login-error"></p>
       <p class="small muted bew-hinweis" data-s="center">Noch kein Zugang?
-        <a href="#/bewerben">Um Zugang bewerben</a></p>
+        <a href="#/bewerben">Um Zugang bewerben</a> ·
+        <a href="#/ueber">Was ist SCOPE X?</a></p>
     </form>`);
 
   /* Ist dieses Gerät hinterlegt, wird gar kein Code gebraucht. Dann bleibt
@@ -616,7 +619,7 @@ function viewRegister(inviteCode, invite) {
       <div class="field"><label for="rp">Passwort, mindestens 12 Zeichen</label>
         <input id="rp" type="password" name="password" autocomplete="new-password" required minlength="12"></div>
       <label class="check confirm"><input type="checkbox" name="nutzung" required>
-        <span>Ich habe die <a href="#/nutzungsbedingungen" target="_blank" rel="noopener">Nutzungsvereinbarung</a>
+        <span>Ich habe die <a href="#/nutzungsbedingungen" data-rechtstext="nutzung">Nutzungsvereinbarung</a>
         gelesen und stimme ihr zu. Insbesondere teile ich nichts, was Patient*innen erkennbar
         macht.</span></label>
       <button class="btn-primary btn-lg" type="submit">Konto anlegen</button>
@@ -771,6 +774,7 @@ const routes = {
   "/themen": viewThemen,
   "/fortbildung": viewFortbildung,
   "/nutzungsbedingungen": viewNutzungsbedingungen,
+  "/ueber": viewUeber,
   "/bewerben": () => { location.replace("#/"); },
 };
 
@@ -834,10 +838,41 @@ async function render() {
   }
 }
 
+/* Wie viele Seitenwechsel es in diesem Tab schon gab. history.back()
+   allein lief ins Leere, wenn eine Seite der erste Eintrag des Tabs war,
+   etwa nach einem Link aus einer Mail oder einem neuen Tab. */
+let navTiefe = 0;
+function zurueck() {
+  if (navTiefe > 0) history.back();
+  else location.hash = "#/";
+}
+
 window.addEventListener("hashchange", () => {
+  navTiefe += 1;
   if (!state.auth || !state.auth.authenticated) { boot(); return; }
   render();
 });
+
+/* Abmelden: aus der Seitenleiste und der Kopfzeile, auf jeder Seite. */
+async function abmelden() {
+  try { await api("/api/auth/logout", { method: "POST" }); } catch (_) { /* ohnehin weg */ }
+  closeSheet();
+  state.auth = null;
+  location.hash = "#/";
+  boot();
+  toast("Abgemeldet.");
+}
+document.querySelectorAll("[data-abmelden]").forEach((b) => b.addEventListener("click", () => {
+  sheet("Abmelden", `<p class="small">Von SCOPE X abmelden? Auf diesem Gerät musst du dich danach
+    neu anmelden.</p>
+    <div class="sheet-actions two">
+      <button type="button" id="ab-nein">Abbrechen</button>
+      <button type="button" class="btn-primary" id="ab-ja">Abmelden</button>
+    </div>`, (body) => {
+    $("#ab-nein", body).addEventListener("click", closeSheet);
+    $("#ab-ja", body).addEventListener("click", abmelden);
+  });
+}));
 
 // Der mittlere Punkt der Leiste. Er navigiert nirgendwohin, er beginnt
 // etwas Neues — von jeder Seite aus: einen Einsatz oder einen Beitrag.
@@ -852,12 +887,11 @@ document.getElementById("tab-new").addEventListener("click", () => {
 
 // ---------------------------------------------------------- Rechtliches
 
-async function viewLegal() {
-  const l = await api("/api/legal");
+function legalHtml(l) {
   const missing = (v, hint) => v
     ? esc(v) : `<span class="missing">${esc(hint)}</span>`;
 
-  app().innerHTML = `
+  return `
     <div class="page-head">
       <h1>Rechtliches</h1>
       <p class="muted small">Anbieterkennzeichnung und Datenschutz</p>
@@ -889,7 +923,7 @@ async function viewLegal() {
       SCOPE X ist eine nicht kommerzielle, privat betriebene Anwendung. Es
       werden keine Leistungen angeboten, keine Werbung ausgespielt und keine
       Einnahmen erzielt. Die Nutzung ist nur mit persönlicher Einladung
-      möglich.</p>
+      oder nach angenommener Bewerbung möglich.</p>
 
       <h2>Verantwortlich für den Betrieb</h2>
       <p class="small">Die Anwendung läuft auf einem privaten Server. Ein
@@ -918,6 +952,22 @@ async function viewLegal() {
       Cloud-Dienste, kein Tracking, keine Analyse- und keine
       Telemetriedienste eingesetzt. Die Anwendung lädt zur Laufzeit nichts
       aus dem Internet nach.</p>
+      <p class="small"><strong>Verschlüsselung.</strong> Die Verbindung
+      ist per TLS verschlüsselt. Gespeichert werden Nachrichten, Namen,
+      E-Mail-Adressen, Profilangaben, Beiträge, Kommentare, Einsatznummer,
+      Fahrzeug, Schicht und Notizen sowie Bilder und Videos mit AES-256-GCM
+      verschlüsselt. Der Schlüssel liegt beim Betreiber; die Anwendung
+      entschlüsselt beim Anzeigen. Eine Ende-zu-Ende-Verschlüsselung, bei der
+      auch der Betreiber nicht lesen könnte, ist das nicht. Datum und
+      Uhrzeit eines Einsatzes sowie Maßnahmen und Medikamente bleiben
+      unverschlüsselt, weil die Auswertung sie zählt und sortiert.</p>
+      <p class="small"><strong>Bewerbung und Empfehlung.</strong> Wer sich
+      bewirbt, gibt Name, E-Mail-Adresse, Beruf, Region und optional
+      Organisation, Wache und eine Begründung an. Unbestätigte Bewerbungen
+      werden nach 48 Stunden gelöscht, entschiedene nach 30 Tagen, angenommene
+      spätestens mit der Registrierung. Lädt ein Mitglied jemanden ein, werden
+      dessen E-Mail-Adresse und optional der Name gespeichert und 90 Tage nach
+      Ablauf der Einladung gelöscht.</p>
       <p class="small"><strong>Speicherdauer.</strong> Daten bleiben
       gespeichert, bis du sie löschst oder dein Konto aufgelöst wird. Ein
       dokumentierter Eintrag wird nach Ablauf der eingestellten
@@ -967,9 +1017,10 @@ async function viewLegal() {
       Fallberichte erscheinen auf Wunsch verzögert, voreingestellt nach
       sieben Tagen.</p>
       <p class="small"><strong>Nachrichten.</strong> Direktnachrichten liegen
-      unverschlüsselt in der Datenbank dieser Installation, wie alle übrigen
-      Daten. Die Administration könnte sie technisch lesen. Eigene
-      Einsatznummern werden auch in Nachrichten abgelehnt.</p>
+      verschlüsselt in der Datenbank, Bilder darin ebenso auf dem
+      Datenträger. Wer den laufenden Server und den Schlüssel kontrolliert,
+      könnte sie technisch lesen; die Anwendung bietet dafür keine Funktion.
+      Eigene Einsatznummern werden auch in Nachrichten abgelehnt.</p>
       <p class="small"><strong>Meldungen.</strong> Ein gemeldeter Beitrag
       wird der Administration zur Prüfung angezeigt. Entfernt sie ihn,
       erfährst du den Grund; der Vorgang steht im Änderungsprotokoll.</p>
@@ -1021,9 +1072,14 @@ async function viewLegal() {
       SOP.</p>
     </div>
 
-    <button class="btn-quiet btn-lg" data-s="mt-md" id="back">Zurück</button>`;
+`;
+}
 
-  $("#back").addEventListener("click", () => history.back());
+async function viewLegal() {
+  const l = await api("/api/legal");
+  app().innerHTML = `${legalHtml(l)}
+    <button class="btn-quiet btn-lg" data-s="mt-md" id="back">Zurück</button>`;
+  $("#back").addEventListener("click", zurueck);
 }
 
 // ------------------------------------------------------------ Einsatzliste
@@ -2997,11 +3053,7 @@ async function viewEinstellungen() {
     });
   }));
 
-  $("#logout").addEventListener("click", async () => {
-    await api("/api/auth/logout", { method: "POST" });
-    state.auth = null;
-    boot();
-  });
+  $("#logout").addEventListener("click", abmelden);
 
 }
 
@@ -3355,6 +3407,7 @@ function publicRoute() {
   if (path === "/passwort-vergessen") { viewForgotPassword(); return true; }
   if (path === "/bewerben") { viewBewerben(query.get("token")); return true; }
   if (path === "/nutzungsbedingungen") { viewNutzungsbedingungen(); return true; }
+  if (path === "/ueber") { viewUeber(); return true; }
   if (path === "/rechtliches") {
     setShell(false);
     viewLegal();

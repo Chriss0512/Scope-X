@@ -76,7 +76,7 @@ Installation ist ein geschlossener Kreis.
 | **Profil** | Profilbild, Titelbild, Chronik, Kompetenzen mit Bestätigungen, Info, Region, Organisation, Wache, Qualifikationen, Abzeichen; öffentlich oder privat |
 | **Netzwerk** | Folgen, Folgeanfragen annehmen oder ignorieren, Vorschläge aus Wache, Organisation und Kreis, Blockieren, Direktnachrichten |
 | **Suche** | Personen mit Filtern nach Kreis, Organisation, Qualifikation; Themen; Beiträge – Suchfeld auf jeder Seite |
-| **Zugang** | Einladung, Bewerbung mit Bürgschaft eines Mitglieds, Nutzungsvereinbarung mit Fassungen |
+| **Zugang** | Einladung durch die Administration, Bewerbung mit Bürgschaft, Einladung durch Mitglieder mit Entscheidung der Administration, Nutzungsvereinbarung mit Fassungen |
 | **Administration** | Konten, Rollen, Einladungen, Bewerbungen, Kataloge (Organisationen, Wachen, Qualifikationen, Themen), Moderation, Stammdaten, Sicherung, Änderungsprotokoll |
 
 ## Umsetzung
@@ -107,8 +107,13 @@ Installation ist ein geschlossener Kreis.
   geprüft.
 - Passwörter mit Argon2id, Zwei-Faktor-Authentifizierung Pflicht, Passkeys,
   Arbeitsnachweis und Drosselung vor jeder Anmeldung, Herkunftsfilter.
+- Verschlüsselung im Ruhezustand mit AES-256-GCM: Nachrichten, Namen,
+  E-Mail-Adressen, Profilangaben, Beiträge, Einsatzkennungen, Notizen sowie
+  alle Bilder und Videos; Suche nach E-Mail-Adressen über einen Blindindex.
 - Ausschließlich parametrisierte SQL-Abfragen, Prüfung jeder Eingabe im
   Server, Objekte anderer antworten mit 404.
+- Statische Sicherheitsanalyse mit Semgrep (OWASP Top Ten) und Prüfung der
+  Abhängigkeiten mit pip-audit bei jedem Push.
 - Keine personenbezogenen Daten in Protokollen; IP-Adressen nur gekürzt
   gehasht.
 - Strenge Content-Security-Policy ohne Inline-Skripte und -Stile.

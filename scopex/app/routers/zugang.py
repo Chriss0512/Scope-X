@@ -30,7 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from .. import kataloge as kat
-from .. import mailer, nutzung
+from .. import mailer, nutzung, schutz
 from ..core import (
     ROLE_LABELS,
     audit,
@@ -133,6 +133,8 @@ class BewerbungIn(BaseModel):
     wache: str = Field(default="", max_length=120)
     motivation: str = Field(default="", max_length=1000)
     buerge: str = Field(default="", max_length=200)
+    # Code aus der Empfehlung eines Mitglieds, falls vorhanden.
+    empfehlung: str = Field(default="", max_length=80)
     datenschutz: bool = False
     pow: dict | None = None
 
@@ -167,6 +169,16 @@ Warst du das nicht, ignoriere diese Nachricht.
 """)
 
 
+def _empfehlung(c, code: str) -> dict | None:
+    """Gültige, ungenutzte Empfehlung zu einem Code."""
+    if not code:
+        return None
+    r_ = row(c, "SELECT * FROM referrals WHERE code_hash = :h", h=token_hash(code.strip()))
+    if not r_ or r_["used_at"] or r_["revoked_at"] or r_["expires_at"] < now_iso():
+        return None
+    return r_
+
+
 @router.post("/api/oeffentlich/bewerbung")
 def bewerben(data: BewerbungIn, request: Request):
     _tor_oeffnen(request, data.pow, kennung=_norm(data.email))
@@ -179,24 +191,33 @@ def bewerben(data: BewerbungIn, request: Request):
     if data.kreis_ags and not kat.kreis_gueltig(data.kreis_ags):
         raise HTTPException(400, "Unbekannter Kreis.")
     ip = hash_ip(client_ip(request))
+    email_idx = schutz.index(email)
+    sofort = False
     with conn() as c:
         if not _offen(c) or not mailer.is_configured():
             raise HTTPException(503, "Bewerbungen sind derzeit nicht möglich.")
         aufraeumen(c)
+        empf = _empfehlung(c, data.empfehlung)
+        if data.empfehlung and not empf:
+            # Wer den Link hat, ist die empfohlene Person; ihr darf man sagen,
+            # dass er nicht mehr gilt.
+            raise HTTPException(400, "Diese Empfehlung ist abgelaufen oder wurde "
+                                     "schon verwendet. Du kannst dich trotzdem "
+                                     "ohne Empfehlung bewerben.")
         # Drosselung je Herkunft. Was darüber hinausgeht, verschwindet still,
         # damit die Antwort nichts über die Grenze verrät.
-        if ip and (scalar(c, "SELECT COUNT(*) FROM applications WHERE ip_hash = :h "
-                             "AND created_at > :t", h=ip, t=_vor(days=1)) or 0) \
-                >= JE_ADRESSE_UND_TAG:
+        if not empf and ip and (scalar(c, "SELECT COUNT(*) FROM applications WHERE "
+                                          "ip_hash = :h AND created_at > :t",
+                                       h=ip, t=_vor(days=1)) or 0) >= JE_ADRESSE_UND_TAG:
             log.info("Bewerbung über Tagesgrenze verworfen.")
             return {"ok": True, "detail": ANTWORT}
 
-        if row(c, "SELECT id FROM users WHERE LOWER(email) = :e", e=email):
+        if row(c, "SELECT id FROM users WHERE email_idx = :x", x=email_idx):
             _konto_vorhanden_senden(email)
             return {"ok": True, "detail": ANTWORT}
 
-        vorhanden = row(c, "SELECT id, status FROM applications WHERE email = :e "
-                           "AND status IN ('unbestaetigt', 'offen')", e=email)
+        vorhanden = row(c, "SELECT id, status FROM applications WHERE email_idx = :x "
+                           "AND status IN ('unbestaetigt', 'offen')", x=email_idx)
         if vorhanden and vorhanden["status"] == "offen":
             # Schon bestätigt und in Prüfung. Keine zweite Bewerbung, keine Mail:
             # die Person hat ihre Bestätigung bereits erhalten.
@@ -204,37 +225,66 @@ def bewerben(data: BewerbungIn, request: Request):
 
         token = secrets.token_urlsafe(32)
         buerge_id, buerge_status, buerge_text = None, None, None
-        eingabe = _norm(data.buerge)
-        if eingabe:
-            b = row(c, "SELECT id FROM users WHERE (LOWER(username) = :n OR "
-                       "LOWER(email) = :n) AND disabled_at IS NULL", n=eingabe)
-            if b:
-                buerge_id, buerge_status = b["id"], "wartet"
-            else:
-                # Nicht gefunden: die Eingabe bleibt für die Administration
-                # sichtbar, die Person erfährt nichts davon.
-                buerge_status, buerge_text = "nicht_gefunden", data.buerge.strip()[:200]
+        if empf:
+            # Das empfehlende Mitglied hat schon gebürgt, als es die Empfehlung
+            # verschickt hat. Es wird nicht noch einmal gefragt.
+            buerge_id, buerge_status = empf["created_by"], "empfohlen"
+            # Die Empfehlung ging an genau diese Adresse: der Klick auf den
+            # Link hat sie bestätigt, eine zweite Mail braucht es nicht.
+            sofort = empf["email_idx"] == email_idx
+        else:
+            eingabe = _norm(data.buerge)
+            if eingabe:
+                b = row(c, "SELECT id FROM users WHERE (LOWER(username) = :n OR "
+                           "email_idx = :x) AND disabled_at IS NULL",
+                        n=eingabe, x=schutz.index(eingabe))
+                if b:
+                    buerge_id, buerge_status = b["id"], "wartet"
+                else:
+                    # Nicht gefunden: die Eingabe bleibt für die Administration
+                    # sichtbar, die Person erfährt nichts davon.
+                    buerge_status = "nicht_gefunden"
+                    buerge_text = data.buerge.strip()[:200]
 
         felder = {
-            "f": data.first_name.strip(), "l": data.last_name.strip(), "e": email,
-            "q": data.qualification.strip(), "k": data.kreis_ags or None,
-            "o": data.organisation.strip() or None, "w": data.wache.strip() or None,
-            "m": data.motivation.strip() or None, "si": buerge_id, "ss": buerge_status,
-            "st": buerge_text, "h": token_hash(token), "ip": ip, "t": now_iso()}
+            "f": schutz.v(data.first_name.strip()), "l": schutz.v(data.last_name.strip()),
+            "e": schutz.v(email), "ex": email_idx,
+            "q": schutz.v(data.qualification.strip()), "k": data.kreis_ags or None,
+            "o": schutz.v(data.organisation.strip() or None),
+            "w": schutz.v(data.wache.strip() or None),
+            "m": schutz.v(data.motivation.strip() or None), "si": buerge_id,
+            "ss": buerge_status, "st": schutz.v(buerge_text),
+            "h": None if sofort else token_hash(token), "ip": ip, "t": now_iso(),
+            "st2": "offen" if sofort else "unbestaetigt",
+            "ca": now_iso() if sofort else None, "rid": empf["id"] if empf else None}
         if vorhanden:
             # Erneut abgeschickt, bevor bestätigt wurde: Angaben und Link
             # werden erneuert, der alte Link verfällt.
-            q(c, "UPDATE applications SET first_name = :f, last_name = :l, "
-                 "qualification = :q, kreis_ags = :k, organisation = :o, wache = :w, "
-                 "motivation = :m, sponsor_id = :si, sponsor_status = :ss, "
-                 "sponsor_text = :st, token_hash = :h, ip_hash = :ip, created_at = :t "
-                 "WHERE id = :i AND email = :e", i=vorhanden["id"], **felder)
+            aid = vorhanden["id"]
+            q(c, "UPDATE applications SET first_name = :f, last_name = :l, email = :e, "
+                 "email_idx = :ex, qualification = :q, kreis_ags = :k, "
+                 "organisation = :o, wache = :w, motivation = :m, sponsor_id = :si, "
+                 "sponsor_status = :ss, sponsor_text = :st, token_hash = :h, "
+                 "ip_hash = :ip, created_at = :t, status = :st2, confirmed_at = :ca, "
+                 "referral_id = :rid WHERE id = :i", i=aid, **felder)
         else:
-            q(c, "INSERT INTO applications (id, first_name, last_name, email, "
+            aid = new_id()
+            q(c, "INSERT INTO applications (id, first_name, last_name, email, email_idx, "
                  "qualification, kreis_ags, organisation, wache, motivation, "
                  "sponsor_id, sponsor_status, sponsor_text, status, token_hash, "
-                 "ip_hash, created_at) VALUES (:i, :f, :l, :e, :q, :k, :o, :w, :m, "
-                 ":si, :ss, :st, 'unbestaetigt', :h, :ip, :t)", i=new_id(), **felder)
+                 "ip_hash, created_at, confirmed_at, referral_id) VALUES (:i, :f, :l, "
+                 ":e, :ex, :q, :k, :o, :w, :m, :si, :ss, :st, :st2, :h, :ip, :t, :ca, "
+                 ":rid)", i=aid, **felder)
+        if empf:
+            q(c, "UPDATE referrals SET used_at = :t, application_id = :a WHERE id = :i",
+              t=now_iso(), a=aid, i=empf["id"])
+        if sofort:
+            for a in _admins(c):
+                _melde(c, a["id"], "bewerbung", aid)
+    if sofort:
+        return {"ok": True, "detail": "Danke! Deine Bewerbung ist eingegangen. Die "
+                                      "Administration entscheidet und meldet sich per "
+                                      "E-Mail bei dir."}
     _bestaetigung_senden(email, token)
     return {"ok": True, "detail": ANTWORT}
 
@@ -264,7 +314,9 @@ def bewerbung_bestaetigen(data: TokenIn):
             raise HTTPException(400, "Dieser Link ist ungültig oder abgelaufen.")
         q(c, "UPDATE applications SET status = 'offen', confirmed_at = :t, "
              "token_hash = NULL WHERE id = :i", t=now_iso(), i=b["id"])
-        if b["sponsor_id"]:
+        # Nur wer genannt wurde, wird gefragt. Ein empfehlendes Mitglied hat
+        # schon gebürgt und bekommt keine zweite Nachricht.
+        if b["sponsor_id"] and b["sponsor_status"] == "wartet":
             q(c, "UPDATE applications SET sponsor_status = 'angefragt' WHERE id = :i",
               i=b["id"])
             _melde(c, b["sponsor_id"], "buergschaft", b["id"])
@@ -305,8 +357,11 @@ def _fuer_buerge(b: dict) -> dict:
 @router.get("/api/netz/buergschaften")
 def buergschaften(user=Depends(current_user)):
     with conn() as c:
+        # Empfehlungen stehen unter „Kolleg*innen einladen“, nicht hier:
+        # wer empfohlen hat, wird nicht noch einmal gefragt.
         liste = rows(c, "SELECT * FROM applications WHERE sponsor_id = :u AND "
-                        "status = 'offen' ORDER BY confirmed_at DESC", u=user["id"])
+                        "status = 'offen' AND sponsor_status <> 'empfohlen' "
+                        "ORDER BY confirmed_at DESC", u=user["id"])
     return {"buergschaften": [_fuer_buerge(b) for b in liste]}
 
 
@@ -322,13 +377,14 @@ def buergschaft_beantworten(aid: str, data: BuergschaftIn,
         # sponsor_id = Anfragende: sonst könnte jedes Mitglied für jede
         # Bewerbung bürgen, deren Kennung es errät.
         b = row(c, "SELECT * FROM applications WHERE id = :i AND sponsor_id = :u "
-                   "AND status = 'offen'", i=aid, u=user["id"])
+                   "AND status = 'offen' AND sponsor_status <> 'empfohlen'",
+                i=aid, u=user["id"])
         if not b:
             raise HTTPException(404, "Anfrage nicht gefunden.")
         status = "bestaetigt" if data.antwort == "ja" else "abgelehnt"
         q(c, "UPDATE applications SET sponsor_status = :s, sponsor_text = :x, "
              "sponsor_at = :t WHERE id = :i",
-          s=status, x=data.text.strip() or None, t=now_iso(), i=aid)
+          s=status, x=schutz.v(data.text.strip() or None), t=now_iso(), i=aid)
         audit(c, user["id"], "applications", aid, "sponsor", "sponsor_status",
               b["sponsor_status"], status)
         for a in _admins(c):
@@ -346,12 +402,17 @@ def aufraeumen(c) -> int:
              "created_at < :t", t=_vor(hours=BESTAETIGUNG_STUNDEN)).rowcount or 0
     b = q(c, "DELETE FROM applications WHERE status IN ('angenommen', 'abgelehnt') "
              "AND decided_at < :t", t=_vor(days=AUFBEWAHRUNG_TAGE)).rowcount or 0
-    return a + b
+    # Empfehlungen enthalten die Adresse eines Menschen, der (noch) kein
+    # Mitglied ist. 90 Tage nach Ablauf verschwinden sie.
+    r_ = q(c, "DELETE FROM referrals WHERE expires_at < :t",
+           t=_vor(days=90 + EMPFEHLUNG_TAGE)).rowcount or 0
+    return a + b + r_
 
 
 def _fuer_admin(c, b: dict) -> dict:
     aus = _fuer_buerge(b)
     aus.update({"email": b["email"], "status": b["status"],
+                "per_empfehlung": bool(b.get("referral_id")),
                 "beworben": b["created_at"], "entschieden": b["decided_at"],
                 "notiz": b["decision_note"] or "", "buerge": None,
                 "buerge_eingabe": ""})
@@ -412,16 +473,17 @@ def bewerbung_annehmen(aid: str, data: AnnahmeIn, admin=Depends(require_admin)):
                 i=aid)
         if not b:
             raise HTTPException(404, "Bewerbung nicht gefunden oder bereits entschieden.")
-        if row(c, "SELECT id FROM users WHERE LOWER(email) = :e", e=b["email"]):
+        if row(c, "SELECT id FROM users WHERE email_idx = :x", x=b["email_idx"]):
             raise HTTPException(409, "Zu dieser Adresse gibt es inzwischen ein Konto.")
         iid = new_id()
         q(c, "INSERT INTO invitations (id, code_hash, email, role, note, created_by, "
              "created_at, expires_at) VALUES (:i, :h, :e, :r, :n, :cb, :c, :x)",
-          i=iid, h=token_hash(code), e=b["email"], r=data.role,
-          n="Bewerbung", cb=admin["id"], c=now_iso(), x=ablauf)
+          i=iid, h=token_hash(code), e=schutz.v(b["email"]), r=data.role,
+          n=schutz.v("Bewerbung"), cb=admin["id"], c=now_iso(), x=ablauf)
         q(c, "UPDATE applications SET status = 'angenommen', decided_at = :t, "
              "decided_by = :a, decision_note = :n, invitation_id = :iid WHERE id = :i",
-          t=now_iso(), a=admin["id"], n=data.notiz.strip() or None, iid=iid, i=aid)
+          t=now_iso(), a=admin["id"], n=schutz.v(data.notiz.strip() or None), iid=iid,
+          i=aid)
         audit(c, admin["id"], "applications", aid, "accept", "role", None, data.role)
         audit(c, admin["id"], "invitations", iid, "create", "role", None, data.role)
         email = b["email"]
@@ -445,7 +507,7 @@ def bewerbung_ablehnen(aid: str, data: AblehnungIn, admin=Depends(require_admin)
             raise HTTPException(404, "Bewerbung nicht gefunden oder bereits entschieden.")
         q(c, "UPDATE applications SET status = 'abgelehnt', decided_at = :t, "
              "decided_by = :a, decision_note = :n WHERE id = :i",
-          t=now_iso(), a=admin["id"], n=data.notiz.strip() or None, i=aid)
+          t=now_iso(), a=admin["id"], n=schutz.v(data.notiz.strip() or None), i=aid)
         audit(c, admin["id"], "applications", aid, "reject")
         email = b["email"]
     if data.benachrichtigen:
@@ -469,3 +531,146 @@ def nach_registrierung(c, invitation_id: str, user_id: str) -> None:
         q(c, "UPDATE user_profile SET kreis_ags = :k WHERE user_id = :u",
           k=b["kreis_ags"], u=user_id)
     q(c, "DELETE FROM applications WHERE id = :i", i=b["id"])
+
+
+# --------------------------------------------------------------------------
+# Empfehlung durch Mitglieder
+# --------------------------------------------------------------------------
+#
+# Ein Mitglied lädt jemanden ein. Anders als bei einer Einladung der
+# Administration entsteht daraus kein Konto, sondern eine Bewerbung: die
+# empfohlene Person füllt das Formular aus, das empfehlende Mitglied steht
+# schon als Bürge fest (ohne erneute Nachricht), und die Administration
+# entscheidet wie bei jeder Bewerbung.
+
+EMPFEHLUNG_TAGE = 14
+OFFEN_JE_MITGLIED = 5
+JE_MITGLIED_30_TAGE = 10
+
+
+class EmpfehlungIn(BaseModel):
+    email: str = Field(min_length=3, max_length=200)
+    name: str = Field(default="", max_length=120)
+
+
+def _empfehlung_status(c, r_: dict) -> str:
+    if r_["revoked_at"]:
+        return "zurückgezogen"
+    if r_["used_at"]:
+        if row(c, "SELECT id FROM users WHERE email_idx = :x", x=r_["email_idx"]):
+            return "Mitglied geworden"
+        return "beworben"
+    if r_["expires_at"] < now_iso():
+        return "abgelaufen"
+    return "verschickt"
+
+
+def _empfehlungen(c, uid: str) -> list[dict]:
+    return [{"id": r_["id"], "email": r_["email"], "name": r_["name"] or "",
+             "erstellt": r_["created_at"], "gueltig_bis": r_["expires_at"],
+             "status": _empfehlung_status(c, r_)}
+            for r_ in rows(c, "SELECT * FROM referrals WHERE created_by = :u "
+                              "ORDER BY created_at DESC LIMIT 50", u=uid)]
+
+
+@router.get("/api/netz/empfehlungen")
+def empfehlungen(user=Depends(current_user)):
+    with conn() as c:
+        moeglich = _offen(c) and mailer.is_configured() and \
+            (user.get("role") or "user") != "guest"
+        return {"moeglich": moeglich, "empfehlungen": _empfehlungen(c, user["id"])}
+
+
+@router.post("/api/netz/empfehlungen")
+def empfehlen(data: EmpfehlungIn, user=Depends(current_user)):
+    if (user.get("role") or "user") == "guest":
+        raise HTTPException(403, "Mit Lesezugriff lässt sich niemand einladen.")
+    email = _norm(data.email)
+    if "@" not in email or " " in email or len(email.split("@")[-1]) < 3:
+        raise HTTPException(400, "Die E-Mail-Adresse sieht nicht gültig aus.")
+    name = " ".join(data.name.split())
+    with conn() as c:
+        if not _offen(c) or not mailer.is_configured():
+            raise HTTPException(503, "Einladungen durch Mitglieder sind derzeit nicht "
+                                     "möglich.")
+        offen = scalar(c, "SELECT COUNT(*) FROM referrals WHERE created_by = :u AND "
+                          "used_at IS NULL AND revoked_at IS NULL AND expires_at > :t",
+                       u=user["id"], t=now_iso()) or 0
+        if offen >= OFFEN_JE_MITGLIED:
+            raise HTTPException(429, f"Du hast schon {OFFEN_JE_MITGLIED} offene "
+                                     "Einladungen. Ziehe eine zurück oder warte, bis "
+                                     "sie verwendet wurde.")
+        zuletzt = scalar(c, "SELECT COUNT(*) FROM referrals WHERE created_by = :u AND "
+                            "created_at > :t", u=user["id"], t=_vor(days=30)) or 0
+        if zuletzt >= JE_MITGLIED_30_TAGE:
+            raise HTTPException(429, "Für diesen Monat sind genug Einladungen "
+                                     "unterwegs.")
+        x = schutz.index(email)
+        if row(c, "SELECT id FROM referrals WHERE created_by = :u AND email_idx = :x "
+                  "AND used_at IS NULL AND revoked_at IS NULL AND expires_at > :t",
+               u=user["id"], x=x, t=now_iso()):
+            raise HTTPException(409, "An diese Adresse ist schon eine Einladung von dir "
+                                     "unterwegs.")
+        absender = row(c, "SELECT first_name, last_name FROM user_profile WHERE "
+                          "user_id = :u", u=user["id"]) or {}
+        von = " ".join(v_ for v_ in (absender.get("first_name"),
+                                     absender.get("last_name")) if v_) or "Ein Mitglied"
+        konto = row(c, "SELECT id FROM users WHERE email_idx = :x", x=x)
+        code = secrets.token_urlsafe(24)
+        rid = new_id()
+        q(c, "INSERT INTO referrals (id, code_hash, email, email_idx, name, created_by, "
+             "created_at, expires_at) VALUES (:i, :h, :e, :x, :n, :u, :t, :b)",
+          i=rid, h=token_hash(code), e=schutz.v(email), x=x, n=schutz.v(name or None),
+          u=user["id"], t=now_iso(),
+          b=(datetime.now(timezone.utc) + timedelta(days=EMPFEHLUNG_TAGE)).replace(
+              microsecond=0).isoformat())
+        audit(c, user["id"], "referrals", rid, "create")
+    # Gibt es zu der Adresse schon ein Konto, geht keine Einladung raus. Das
+    # Mitglied erfährt davon nichts: es sieht sonst, wer hier ein Konto hat.
+    if not konto:
+        mailer.send(email, f"SCOPE X: {von} lädt dich ein", f"""\
+{"Hallo " + name + "," if name else "Hallo,"}
+
+{von} lädt dich zu SCOPE X ein, dem Kompetenzlogbuch und Fachnetzwerk für
+die Notfallversorgung.
+
+Über diesen Link bewirbst du dich um Zugang. {von} ist dabei schon als
+Kontakt eingetragen; über die Aufnahme entscheidet die Administration:
+
+{mailer.link("#/bewerben?empfehlung=" + code)}
+
+Was SCOPE X ist: {mailer.link("#/ueber")}
+
+Der Link gilt {EMPFEHLUNG_TAGE} Tage. Möchtest du nicht, ignoriere diese
+Nachricht; es wird nichts gespeichert, was über diese Einladung hinausgeht.
+""")
+    with conn() as c:
+        return {"ok": True, "empfehlungen": _empfehlungen(c, user["id"])}
+
+
+@router.delete("/api/netz/empfehlungen/{rid}")
+def empfehlung_zurueckziehen(rid: str, user=Depends(current_user)):
+    with conn() as c:
+        r_ = row(c, "SELECT * FROM referrals WHERE id = :i AND created_by = :u",
+                 i=rid, u=user["id"])
+        if not r_:
+            raise HTTPException(404, "Einladung nicht gefunden.")
+        if not r_["used_at"] and not r_["revoked_at"]:
+            q(c, "UPDATE referrals SET revoked_at = :t WHERE id = :i", t=now_iso(), i=rid)
+        return {"empfehlungen": _empfehlungen(c, user["id"])}
+
+
+@router.get("/api/oeffentlich/empfehlung/{code}")
+def empfehlung_pruefen(code: str):
+    """Für das Bewerbungsformular: wer empfiehlt, an welche Adresse. Wer den
+    Code hat, ist die eingeladene Person; mehr als diese Angaben gibt es
+    nicht."""
+    with conn() as c:
+        r_ = _empfehlung(c, code[:80])
+        if not r_:
+            raise HTTPException(404, "Diese Einladung ist abgelaufen oder wurde schon "
+                                     "verwendet.")
+        p = row(c, "SELECT first_name, last_name FROM user_profile WHERE user_id = :u",
+                u=r_["created_by"]) or {}
+    return {"von": " ".join(x for x in (p.get("first_name"), p.get("last_name")) if x)
+            or "Ein Mitglied", "email": r_["email"], "name": r_["name"] or ""}

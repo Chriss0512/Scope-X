@@ -1,5 +1,5 @@
 {
-  "version": "4.5.0",
+  "version": "4.6.0",
   "paths": [
     "/api/account/delete",
     "/api/admin/bewerbungen",
@@ -89,6 +89,8 @@
     "/api/netz/buergschaften/{aid}",
     "/api/netz/eintraege",
     "/api/netz/eintraege/{eid}",
+    "/api/netz/empfehlungen",
+    "/api/netz/empfehlungen/{rid}",
     "/api/netz/entdecken",
     "/api/netz/feed",
     "/api/netz/folgen/{uid}",
@@ -136,6 +138,7 @@
     "/api/nutzung/zustimmen",
     "/api/oeffentlich/bewerbung",
     "/api/oeffentlich/bewerbung/bestaetigen",
+    "/api/oeffentlich/empfehlung/{code}",
     "/api/oeffentlich/kreise",
     "/api/oeffentlich/nutzungsbedingungen",
     "/api/overview",

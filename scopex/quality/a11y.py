@@ -66,7 +66,7 @@ def audit() -> list[str]:
                               "#/administration", "#/rechtliches",
                               "#/netzwerk", "#/suche", "#/suche?q=reanimation",
                               "#/themen", "#/gespeichert", "#/fortbildung",
-                              "#/nutzungsbedingungen"]:
+                              "#/nutzungsbedingungen", "#/ueber"]:
                     page.goto(f"http://127.0.0.1:8199/{route}",
                               wait_until="networkidle")
                     page.wait_for_timeout(900)

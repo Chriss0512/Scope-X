@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 
-from . import nutzung
+from . import nutzung, schutz
 from .db import conn, new_id, now_iso, q, row
 from .security import SESSION_COOKIE, resolve_session
 
@@ -165,8 +165,8 @@ def audit(c, user_id: str | None, entity_type: str, entity_id: str,
          "VALUES (:i, :u, :t, :et, :ei, :a, :f, :o, :n)",
       i=new_id(), u=user_id, t=now_iso(), et=entity_type, ei=entity_id,
       a=action, f=field,
-      o=None if old_value is None else str(old_value),
-      n=None if new_value is None else str(new_value))
+      o=None if old_value is None else schutz.v(str(old_value)),
+      n=None if new_value is None else schutz.v(str(new_value)))
 
 
 def audit_diff(c, user_id: str, entity_type: str, entity_id: str,

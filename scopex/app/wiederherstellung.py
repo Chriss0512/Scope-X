@@ -31,7 +31,7 @@ import argparse
 import getpass
 import sys
 
-from . import gate
+from . import gate, schutz
 from .core import audit
 from .db import conn, migrate, now_iso, q, row, rows
 from .security import (
@@ -56,7 +56,8 @@ def _protokoll(c, user_id: str, was: str, detail: str = "") -> None:
 
 def _konto(c, kennung: str) -> dict:
     treffer = row(c, "SELECT * FROM users WHERE lower(username) = :k "
-                     "OR lower(email) = :k", k=kennung.strip().lower())
+                     "OR email_idx = :x", k=kennung.strip().lower(),
+                  x=schutz.index(kennung))
     if not treffer:
         print(f"Kein Konto mit '{kennung}'. Mit --liste siehst du alle.",
               file=sys.stderr)
@@ -114,6 +115,11 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     migrate()
+    # Schlüssel gegen die Datenbank prüfen, bevor etwas gelesen wird. Ohne
+    # passenden Schlüssel bricht das Werkzeug ab, statt einen neuen
+    # anzulegen.
+    with conn() as c:
+        schutz.pruefen_und_einpflegen(c)
 
     if args.liste:
         return _liste()

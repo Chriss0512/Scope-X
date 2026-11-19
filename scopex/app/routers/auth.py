@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from .. import gate, mailer, nutzung
+from .. import gate, mailer, nutzung, schutz
 from ..core import ROLE_LABELS, audit, current_user, optional_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
 from ..security import (
@@ -132,8 +132,10 @@ def _norm(value: str | None) -> str:
 
 def find_login(c, identifier: str) -> dict | None:
     """Sucht ein Konto über Benutzername oder E-Mail-Adresse."""
+    # Die Adresse liegt verschlüsselt; verglichen wird über den Blindindex.
     return row(c, "SELECT * FROM users WHERE LOWER(username) = :n "
-                  "OR LOWER(email) = :n", n=_norm(identifier))
+                  "OR email_idx = :x", n=_norm(identifier),
+               x=schutz.index(identifier) or "-")
 
 
 def _is_secure(request: Request) -> bool:
@@ -335,10 +337,10 @@ def register(data: RegisterIn, request: Request, response: Response):
         if email and find_login(c, email):
             raise HTTPException(409, "Diese E-Mail-Adresse ist bereits vergeben.")
         uid = new_id()
-        q(c, "INSERT INTO users (id, username, email, password_hash, created_at, "
-             "failed_logins, role, invited_by) "
-             "VALUES (:i, :n, :e, :p, :t, 0, :r, :ib)",
-          i=uid, n=data.username.strip(), e=email,
+        q(c, "INSERT INTO users (id, username, email, email_idx, password_hash, "
+             "created_at, failed_logins, role, invited_by) "
+             "VALUES (:i, :n, :e, :ex, :p, :t, 0, :r, :ib)",
+          i=uid, n=data.username.strip(), e=schutz.v(email), ex=schutz.index(email),
           p=hash_password(data.password), t=now_iso(), r=role,
           ib=invitation["created_by"] if invitation else None)
         if invitation:
@@ -346,7 +348,7 @@ def register(data: RegisterIn, request: Request, response: Response):
               t=now_iso(), u=uid, i=invitation["id"])
         q(c, "INSERT INTO user_profile (user_id, first_name, last_name, "
              "qualification, created_at) VALUES (:u, :f, :l, :q, :t)",
-          u=uid, f=data.first_name.strip(), l=data.last_name.strip(),
+          u=uid, f=schutz.v(data.first_name.strip()), l=schutz.v(data.last_name.strip()),
           q=data.qualification.strip(), t=now_iso())
         secret = new_totp_secret()
         q(c, "INSERT INTO auth_totp (user_id, secret, created_at) "
@@ -673,8 +675,8 @@ def change_email(data: EmailChangeIn, request: Request):
         existing = find_login(c, email) if email else None
         if existing and existing["id"] != user["id"]:
             raise HTTPException(409, "Diese Adresse gehört bereits zu einem Konto.")
-        q(c, "UPDATE users SET email = :e WHERE id = :i",
-          e=email or None, i=user["id"])
+        q(c, "UPDATE users SET email = :e, email_idx = :x WHERE id = :i",
+          e=schutz.v(email) or None, x=schutz.index(email), i=user["id"])
         audit(c, user["id"], "users", user["id"], "email_change")
     return {"ok": True, "email": email or None}
 

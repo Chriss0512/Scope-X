@@ -9,14 +9,15 @@ Existenz nicht erfragen lässt.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from .. import medien
+from .. import medien, schutz
 from .. import netzkern as nk
 from ..core import audit, current_user
 from ..db import conn, new_id, now_iso, q, row, rows, scalar
@@ -139,7 +140,7 @@ def profil_speichern(data: ProfilIn, user=Depends(current_user)):
                 continue
             nk.pruefe_text(c, user["id"], wert, uhrzeit=False)
             q(c, f"UPDATE user_profile SET {feld} = :w WHERE user_id = :u",
-              w=wert.strip(), u=user["id"])
+              w=schutz.fuer("user_profile", feld, wert.strip()), u=user["id"])
         if data.aktiv is not None:
             q(c, "UPDATE user_profile SET net_active = :a WHERE user_id = :u",
               a=1 if data.aktiv else 0, u=user["id"])
@@ -195,9 +196,9 @@ def eintrag_anlegen(data: EintragIn, user=Depends(current_user)):
         q(c, "INSERT INTO net_profile_entries (id, user_id, kind, title, org, "
              "start_date, end_date, note, created_at) VALUES (:i, :u, :k, :t, :o, "
              ":s, :e, :n, :c)", i=new_id(), u=user["id"], k=data.art,
-          t=data.titel.strip(), o=(data.org or "").strip() or None,
+          t=schutz.v(data.titel.strip()), o=schutz.v((data.org or "").strip() or None),
           s=data.von or None, e=data.bis or None,
-          n=(data.notiz or "").strip() or None, c=now_iso())
+          n=schutz.v((data.notiz or "").strip() or None), c=now_iso())
         return {"eintraege": eintraege(c, user["id"])}
 
 
@@ -210,9 +211,10 @@ def eintrag_aendern(eid: str, data: EintragIn, user=Depends(current_user)):
         _pruefe_eintrag(c, user["id"], data)
         q(c, "UPDATE net_profile_entries SET kind = :k, title = :t, org = :o, "
              "start_date = :s, end_date = :e, note = :n WHERE id = :i",
-          k=data.art, t=data.titel.strip(), o=(data.org or "").strip() or None,
+          k=data.art, t=schutz.v(data.titel.strip()),
+          o=schutz.v((data.org or "").strip() or None),
           s=data.von or None, e=data.bis or None,
-          n=(data.notiz or "").strip() or None, i=eid)
+          n=schutz.v((data.notiz or "").strip() or None), i=eid)
         return {"eintraege": eintraege(c, user["id"])}
 
 
@@ -421,35 +423,57 @@ def medium_status(mid: str, user=Depends(current_user)):
         return medium_aus(m)
 
 
-def _datei(name: str | None, mime: str) -> FileResponse:
+def _datei(name: str | None, mime: str, request: Request) -> Response:
+    """Liefert eine Mediendatei entschlüsselt aus.
+
+    Range-Anfragen werden weiter beantwortet, damit sich Videos spulen
+    lassen: entschlüsselt werden nur die Blöcke, die der Bereich braucht.
+    """
     try:
         pfad = medien.pfad_fuer(name or "")
     except medien.MedienFehler as exc:
         raise HTTPException(404, "Medium nicht gefunden.") from exc
     if not pfad.exists():
         raise HTTPException(404, "Medium nicht gefunden.")
-    # FileResponse beantwortet Range-Anfragen; Videos lassen sich damit
-    # spulen, ohne die ganze Datei zu laden.
-    return FileResponse(pfad, media_type=mime,
-                        headers={"Cache-Control": "private, max-age=3600"})
+    groesse = schutz.klartext_groesse(pfad)
+    kopf = {"Cache-Control": "private, max-age=3600", "Accept-Ranges": "bytes"}
+    bereich = request.headers.get("range", "")
+    treffer = re.fullmatch(r"bytes=(\d*)-(\d*)", bereich.strip())
+    if treffer and groesse and (treffer.group(1) or treffer.group(2)):
+        if treffer.group(1):
+            start = int(treffer.group(1))
+            ende = int(treffer.group(2)) if treffer.group(2) else groesse - 1
+        else:
+            start, ende = max(0, groesse - int(treffer.group(2))), groesse - 1
+        ende = min(ende, groesse - 1)
+        if start > ende:
+            return Response(status_code=416,
+                            headers={"Content-Range": f"bytes */{groesse}"})
+        kopf.update({"Content-Range": f"bytes {start}-{ende}/{groesse}",
+                     "Content-Length": str(ende - start + 1)})
+        return StreamingResponse(schutz.datei_lesen(pfad, start, ende), status_code=206,
+                                 media_type=mime, headers=kopf)
+    kopf["Content-Length"] = str(groesse)
+    return StreamingResponse(schutz.datei_lesen(pfad), media_type=mime, headers=kopf)
 
 
 @router.get("/medien/{mid}")
-def medium_ausliefern(mid: str, user=Depends(current_user)):
+def medium_ausliefern(mid: str, request: Request, user=Depends(current_user)):
     with conn() as c:
         m = _medium_oder_404(c, user, mid)
     if m["status"] != "bereit":
         raise HTTPException(404, "Medium nicht gefunden.")
-    return _datei(m["file"], m["mime"])
+    return _datei(m["file"], m["mime"], request)
 
 
 @router.get("/medien/{mid}/vorschau")
-def medium_vorschau(mid: str, user=Depends(current_user)):
+def medium_vorschau(mid: str, request: Request, user=Depends(current_user)):
     with conn() as c:
         m = _medium_oder_404(c, user, mid)
     if m["status"] != "bereit":
         raise HTTPException(404, "Medium nicht gefunden.")
-    return _datei(m["poster"] if m["kind"] == "video" else m["file"], "image/jpeg")
+    return _datei(m["poster"] if m["kind"] == "video" else m["file"], "image/jpeg",
+                  request)
 
 
 # --------------------------------------------------------------------------
@@ -461,20 +485,20 @@ def personen_suchen(q_: str = Query("", alias="q", max_length=80),
                     user=Depends(current_user)):
     with conn() as c:
         nk.aktiv_erforderlich(c, user)
-        muster = f"%{q_.strip().lower()}%"
+        # Namen liegen verschlüsselt; gesucht wird deshalb nach dem
+        # Entschlüsseln, nicht per LIKE in der Datenbank.
+        begriff = q_.strip().lower()
         gesperrt = nk.blockierte_ids(c, user["id"])
-        treffer = rows(
+        alle = rows(
             c, "SELECT p.*, p.user_id AS uid, u.disabled_at FROM user_profile p "
                "JOIN users u ON u.id = p.user_id WHERE p.net_active = 1 "
-               "AND u.disabled_at IS NULL AND p.user_id <> :ich AND ("
-               "lower(coalesce(p.first_name, '')) LIKE :m OR "
-               "lower(coalesce(p.last_name, '')) LIKE :m OR "
-               "lower(coalesce(p.headline, '')) LIKE :m OR "
-               "lower(coalesce(p.organisation, '')) LIKE :m) "
-               "ORDER BY p.first_name, p.last_name LIMIT 40",
-            ich=user["id"], m=muster)
-        return {"personen": [nk.person_kurz(c, user["id"], p) for p in treffer
-                             if p["uid"] not in gesperrt][:30]}
+               "AND u.disabled_at IS NULL AND p.user_id <> :ich", ich=user["id"])
+        treffer = [p for p in alle if p["uid"] not in gesperrt and begriff in " ".join(
+            (p.get("first_name") or "", p.get("last_name") or "",
+             p.get("headline") or "", p.get("organisation") or "")).lower()]
+        treffer.sort(key=lambda p: ((p.get("first_name") or "").lower(),
+                                    (p.get("last_name") or "").lower()))
+        return {"personen": [nk.person_kurz(c, user["id"], p) for p in treffer[:30]]}
 
 
 @router.get("/personen/{uid}")
@@ -807,7 +831,7 @@ def auskunft(c, uid: str) -> dict:
 
     def datei(m):
         try:
-            return base64.b64encode(medien.pfad_fuer(m["file"]).read_bytes()).decode()
+            return base64.b64encode(schutz.datei_bytes(medien.pfad_fuer(m["file"]))).decode()
         except (medien.MedienFehler, OSError):
             return None
 
@@ -861,6 +885,8 @@ def auskunft(c, uid: str) -> dict:
                            "WHERE user_id = :u", u=uid),
         "nutzungsvereinbarung": rows(c, "SELECT version, accepted_at FROM "
                                         "terms_acceptance WHERE user_id = :u", u=uid),
+        "empfehlungen": rows(c, "SELECT email, name, created_at, expires_at, used_at, "
+                                "revoked_at FROM referrals WHERE created_by = :u", u=uid),
         "eingereicht": {
             "organisationen": rows(c, "SELECT name, status, created_at FROM "
                                       "net_organisations WHERE created_by = :u", u=uid),
@@ -910,6 +936,7 @@ def loeschen(c, uid: str) -> None:
                     "terms_acceptance"):
         q(c, f"DELETE FROM {tabelle} WHERE user_id = :u", u=uid)
     q(c, "DELETE FROM net_dismissed WHERE user_id = :u OR other_id = :u", u=uid)
+    q(c, "DELETE FROM referrals WHERE created_by = :u", u=uid)
     # Eingereichte Katalogeinträge bleiben (andere nutzen sie), verlieren
     # aber den Bezug zur Person.
     for tabelle in ("net_organisations", "net_wachen", "net_qualifications",

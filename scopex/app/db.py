@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 
+from . import schutz
+
 DATABASE_URL = os.environ.get("SCOPEX_DATABASE_URL", "sqlite:////data/scopex.db")
 
 _connect_args = {}
@@ -60,17 +62,25 @@ def q(c, sql: str, /, **params):
     return c.execute(text(sql), params)
 
 
-def rows(c, sql: str, /, **params) -> list[dict]:
-    return [dict(r._mapping) for r in c.execute(text(sql), params)]
+# Gelesen wird immer entschlüsselt: verschlüsselte Werte tragen ein
+# Präfix (siehe schutz.py) und werden hier zentral in Klartext verwandelt.
+# So kann keine Route das Entschlüsseln vergessen. Geschrieben wird
+# ausdrücklich mit schutz.v() an jeder Stelle, die eine geschützte Spalte
+# setzt; die Prüfschleife sucht nach Klartext, der durchgerutscht ist.
+
+def rows(c, sql: str, /, _roh: bool = False, **params) -> list[dict]:
+    if _roh:
+        return [dict(r._mapping) for r in c.execute(text(sql), params)]
+    return [schutz.zeile(dict(r._mapping)) for r in c.execute(text(sql), params)]
 
 
 def row(c, sql: str, /, **params) -> dict | None:
     r = c.execute(text(sql), params).first()
-    return dict(r._mapping) if r else None
+    return schutz.zeile(dict(r._mapping)) if r else None
 
 
 def scalar(c, sql: str, /, **params):
-    return c.execute(text(sql), params).scalar()
+    return schutz.e(c.execute(text(sql), params).scalar())
 
 
 # --------------------------------------------------------------------------
@@ -916,6 +926,34 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
             accepted_at TEXT NOT NULL
         )""",
         "CREATE UNIQUE INDEX ix_terms_once ON terms_acceptance(user_id, version)",
+    ]),
+
+    # 4.6.0: Verschlüsselung im Ruhezustand und Empfehlungen durch Mitglieder.
+    # Die Werte selbst verschlüsselt schutz.pruefen_und_einpflegen beim
+    # Start; hier entstehen nur die Spalten für den Blindindex.
+    ("0012_schutz_empfehlungen", [
+        "ALTER TABLE users ADD COLUMN email_idx TEXT",
+        "CREATE UNIQUE INDEX ix_users_email_idx ON users(email_idx)",
+        "ALTER TABLE applications ADD COLUMN email_idx TEXT",
+        "CREATE INDEX ix_app_email_idx ON applications(email_idx)",
+        "ALTER TABLE applications ADD COLUMN referral_id TEXT",
+        # Empfehlung eines Mitglieds: die empfohlene Person bewirbt sich
+        # über den Link, das Mitglied steht dann schon als Bürge fest.
+        """CREATE TABLE referrals (
+            id TEXT PRIMARY KEY,
+            code_hash TEXT NOT NULL,
+            email TEXT NOT NULL,
+            email_idx TEXT NOT NULL,
+            name TEXT,
+            created_by TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            revoked_at TEXT,
+            application_id TEXT
+        )""",
+        "CREATE UNIQUE INDEX ix_ref_code ON referrals(code_hash)",
+        "CREATE INDEX ix_ref_creator ON referrals(created_by, created_at)",
     ]),
 ]
 

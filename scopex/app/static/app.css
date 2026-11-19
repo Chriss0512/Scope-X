@@ -308,13 +308,27 @@ input[type="checkbox"], input[type="radio"] {
   accent-color: var(--accent); flex: 0 0 auto;
 }
 input[type="file"] { padding: .5rem .6rem; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+/* Datums- und Zeitfelder rendert iOS mit eigener Höhe, Breite und
+   zentriertem Wert. Ohne native Darstellung folgen sie denselben Maßen
+   wie jedes andere Feld. */
+input[type="date"], input[type="month"], input[type="time"],
+input[type="datetime-local"], input[type="week"] {
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 46px; line-height: 1.2; text-align: left;
+}
+input::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input::-webkit-datetime-edit { padding: 0; }
 input:focus, select:focus, textarea:focus {
   border-color: var(--accent); outline: 2px solid var(--focus); outline-offset: 1px;
 }
 input::placeholder { color: var(--muted); opacity: .8; }
 textarea { min-height: 78px; resize: vertical; line-height: 1.5; }
 .field + .field { margin-top: .75rem; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+/* minmax(0, …): ohne die Untergrenze 0 setzt ein Feld seine eigene
+   Mindestbreite durch. iOS-Datumsfelder haben eine, und liefen bis 4.5.0
+   in das Nachbarfeld hinein. */
+.field-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .6rem; }
 /* Im Raster sind die beiden Felder Geschwister, die Abstandsregel für
    gestapelte Felder würde das zweite sonst um eine Zeile nach unten schieben. */
 .field-row > .field + .field { margin-top: 0; }
@@ -1808,3 +1822,23 @@ input[type="checkbox"][role="switch"]:checked::before { transform: translateX(20
 .feed-side .person-row { flex-wrap: nowrap; }
 .feed-side .person-row > a { flex: 1 1 auto; }
 .feed-side .person-row .btn-primary, .feed-side .person-row .btn-soft { flex: 0 0 auto; }
+
+/* Abmelden auf jeder Seite */
+.nav-abmelden { display: none; }
+@media (min-width: 900px) {
+  nav.tabbar .nav-abmelden {
+    display: flex; align-items: center; gap: .9rem; margin-top: auto;
+    padding: .7rem .8rem; border: none; background: none; border-radius: 10px;
+    color: var(--nav-ink); font: inherit; font-size: .95rem; cursor: pointer; min-height: 0;
+  }
+  nav.tabbar .nav-abmelden:hover { background: var(--surface-2); }
+  nav.tabbar .nav-abmelden svg { width: 25px; height: 25px; }
+}
+.g-top .g-abmelden svg { width: 24px; height: 24px; }
+.zurueck-leiste { margin: 0 0 .6rem; }
+.ueber h2 { margin-top: 1.4rem; }
+.ueber ul { padding-left: 1.1rem; }
+.ueber li { margin: .25rem 0; }
+
+/* Kleine Verknüpfungen unter Feldern bekommen etwas Luft nach oben. */
+.field > .link-btn { margin-top: .35rem; display: inline-block; min-height: 32px; }

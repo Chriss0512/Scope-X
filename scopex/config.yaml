@@ -3,7 +3,7 @@
 # nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
 # Start, Neustart und Backup des Containers.
 name: SCOPE X
-version: "4.5.0"
+version: "4.6.0"
 slug: scopex
 description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
 arch:
@@ -39,6 +39,7 @@ options:
   smtp_password: ""
   smtp_from: ""
   kontakt: ""
+  schluessel: ""
 schema:
   log_level: list(critical|error|warning|info|debug)
   # Öffentliche Adresse der Anwendung, vollständig mit Schema, also
@@ -88,3 +89,10 @@ schema:
   # Kontaktadresse für .well-known/security.txt nach RFC 9116. Leer
   # gelassen, verweist die Datei auf das Impressum.
   kontakt: str?
+  # Schlüssel für die Verschlüsselung im Ruhezustand: 32 Byte als Base64,
+  # etwa aus `openssl rand -base64 32`. Leer gelassen, legt SCOPE X beim
+  # ersten Start /data/scopex.key an. Wer die Option setzt, muss den Wert
+  # getrennt sicher verwahren: ohne ihn sind Nachrichten und persönliche
+  # Angaben nicht mehr lesbar. Nachträglich ändern geht nicht; die
+  # Anwendung startet dann nicht und meldet den falschen Schlüssel.
+  schluessel: password?

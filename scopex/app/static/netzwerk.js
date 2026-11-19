@@ -228,6 +228,7 @@ async function viewNetzwerk() {
         </div>
         <div id="nw-liste"></div>
       </section>
+      <section class="mt-sec" id="nw-einladen"></section>
       <a class="settings-link link-plain" href="#/themen"><strong>Themen</strong>
         <span class="tiny muted">Folge Kompetenz-Themen wie #Atemwegsmanagement oder #EKG-Quiz</span></a>
       <a class="settings-link link-plain" href="#/gespeichert"><strong>Gespeichert</strong>
@@ -244,6 +245,7 @@ async function viewNetzwerk() {
   zeige("folge_ich");
   const box = $("#nw");
   bindeFolgen(box, () => viewNetzwerk());
+  zeigeEinladungen($("#nw-einladen"));
   box.addEventListener("click", async (e) => {
     const ig = e.target.closest("[data-ignorieren]");
     const weg = e.target.closest("[data-weg-vorschlag]");
@@ -401,10 +403,10 @@ function ortKarten(p) {
             placeholder="z. B. Heidekreis"><datalist id="ok-liste"></datalist></div>
         <div class="field"><label for="oo">Organisation</label>
           <select id="oo"><option value="">keine Angabe</option></select>
-          <button type="button" class="link-btn small" id="oo-neu">Organisation fehlt?</button></div>
+          <button type="button" class="link-btn small strong" id="oo-neu">Organisation fehlt?</button></div>
         <div class="field"><label for="ow">Wache</label>
           <select id="ow"><option value="">keine Angabe</option></select>
-          <button type="button" class="link-btn small" id="ow-neu">Wache fehlt? Einreichen</button></div>
+          <button type="button" class="link-btn small strong" id="ow-neu">Wache fehlt? Einreichen</button></div>
         <button class="btn-primary" type="submit">Speichern</button>
         <p class="tiny muted" id="ort-err" role="alert"></p>
         <p class="tiny muted">Kreisliste: Statistisches Bundesamt (Destatis), Gemeindeverzeichnis,
@@ -427,10 +429,10 @@ function ortKarten(p) {
         <div class="field"><label for="qb">Gültig bis (nur wenn abweichend)</label>
           <input id="qb" type="month"></div>
         <button class="btn-soft" type="submit">Hinzufügen</button>
-        <button type="button" class="link-btn small" id="q-fehlt">Kurs fehlt? Vorschlagen</button>
+        <button type="button" class="link-btn small strong" id="q-fehlt">Kurs fehlt? Vorschlagen</button>
         <p class="tiny muted" id="q-err" role="alert"></p>
       </form>
-      <a class="small link-plain" href="#/fortbildung" data-s="mt-md">Fortbildungsnachweis</a>
+      <a class="small" href="#/fortbildung" data-s="mt-md">Zum Fortbildungsnachweis</a>
     </div>`;
 }
 
@@ -602,5 +604,50 @@ async function viewFortbildung() {
   app().querySelectorAll("[data-fb-weg]").forEach((b) => b.addEventListener("click", async () => {
     await api("/api/netz/fortbildungen/" + encodeURIComponent(b.dataset.fbWeg), { method: "DELETE" });
     render();
+  }));
+}
+
+// ---------------------------------------------------- Kolleg*innen einladen
+
+/* Mitglieder laden ein, die Administration entscheidet: aus der Einladung
+   wird eine Bewerbung, in der das Mitglied schon als Kontakt steht. */
+async function zeigeEinladungen(ziel) {
+  if (!ziel) return;
+  const r = await api("/api/netz/empfehlungen").catch(() => null);
+  if (!r || !document.body.contains(ziel)) return;
+  if (!r.moeglich && !r.empfehlungen.length) { ziel.remove(); return; }
+  ziel.innerHTML = `
+    <h2 class="sec">Kolleg*innen einladen</h2>
+    <p class="tiny muted">Die eingeladene Person bewirbt sich über den Link in der Mail; du stehst
+    dabei schon als Kontakt fest. Über die Aufnahme entscheidet die Administration.</p>
+    ${r.moeglich ? `<button type="button" class="btn-primary small" id="ein-neu" data-s="mt-sm">Person einladen</button>` : ""}
+    ${r.empfehlungen.length ? `<ul class="entry-list" data-s="mt-sm">${r.empfehlungen.map((x) => `
+      <li class="entry-row"><span class="grow"><strong>${esc(x.name || x.email)}</strong>
+        <span class="tiny muted np-sub">${x.name ? esc(x.email) + " · " : ""}${esc(x.status)}</span></span>
+        ${x.status === "verschickt" ? `<button type="button" class="btn-quiet small"
+          data-ein-weg="${esc(x.id)}">Zurückziehen</button>` : ""}</li>`).join("")}</ul>` : ""}`;
+  const neu = $("#ein-neu", ziel);
+  if (neu) neu.addEventListener("click", () => sheet("Person einladen", `
+    <form id="ein-form" class="stack">
+      <div class="field"><label for="ein-mail">E-Mail-Adresse</label>
+        <input id="ein-mail" type="email" required maxlength="200" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="ein-name">Name (optional)</label>
+        <input id="ein-name" maxlength="120"></div>
+      <p class="tiny muted">Die Person bekommt eine Mail mit deinem Namen und einem Link zur
+      Bewerbung, gültig 14 Tage. Lade nur Menschen ein, die du kennst und die in der
+      Notfallversorgung arbeiten oder dafür ausgebildet werden.</p>
+      <button class="btn-primary" type="submit">Einladung senden</button>
+      <p class="tiny muted" id="ein-err" role="alert"></p>
+    </form>`, (body) => $("#ein-form", body).addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await api("/api/netz/empfehlungen", { method: "POST", body: {
+        email: $("#ein-mail", body).value, name: $("#ein-name", body).value } });
+      closeSheet(); toast("Einladung verschickt."); zeigeEinladungen(ziel);
+    } catch (err) { $("#ein-err", body).textContent = err.message; }
+  })));
+  ziel.querySelectorAll("[data-ein-weg]").forEach((b) => b.addEventListener("click", async () => {
+    await api("/api/netz/empfehlungen/" + encodeURIComponent(b.dataset.einWeg), { method: "DELETE" });
+    zeigeEinladungen(ziel);
   }));
 }
