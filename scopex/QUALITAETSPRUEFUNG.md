@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 19.11.2026 um 12:19 Uhr für SCOPE X.
+Erzeugt am 19.11.2026 um 12:34 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 

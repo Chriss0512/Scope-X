@@ -62,8 +62,13 @@ class MedienFehler(ValueError):
     """Ein Upload, der kein verwendbares Bild oder Video ist."""
 
 
+def ablage_pfad() -> Path:
+    """Ort der Mediendateien, ohne ihn anzulegen."""
+    return Path(os.environ.get("SCOPEX_MEDIA_DIR", "/data/media"))
+
+
 def ablage() -> Path:
-    pfad = Path(os.environ.get("SCOPEX_MEDIA_DIR", "/data/media"))
+    pfad = ablage_pfad()
     pfad.mkdir(parents=True, exist_ok=True)
     return pfad
 

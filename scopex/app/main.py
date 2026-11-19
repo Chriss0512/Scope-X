@@ -62,8 +62,9 @@ async def lifespan(_: FastAPI):
         neu = schutz.pruefen_und_einpflegen(c)
         if neu:
             log.info("%s Werte verschlüsselt.", neu)
-    from .medien import ablage
-    dateien = schutz.medien_einpflegen(ablage())
+    # Nur, wenn es schon Medien gibt: der Start legt kein Verzeichnis an.
+    from .medien import ablage_pfad
+    dateien = schutz.medien_einpflegen(ablage_pfad()) if ablage_pfad().is_dir() else 0
     if dateien:
         log.info("%s Mediendateien verschlüsselt.", dateien)
     with conn() as c:
