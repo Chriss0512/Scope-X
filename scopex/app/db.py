@@ -989,6 +989,32 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         "CREATE INDEX ix_mentions_post ON net_mentions(post_id, comment_id)",
         "CREATE INDEX ix_mentions_user ON net_mentions(user_id)",
     ]),
+    # 4.8.0: Übernahme aus NIDAshare. Gespeichert wird nur ein Blindindex
+    # des Codes (nie der Code, nie das Protokoll), damit dasselbe Protokoll
+    # nicht doppelt übernommen wird und Abrufe sich begrenzen lassen.
+    # import_begriffe merkt sich, welchem Katalogeintrag eine Person einen
+    # Begriff aus NIDA zugeordnet hat.
+    ("0016_nidashare", [
+        """CREATE TABLE nida_imports (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            code_idx TEXT NOT NULL,
+            status TEXT NOT NULL,
+            encounter_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_nida_user ON nida_imports(user_id, created_at)",
+        "CREATE INDEX ix_nida_code ON nida_imports(user_id, code_idx)",
+        """CREATE TABLE import_begriffe (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            begriff TEXT NOT NULL,
+            measure_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE UNIQUE INDEX ix_import_begriff ON import_begriffe(user_id, begriff)",
+    ]),
 ]
 
 

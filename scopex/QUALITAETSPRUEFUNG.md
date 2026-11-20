@@ -1,6 +1,6 @@
 # Qualitätsbericht (automatisch erzeugt)
 
-Erzeugt am 20.11.2026 um 13:08 Uhr für SCOPE X.
+Erzeugt am 20.11.2026 um 15:15 Uhr für SCOPE X.
 
 Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklich nicht als bestanden.
 
@@ -8,7 +8,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Funktionale Testreihen | bestanden | 693 Prüfungen bestanden |
+| Funktionale Testreihen | bestanden | 744 Prüfungen bestanden |
 | Jede API-Route wird von mindestens einem Test berührt | bestanden | alle Router abgedeckt |
 
 ## Performance Efficiency
@@ -16,7 +16,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Antwortzeiten unter 400 ms | bestanden | alle innerhalb des Budgets |
-| Auslieferungsgröße der Oberfläche | bestanden | Übertragung 454 KB von 500 KB (Skript und Stil 110 KB komprimiert, Schrift 343 KB); einzulesen 420 KB von 480 KB |
+| Auslieferungsgröße der Oberfläche | bestanden | Übertragung 461 KB von 500 KB (Skript und Stil 117 KB komprimiert, Schrift 343 KB); einzulesen 443 KB von 480 KB |
 
 ## Compatibility
 
@@ -39,7 +39,7 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
-| Migrationen sind idempotent | bestanden | 15 angewendet, zweiter Durchlauf leer |
+| Migrationen sind idempotent | bestanden | 16 angewendet, zweiter Durchlauf leer |
 | Sicherung und Wiederherstellung als Kreis | bestanden | Kennzahlen vor und nach der Wiederherstellung gleich |
 | Überwachung im Betrieb | manuell offen | Ausfall derzeit nur über das Add-on-Protokoll erkennbar |
 
@@ -61,16 +61,16 @@ Erzeugt von `quality/run_quality.py`. Manuell offene Punkte zählen ausdrücklic
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Statische Analyse ohne Befund | bestanden | keine Befunde |
-| Testabdeckung mindestens 70 Prozent | bestanden | 81.3 Prozent |
-| Version folgt SemVer und ist dokumentiert | bestanden | 4.7.0, 15 Fassungen dokumentiert |
-| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 146 Pfade, 1 neu, Sicherungsformat 1 |
+| Testabdeckung mindestens 70 Prozent | bestanden | 82.0 Prozent |
+| Version folgt SemVer und ist dokumentiert | bestanden | 4.8.0, 15 Fassungen dokumentiert |
+| Keine stille Änderung der öffentlichen Schnittstelle | bestanden | 149 Pfade, 3 neu, Sicherungsformat 1 |
 
 ## Flexibility
 
 | Prüfung | Ergebnis | Anmerkung |
 |---|---|---|
 | Vollständiger Export ohne proprietäres Format | bestanden | JSON, CSV und PDF |
-| Installierbarkeit als Add-on | bestanden | Version 4.7.0, Änderungsprotokoll vorhanden |
+| Installierbarkeit als Add-on | bestanden | Version 4.8.0, Änderungsprotokoll vorhanden |
 
 ## Safety
 

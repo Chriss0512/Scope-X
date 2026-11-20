@@ -1635,8 +1635,13 @@ function neuAuswahlSheet() {
       <button type="button" class="choice log" id="neu-einsatz">
         <strong>Einsatz dokumentieren</strong>
         <span class="tiny muted">Ins eigene Logbuch, nur für dich</span></button>
+      ${state.constants.nidashare && canWrite() ? `<a class="choice log" href="#/import" id="neu-nida">
+        <strong>Aus NIDAshare übernehmen</strong>
+        <span class="tiny muted">Maßnahmen aus dem Protokoll, nur für dich</span></a>` : ""}
     </div>`, (body) => {
     $("#neu-einsatz", body).addEventListener("click", () => { closeSheet(); newEncounterSheet(); });
+    const nida = $("#neu-nida", body);
+    if (nida) nida.addEventListener("click", () => closeSheet());
     body.querySelectorAll("[data-neu]").forEach((b) => b.addEventListener("click", async () => {
       closeSheet();
       const p = await netzProfil();

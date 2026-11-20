@@ -1,0 +1,3 @@
+# Fremdbibliotheken, unverändert aus npm übernommen (siehe
+# app/static/vendor/README.md). Befunde darin wären nicht unsere.
+app/static/vendor/

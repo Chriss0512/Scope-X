@@ -773,6 +773,7 @@ const routes = {
   "/fortbildung": viewFortbildung,
   "/nutzungsbedingungen": viewNutzungsbedingungen,
   "/ueber": viewUeber,
+  "/import": viewNidaImport,
   "/bewerben": () => { location.replace("#/"); },
 };
 
@@ -809,7 +810,7 @@ async function render() {
     "/beitrag": "/", "/tag": breit ? "/entdecken" : "/netzwerk",
     "/einstellungen": "/profil", "/gespeichert": "/profil",
     "/suche": breit ? "/entdecken" : "", "/themen": breit ? "/entdecken" : "/netzwerk",
-    "/fortbildung": "/einsaetze",
+    "/fortbildung": "/einsaetze", "/import": "/einsaetze",
     "/person": params[0] && params[0] === (state.auth.user || {}).id ? "/profil" : "/entdecken",
     "/protokoll": "/administration",
   }[path] || path;
@@ -1164,6 +1165,9 @@ function newEncounterSheet() {
     .map((n) => `<button type="button" class="chip accent" data-naca="${esc(n)}"
       aria-pressed="false">NACA ${esc(n)}</button>`).join("");
   sheet("Neue Dokumentation", `
+    ${state.constants.nidashare ? `<a class="choice log ni-einstieg" href="#/import">
+      <strong>Aus NIDAshare übernehmen</strong>
+      <span class="tiny muted">Code eingeben oder fotografieren, Maßnahmen prüfen</span></a>` : ""}
     <form id="enc-form" class="stack">
       <p class="small muted">Wann war der Einsatz? Vorbelegt ist jetzt, für
       Nachträge trag den tatsächlichen Zeitpunkt ein.</p>

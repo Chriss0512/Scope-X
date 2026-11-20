@@ -10,3 +10,4 @@ cryptography==50.0.1
 webauthn==3.0.0
 pillow==13.0.0
 imageio-ffmpeg==0.7.0
+pypdf==6.21.4
