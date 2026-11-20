@@ -3,11 +3,12 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
-## 4.7.0
+## 4.6.1
 
-MINOR: neues Erscheinungsbild nach dem Markenhandbuch 2.0 und eine
-Migration (`0013_divi_relaxantien`). Endpunkte, Sicherungsformat und
-Add-on-Optionen bleiben unverändert.
+PATCH: neues Erscheinungsbild nach dem Markenhandbuch 2.0 und berichtigte
+DIVI-Etiketten, keine neuen Funktionen. Eine Migration
+(`0013_divi_relaxantien`); Endpunkte, Sicherungsformat und Add-on-Optionen
+bleiben unverändert.
 
 ### Markenhandbuch 2.0
 
