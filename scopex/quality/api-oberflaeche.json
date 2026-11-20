@@ -1,5 +1,5 @@
 {
-  "version": "4.7.0",
+  "version": "4.8.0",
   "paths": [
     "/api/account/delete",
     "/api/admin/bewerbungen",
@@ -67,6 +67,9 @@
     "/api/exports/pdf",
     "/api/exports/restore",
     "/api/health",
+    "/api/import/nidashare",
+    "/api/import/nidashare/{iid}/uebernehmen",
+    "/api/import/nidashare/{iid}/verwerfen",
     "/api/legal",
     "/api/netz/anfragen",
     "/api/netz/beitraege",

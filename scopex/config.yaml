@@ -3,7 +3,7 @@
 # nirgendwo in der Home-Assistant-Oberfläche. Der Supervisor übernimmt nur
 # Start, Neustart und Backup des Containers.
 name: SCOPE X
-version: "4.7.0"
+version: "4.8.0"
 slug: scopex
 description: Maßnahmen- und Kompetenzlogbuch für den Rettungsdienst
 arch:
@@ -40,6 +40,7 @@ options:
   smtp_from: ""
   kontakt: ""
   schluessel: ""
+  nidashare: false
 schema:
   log_level: list(critical|error|warning|info|debug)
   # Öffentliche Adresse der Anwendung, vollständig mit Schema, also
@@ -96,3 +97,8 @@ schema:
   # Angaben nicht mehr lesbar. Nachträglich ändern geht nicht; die
   # Anwendung startet dann nicht und meldet den falschen Schlüssel.
   schluessel: password?
+  # Übernahme von Maßnahmen aus NIDA-Protokollen über nidashare.de. Der
+  # Server ruft das Protokoll mit dem Code ab, liest nur Maßnahmen,
+  # Medikamente und Einsatzzeit aus und verwirft das PDF sofort. Nur
+  # einschalten, wenn der Träger zugestimmt hat.
+  nidashare: bool

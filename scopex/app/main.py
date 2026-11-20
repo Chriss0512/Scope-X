@@ -25,6 +25,7 @@ from .routers import (
     beitraege,
     catalog,
     exports,
+    importe,
     kataloge,
     nachrichten,
     netz,
@@ -43,7 +44,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 # Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
 # vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
 # nichts den Abgleich erzwang.
-APP_VERSION = "4.7.0"
+APP_VERSION = "4.8.0"
 
 
 @asynccontextmanager
@@ -103,12 +104,16 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = (
-        "geolocation=(), microphone=(), camera=(), interest-cohort=()")
+        "geolocation=(), microphone=(), camera=(self), interest-cohort=()")
     # Keine externen Quellen. Wenn die Seite etwas nachladen will, das hier
-    # nicht steht, ist das ein Fehler und kein Feature.
+    # nicht steht, ist das ein Fehler und kein Feature. 'wasm-unsafe-eval'
+    # erlaubt nur das Übersetzen von WebAssembly (Texterkennung des Codes
+    # im Browser, ab 4.8.0), kein eval von JavaScript. Die Kamera ist nur
+    # für die eigene Seite freigegeben.
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; script-src 'self'; style-src 'self'; "
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; "
         "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+        "worker-src 'self'; "
         "form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
     # request.url.scheme, nicht der Rohheader: uvicorn setzt das Schema aus
     # X-Forwarded-Proto nur dann, wenn die Gegenstelle in
@@ -134,6 +139,7 @@ app.include_router(nachrichten.router)
 app.include_router(kataloge.router)
 app.include_router(zugang.router)
 app.include_router(netzwerk.router)
+app.include_router(importe.router)
 
 
 @app.get("/api/health")

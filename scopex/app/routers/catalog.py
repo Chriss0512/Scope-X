@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from .. import nidashare
 from ..core import audit, current_user, require_admin
 from ..db import conn, new_id, q, row, rows
 from ..seed import (
@@ -50,6 +51,7 @@ def constants():
         "divi_groups": DIVI_GROUPS,
         "divi_labels": DIVI_LABELS,
         "divi_weisse_schrift": DIVI_WEISSE_SCHRIFT,
+        "nidashare": nidashare.aktiv(),
     }
 
 

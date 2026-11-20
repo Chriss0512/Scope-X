@@ -359,8 +359,31 @@ nachvollziehbare gewichtete Summe statt eines trainierten Modells. Das
 eigene Logbuch fließt nur als Anzahl je Maßnahme ein und nur in die
 eigene Reihenfolge.
 
-Nachrichten liegen wie alle Daten unverschlüsselt in der Datenbank des
+Nachrichten liegen seit 4.6.0 verschlüsselt in der Datenbank des
 Add-ons. Mediendateien liegen unter `/data/media`.
+
+### Übernahme aus NIDAshare (ab 4.8.0)
+
+Maßnahmen und Medikamente aus einem NIDA-Protokoll übernehmen, statt sie
+abzutippen. Unter **Neu → Aus NIDAshare übernehmen** den Code vom Tablet
+eingeben oder fotografieren (QR-Code oder Textcode; die Erkennung läuft
+nur im Browser, das Bild verlässt das Gerät nicht). Nach Bestätigung des
+Codes ruft der SCOPE-X-Server das Protokoll auf nidashare.de ab, liest
+Datum, Alarmzeit, NACA, Einsatznummer, Maßnahmen und Medikamente heraus
+und verwirft das PDF sofort. Patientendaten werden nicht ausgelesen, das
+Protokoll wird nirgends gespeichert und erreicht das Gerät nicht. Der Code
+steht in keinem Log; gespeichert wird nur ein Blindindex gegen doppelte
+Übernahme.
+
+In der Nachbearbeitung wählt man aus, was man selbst durchgeführt,
+angeleitet oder assistiert hat, korrigiert Zuordnung, Ergebnis, Rolle,
+Uhrzeit, Dosis und Blutzucker und ergänzt Fehlendes. Erst „Übernehmen“
+legt den Einsatz an.
+
+Ausgeschaltet, bis die Administration die Option `nidashare` setzt. Nur
+einschalten, wenn der Träger zugestimmt hat. Jeder Abruf zählt bei
+NIDAshare als Download des Protokolls; höchstens zehn Abrufe je Person und
+Stunde. Die Kamera braucht HTTPS.
 
 ### Verschlüsselung im Ruhezustand (ab 4.6.0)
 

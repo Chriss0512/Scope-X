@@ -3,6 +3,47 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.8.0
+
+MINOR: eine neue Funktion, eine Migration (`0016_nidashare`), eine neue
+Add-on-Option (`nidashare`, voreingestellt aus) und eine neue
+Abhängigkeit (`pypdf`). Bestehende Endpunkte bleiben kompatibel.
+
+### Übernahme aus NIDAshare
+
+- **Code eingeben oder fotografieren.** QR-Codes erkennt die Kamera
+  sofort, Textcodes liest eine Texterkennung im Browser (Tesseract, lädt
+  einmalig etwa 6 MB beim ersten Foto). Das Bild verlässt das Gerät nicht.
+  Vor jedem Abruf wird der Code zur Bestätigung groß angezeigt.
+- **Abruf auf dem Server.** SCOPE X ruft das Protokoll auf nidashare.de
+  ab, wie ein Browser: Seite laden, Code ins einzige Feld, PDF annehmen.
+  Nur innerhalb von nidashare.de, mit Zeit- und Größenlimit und einer
+  eindeutigen Kennung. Das PDF wird nur im Arbeitsspeicher gelesen und
+  sofort verworfen.
+- **Nur was auf der Liste steht.** Datum, Alarmzeit, NACA, Einsatznummer,
+  Maßnahmen (mit Fehlversuch und Blutzuckerwert), Medikamente mit Dosis,
+  Einheit, Weg und Uhrzeit. Kein Name, kein Geburtsdatum, keine Adresse,
+  keine Diagnose, keine Dauermedikation.
+- **Nachbearbeitung.** Jede Zeile lässt sich abwählen, einer anderen
+  Maßnahme zuordnen und in Ergebnis, Rolle, Uhrzeit, Dosis, Weg und
+  Blutzucker korrigieren; Fehlendes lässt sich ergänzen. Unsichere Funde
+  sind markiert und nicht vorausgewählt. Eigene Zuordnungen merkt sich
+  SCOPE X für den nächsten Abruf.
+- **Schutz.** Der Code steht in keinem Log und nicht in der Datenbank;
+  gespeichert wird ein Blindindex gegen doppelte Übernahme. Ein zweiter
+  Abruf desselben Codes fragt nach, weil er bei NIDAshare als weiterer
+  Download zählt. Höchstens zehn Abrufe je Person und Stunde, nicht für
+  Gäste. Konto löschen entfernt Abrufe und Zuordnungen.
+- Option `nidashare` in den Add-on-Einstellungen, voreingestellt aus.
+
+### Sicherheitsrichtlinie
+
+- Content-Security-Policy erlaubt `'wasm-unsafe-eval'` (nur WebAssembly
+  für die Texterkennung, kein eval von JavaScript) und Worker von der
+  eigenen Adresse. Die Kamera ist für die eigene Seite freigegeben.
+- Fremdbibliotheken liegen mit Version und Lizenz unter
+  `app/static/vendor/` und sind von der Semgrep-Prüfung ausgenommen.
+
 ## 4.7.0
 
 MINOR: neues Erscheinungsbild nach dem Markenhandbuch 2.0, berichtigte

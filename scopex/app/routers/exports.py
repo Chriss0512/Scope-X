@@ -432,7 +432,8 @@ def delete_own_account(data: DeleteAccountIn, user=Depends(current_user)):
         netz.loeschen(c, user["id"])
         for table in ("favorites", "settings", "recovery_codes", "sessions",
                       "trusted_devices", "passkeys", "password_resets",
-                      "auth_totp", "user_profile"):
+                      "auth_totp", "user_profile", "nida_imports",
+                      "import_begriffe"):
             q(c, f"DELETE FROM {table} WHERE user_id = :u", u=user["id"])
         # Protokoll bleibt, verliert aber den Personenbezug.
         q(c, "UPDATE audit_log SET user_id = NULL WHERE user_id = :u", u=user["id"])
