@@ -5,9 +5,11 @@ Versionierung nach Semantic Versioning 2.0.0, Regeln in
 
 ## 4.7.0
 
-MINOR: zwei neue Funktionen und zwei Migrationen
-(`0014_blutzucker_einheiten`, `0015_erwaehnungen`). Bestehende Endpunkte
-bleiben kompatibel; neu ist `GET /api/netz/erwaehnbar`.
+MINOR: neues Erscheinungsbild nach dem Markenhandbuch 2.0, berichtigte
+DIVI-Etiketten und zwei neue Funktionen. Drei Migrationen
+(`0013_divi_relaxantien`, `0014_blutzucker_einheiten`,
+`0015_erwaehnungen`). Bestehende Endpunkte, Sicherungsformat und
+Add-on-Optionen bleiben kompatibel; neu ist `GET /api/netz/erwaehnbar`.
 
 ### Blutzucker in mg/dl und mmol/l
 
@@ -41,16 +43,8 @@ bleiben kompatibel; neu ist `GET /api/netz/erwaehnbar`.
 
 - Einstellungen prüfen Darstellung und Durchführungsart jetzt gegen die
   erlaubten Werte.
-- Markenhandbuch 2.1: Erwähnungen nicht mehr als geplant geführt.
 
-## 4.6.1
-
-PATCH: neues Erscheinungsbild nach dem Markenhandbuch 2.0 und berichtigte
-DIVI-Etiketten, keine neuen Funktionen. Eine Migration
-(`0013_divi_relaxantien`); Endpunkte, Sicherungsformat und Add-on-Optionen
-bleiben unverändert.
-
-### Markenhandbuch 2.0
+### Markenhandbuch 2.1
 
 - Das Handbuch liegt überarbeitet im Repo unter `brand/`
   (`SCOPE_X_Markenhandbuch.pdf`, Quelle in `brand/handbuch/`). Berichtigt
