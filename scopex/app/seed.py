@@ -255,7 +255,8 @@ MEASURES: list[tuple] = [
     ]),
 
     ("d_bz", "D", "Blutzuckermessung", [
-        ("wert", "Wert", "number", "mg/dl", None),
+        # Typ glucose: Eingabe in mg/dl oder mmol/l, gespeichert in mg/dl.
+        ("wert", "Wert", "glucose", "mg/dl", None),
     ]),
 
     ("e_temperatur", "E", "Temperaturmanagement", [

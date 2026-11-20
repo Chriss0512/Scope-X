@@ -411,7 +411,11 @@ def schnappschuss(c, uid: str, attempt_ids: list[str], medication_ids: list[str]
 # Mitteilungen
 # --------------------------------------------------------------------------
 
-def melde(c, an: str, art: str, von: str | None, post_id: str | None = None) -> None:
+def melde(c, an: str, art: str, von: str | None, post_id: str | None = None,
+          ab: str | None = None) -> None:
+    """Legt eine Mitteilung an. ``ab`` verschiebt sie auf einen späteren
+    Zeitpunkt, etwa die Veröffentlichung eines geplanten Beitrags; bis
+    dahin zählt und erscheint sie nicht."""
     if an == von:
         return
     if von and blockiert(c, an, von):
@@ -425,7 +429,75 @@ def melde(c, an: str, art: str, von: str | None, post_id: str | None = None) -> 
         return
     q(c, "INSERT INTO net_notifications (id, user_id, kind, actor_id, post_id, "
          "created_at) VALUES (:i, :u, :k, :a, :p, :t)",
-      i=new_id(), u=an, k=art, a=von, p=post_id, t=now_iso())
+      i=new_id(), u=an, k=art, a=von, p=post_id, t=max(ab or "", now_iso()))
+
+
+# --------------------------------------------------------------------------
+# Erwähnungen
+# --------------------------------------------------------------------------
+# Erwähnen lässt sich nur, wem man folgt (bestätigt), wer aktiv ist und mit
+# wem keine Blockierung besteht. Die erwähnte Person muss den Beitrag sehen
+# dürfen, sonst würde die Mitteilung auf etwas zeigen, das sie nicht öffnen
+# kann, und verriete, dass es ihn gibt.
+
+MAX_ERWAEHNUNGEN = 10
+
+
+def erwaehnbar(c, ich: str, uid: str) -> bool:
+    if uid == ich or blockiert(c, ich, uid) or not folgt(c, ich, uid):
+        return False
+    return aktiv(profil(c, uid))
+
+
+def erwaehnungen_pruefen(c, ich: str, text: str, ids: list[str],
+                         beitrag_autor: str) -> list[str]:
+    """Gibt die gültigen Erwähnungen zurück, ohne Doppelte.
+
+    Eine Person, deren "@Name" nicht mehr im Text steht, wird still
+    übergangen: sie wurde ausgewählt und dann wieder gelöscht. Wer nicht
+    erwähnt werden darf, führt zu einem Fehler, weil der Client nur
+    erwähnbare Personen anbietet."""
+    aus: list[str] = []
+    for uid in dict.fromkeys(ids or []):
+        if not isinstance(uid, str) or len(uid) > 64:
+            raise HTTPException(400, "Ungültige Erwähnung.")
+        if not erwaehnbar(c, ich, uid):
+            raise HTTPException(403, "Erwähnen kannst du nur Personen, denen du folgst.")
+        if f"@{anzeigename(profil(c, uid))}" not in (text or ""):
+            continue
+        if uid != beitrag_autor and not voll_sichtbar(c, uid, beitrag_autor):
+            raise HTTPException(403, "Diese Person kann den Beitrag nicht sehen und "
+                                     "lässt sich deshalb nicht erwähnen.")
+        aus.append(uid)
+    if len(aus) > MAX_ERWAEHNUNGEN:
+        raise HTTPException(400, f"Höchstens {MAX_ERWAEHNUNGEN} Erwähnungen je Text.")
+    return aus
+
+
+def erwaehnungen_speichern(c, ich: str, post_id: str, comment_id: str | None,
+                           ids: list[str], ab: str | None = None,
+                           still: set[str] | None = None) -> None:
+    """``still``: erwähnt, aber ohne eigene Mitteilung, weil die Person
+    schon anders benachrichtigt wird."""
+    art = "erwaehnung_kommentar" if comment_id else "erwaehnung"
+    for uid in ids:
+        q(c, "INSERT INTO net_mentions (id, post_id, comment_id, user_id, author_id, "
+             "created_at) VALUES (:i, :p, :k, :u, :a, :t)",
+          i=new_id(), p=post_id, k=comment_id, u=uid, a=ich, t=now_iso())
+        if uid not in (still or set()):
+            melde(c, uid, art, ich, post_id, ab=ab)
+
+
+def erwaehnte(c, ich: str, post_id: str, comment_id: str | None = None) -> list[dict]:
+    """Erwähnte Personen mit aktuellem Namen, für die Verlinkung im Text."""
+    aus = []
+    for m in rows(c, "SELECT user_id FROM net_mentions WHERE post_id = :p AND "
+                     + ("comment_id = :k" if comment_id else "comment_id IS NULL"),
+                  p=post_id, **({"k": comment_id} if comment_id else {})):
+        p = profil(c, m["user_id"])
+        if p and aktiv(p) and not blockiert(c, ich, m["user_id"]):
+            aus.append({"id": p["uid"], "name": anzeigename(p)})
+    return aus
 
 
 def jetzt() -> datetime:

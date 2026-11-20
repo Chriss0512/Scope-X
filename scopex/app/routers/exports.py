@@ -9,8 +9,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from pydantic import BaseModel
 
+from .. import einheiten, schutz
 from .. import pdf as pdf_module
-from .. import schutz
 from ..analytics import (
     Filters,
     compute,
@@ -139,9 +139,8 @@ def export_csv(kind: str = "attempts", period: str | None = None,
                              "Kategorie", "Maßnahme", "Ergebnis",
                              "Durchführungsart", "Rolle", "Parameter", "ZEK"])
             for a in detail_rows(c, f, limit=100000):
-                params = "; ".join(
-                    f"{p['label']}: {p['value']}{(' ' + p['unit']) if p.get('unit') else ''}"
-                    for p in a["parameters"])
+                params = "; ".join(einheiten.parameter_text(p)
+                                   for p in a["parameters"])
                 writer.writerow([
                     a["enc_date"], a["enc_time"], a.get("mission_number") or "",
                     a.get("naca") or "", a["measure_category"], a["measure_name"],

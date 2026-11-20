@@ -15,6 +15,8 @@ from fontTools.ttLib import TTFont
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
+from . import einheiten
+
 # Markenhandbuch 2.0, Kapitel 08: Inter, Logo horizontal oben links,
 # Fußzeile mit Hinweis auf Selbstdokumentation. Die Schriften erzeugt
 # tools/marke_erzeugen.py aus derselben Inter-Datei wie die Oberfläche.
@@ -379,8 +381,7 @@ def build(profile: dict, stats: dict, period_label: str,
             if d.get("delegation"):
                 line.append(d["delegation"])
             for p in d.get("parameters", []):
-                unit = f" {p['unit']}" if p.get("unit") else ""
-                line.append(f"{p['label']}: {p['value']}{unit}")
+                line.append(einheiten.parameter_text(p))
             pdf.multi_cell(0, 4.6, new_x=XPos.LMARGIN, new_y=YPos.NEXT, text=_safe(" | ".join(line)))
             if d.get("complications"):
                 pdf.set_text_color(*ZEK)

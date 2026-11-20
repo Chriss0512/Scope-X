@@ -525,10 +525,95 @@ check("Repost zeigt das Original als nicht verfügbar",
       {"nicht_verfuegbar": True})
 chris.put("/api/netz/profil", json={"aktiv": True})
 
+# --- Erwähnungen (4.7.0) ------------------------------------------------
+# Stand hier: Anna folgt Chris (öffentlich) und Ben (privat, angenommen),
+# Dora folgt sie nicht.
+erw = anna.get("/api/netz/erwaehnbar").json()["personen"]
+ids = {p["id"] for p in erw}
+check("Erwähnbar sind nur gefolgte Konten", CHRIS in ids and BEN in ids and DORA not in ids,
+      ids)
+check("Suche nach Namen", [p["id"] for p in anna.get(
+    "/api/netz/erwaehnbar", params={"q": "kra"}).json()["personen"]] == [BEN])
+vorher = chris.get("/api/netz/zaehler").json()["mitteilungen"]
+r = anna.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "Danke @Christian Faust für die Praxisanleitung heute!",
+    "erwaehnungen": [CHRIS]})
+check("Beitrag mit Erwähnung", r.status_code == 200, r.text[:200])
+erw_post = r.json()
+check("Beitrag nennt die erwähnte Person",
+      erw_post["erwaehnt"] == [{"id": CHRIS, "name": "Christian Faust"}], erw_post["erwaehnt"])
+check("Erwähnte Person bekommt eine Mitteilung",
+      chris.get("/api/netz/zaehler").json()["mitteilungen"] == vorher + 1)
+m = chris.get("/api/netz/mitteilungen").json()["mitteilungen"][0]
+check("… vom Typ erwaehnung mit Beitrag",
+      m["art"] == "erwaehnung" and m["post_id"] == erw_post["id"] and m["von"]["id"] == ANNA, m)
+r = anna.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "Hallo @Dora Lenz", "erwaehnungen": [DORA]})
+check("Nicht gefolgtes Konto lässt sich nicht erwähnen", r.status_code == 403, r.status_code)
+r = anna.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "Ausgewählt und wieder gelöscht", "erwaehnungen": [BEN]})
+check("Name nicht mehr im Text: keine Erwähnung",
+      r.status_code == 200 and r.json()["erwaehnt"] == [], r.text[:200])
+check("… und keine Mitteilung", all(x["art"] != "erwaehnung" for x in
+      ben.get("/api/netz/mitteilungen").json()["mitteilungen"]))
+r = anna.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "Gleich zweimal @Christian Faust", "erwaehnungen": [CHRIS, CHRIS]})
+check("Doppelte Erwähnung zählt einmal", len(r.json()["erwaehnt"]) == 1)
+vorher = chris.get("/api/netz/zaehler").json()["mitteilungen"]
+r = anna.post("/api/netz/beitraege", json={"art": "beitrag", "verzoegerung_tage": 1,
+    "text": "Morgen: @Christian Faust", "erwaehnungen": [CHRIS]})
+geplant = r.json()
+check("Geplanter Beitrag: Mitteilung erst mit Veröffentlichung",
+      geplant["geplant"] and chris.get("/api/netz/zaehler").json()["mitteilungen"] == vorher)
+check("… und nicht in der Liste", all(x["post_id"] != geplant["id"] for x in
+      chris.get("/api/netz/mitteilungen").json()["mitteilungen"]))
+anna.delete(f"/api/netz/beitraege/{geplant['id']}")
+
+# Ben ist privat. Wen er erwähnt, muss seinen Beitrag sehen dürfen.
+ben.post(f"/api/netz/folgen/{ANNA}")
+ben.post(f"/api/netz/folgen/{CHRIS}")
+r = ben.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "@Christian Faust schau mal", "erwaehnungen": [CHRIS]})
+check("Wer den Beitrag nicht sehen darf, lässt sich nicht erwähnen",
+      r.status_code == 403, r.status_code)
+check("… und wird dem privaten Konto nicht angeboten",
+      CHRIS not in {p["id"] for p in ben.get("/api/netz/erwaehnbar").json()["personen"]})
+r = ben.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "@Anna Berger danke fürs Mitnehmen", "erwaehnungen": [ANNA]})
+check("Bestätigte Followerin des privaten Kontos erwähnbar", r.status_code == 200, r.text[:200])
+ben.delete(f"/api/netz/beitraege/{r.json()['id']}")
+
+# Kommentare
+r = chris.post(f"/api/netz/beitraege/{erw_post['id']}/kommentare", json={
+    "text": "Gern, @Anna Berger!", "erwaehnungen": [ANNA]})
+check("Kommentar mit Erwähnung", r.status_code == 200, r.text[:200])
+k = r.json()["kommentare"][-1]
+check("Kommentar nennt die Erwähnung", k["erwaehnt"] == [{"id": ANNA, "name": "Anna Berger"}],
+      k)
+arten = [x["art"] for x in anna.get("/api/netz/mitteilungen").json()["mitteilungen"]
+         if x["post_id"] == erw_post["id"]]
+check("Autorin bekommt den Kommentar gemeldet, nicht doppelt als Erwähnung",
+      "kommentar" in arten and "erwaehnung_kommentar" not in arten, arten)
+r = chris.post(f"/api/netz/beitraege/{erw_post['id']}/kommentare", json={
+    "text": "@Ben Kraus auch?", "erwaehnungen": [BEN]})
+check("Im Kommentar nur gefolgte Konten", r.status_code == 403, r.status_code)
+check("Kandidaten für Kommentare prüfen den Beitrag",
+      anna.get("/api/netz/erwaehnbar", params={"post_id": "gibt-es-nicht"}).status_code == 404)
+chris.delete(f"/api/netz/kommentare/{k['id']}")
+from app.db import conn as _conn
+from app.db import scalar as _scalar
+
+with _conn() as c_:
+    check("Kommentar gelöscht: Erwähnung weg", not _scalar(
+        c_, "SELECT COUNT(*) FROM net_mentions WHERE comment_id = :k", k=k["id"]))
+chris.post("/api/netz/beitraege", json={"art": "beitrag",
+    "text": "Gute Runde mit @Anna Berger", "erwaehnungen": [ANNA]})
+
 # --- DSGVO ---------------------------------------------------------------
 aus = anna.get("/api/exports/my-data").json()["netzwerk"]
 check("Auskunft enthält das Netzwerk",
-      aus["kommentare"] and aus["gefaellt_mir"] and aus["folge_ich"] and aus["nachrichten"],
+      aus["kommentare"] and aus["gefaellt_mir"] and aus["folge_ich"] and aus["nachrichten"]
+      and aus["erwaehnungen"]["von_mir"] and aus["erwaehnungen"]["von_anderen"],
       sorted(aus))
 check("Auskunft nennt Personen nur mit Anzeigenamen",
       "chris@example" not in json.dumps(aus, ensure_ascii=False))
@@ -550,6 +635,7 @@ with conn() as c:
         "SELECT COUNT(*) FROM net_notifications WHERE user_id = :u OR actor_id = :u",
         "SELECT COUNT(*) FROM net_conversations WHERE user_a = :u OR user_b = :u",
         "SELECT COUNT(*) FROM net_media WHERE user_id = :u",
+        "SELECT COUNT(*) FROM net_mentions WHERE user_id = :u OR author_id = :u",
     ))
 check("Keine Netzwerkdaten der gelöschten Person übrig", rest == 0, rest)
 check("Fremde Mediendateien bleiben erhalten",

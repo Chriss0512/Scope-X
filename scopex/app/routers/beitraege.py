@@ -123,6 +123,7 @@ def beitrag_aus(c, user: dict, post: dict, gruende: list[str] | None = None,
         "gemerkt": bool(row(c, "SELECT post_id FROM net_saved WHERE user_id = :u "
                                "AND post_id = :p", u=ich, p=post["id"])),
         "hilfreich": post["answer_comment_id"],
+        "erwaehnt": nk.erwaehnte(c, ich, post["id"]),
     }
     if post["kind"] == "repost" and tiefe == 0:
         orig = row(c, "SELECT * FROM net_posts WHERE id = :i", i=post["repost_of"])
@@ -262,6 +263,7 @@ class BeitragIn(BaseModel):
     verzoegerung_tage: int = Field(default=0, ge=0, le=30)
     themen: list[str] = Field(default_factory=list, max_length=MAX_THEMEN)
     kommentare_aus: bool = False
+    erwaehnungen: list[str] = Field(default_factory=list, max_length=20)
 
 
 DETAILFELDER = {
@@ -322,6 +324,7 @@ def beitrag_erstellen(data: BeitragIn, user=Depends(current_user)):
         nk.pruefe_text(c, ich, titel or "")
         details = _details(c, ich, data.art, data.details)
         link_url = link_titel = link_quelle = schnapp = repost_of = None
+        erwaehnt = nk.erwaehnungen_pruefen(c, ich, text, data.erwaehnungen, ich)
 
         if data.art == "repost":
             if data.medien_ids:
@@ -413,6 +416,9 @@ def beitrag_erstellen(data: BeitragIn, user=Depends(current_user)):
         if repost_of:
             nk.melde(c, scalar(c, "SELECT author_id FROM net_posts WHERE id = :i",
                                i=repost_of), "repost", ich, repost_of)
+        # Bei geplanten Beiträgen erscheint die Mitteilung erst mit der
+        # Veröffentlichung.
+        nk.erwaehnungen_speichern(c, ich, pid, None, erwaehnt, ab=veroeffentlicht)
         return beitrag_aus(c, user, row(c, "SELECT * FROM net_posts WHERE id = :i", i=pid))
 
 
@@ -433,7 +439,7 @@ def beitrag_loeschen(post_id: str, user=Depends(current_user)):
         for m in rows(c, "SELECT id FROM net_media WHERE post_id = :p", p=post_id):
             medium_loeschen(c, m["id"], user["id"])
         for tabelle in ("net_likes", "net_comments", "net_tags", "net_hidden",
-                        "net_notifications", "net_saved", "net_seen"):
+                        "net_notifications", "net_saved", "net_seen", "net_mentions"):
             q(c, f"DELETE FROM {tabelle} WHERE post_id = :p", p=post_id)
         q(c, "DELETE FROM net_posts WHERE id = :i", i=post_id)
     return {"ok": True}
@@ -537,6 +543,7 @@ def wer_mag(post_id: str, user=Depends(current_user)):
 
 class KommentarIn(BaseModel):
     text: str = Field(max_length=1000)
+    erwaehnungen: list[str] = Field(default_factory=list, max_length=20)
 
 
 @router.get("/beitraege/{post_id}/kommentare")
@@ -556,6 +563,7 @@ def kommentare(post_id: str, user=Depends(current_user)):
                 "darf_entfernen": k["author_id"] == user["id"]
                 or post["author_id"] == user["id"] or nk.ist_admin(user),
                 "hilfreich": k["id"] == post["answer_comment_id"],
+                "erwaehnt": nk.erwaehnte(c, user["id"], post_id, k["id"]),
             })
         # Die hilfreiche Antwort steht oben, wie bei Frage-Antwort-Foren.
         aus.sort(key=lambda k: not k["hilfreich"])
@@ -578,10 +586,17 @@ def kommentieren(post_id: str, data: KommentarIn, user=Depends(current_user)):
             raise HTTPException(403, "Die Kommentare zu diesem Beitrag sind "
                                      "ausgeschaltet.")
         nk.pruefe_text(c, user["id"], text)
+        erwaehnt = nk.erwaehnungen_pruefen(c, user["id"], text, data.erwaehnungen,
+                                           post["author_id"])
+        kid = new_id()
         q(c, "INSERT INTO net_comments (id, post_id, author_id, body, created_at) "
              "VALUES (:i, :p, :a, :b, :t)",
-          i=new_id(), p=post_id, a=user["id"], b=schutz.v(text), t=now_iso())
+          i=kid, p=post_id, a=user["id"], b=schutz.v(text), t=now_iso())
         nk.melde(c, post["author_id"], "kommentar", user["id"], post_id)
+        # Die Autorin des Beitrags erfährt vom Kommentar schon über
+        # "kommentar"; eine zweite Mitteilung wäre doppelt.
+        nk.erwaehnungen_speichern(c, user["id"], post_id, kid, erwaehnt,
+                                  still={post["author_id"]})
     return kommentare(post_id, user)
 
 
@@ -600,6 +615,7 @@ def kommentar_entfernen(comment_id: str, user=Depends(current_user)):
         if post["answer_comment_id"] == comment_id:
             q(c, "UPDATE net_posts SET answer_comment_id = NULL WHERE id = :p",
               p=post["id"])
+        q(c, "DELETE FROM net_mentions WHERE comment_id = :i", i=comment_id)
         if k["author_id"] == user["id"]:
             q(c, "DELETE FROM net_comments WHERE id = :i", i=comment_id)
         else:

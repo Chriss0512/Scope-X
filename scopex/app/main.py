@@ -43,7 +43,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 # Muss mit "version" in config.yaml übereinstimmen. Die Prüfschleife
 # vergleicht beide; sie stand hier seit der Erstfassung auf 1.0.0, weil
 # nichts den Abgleich erzwang.
-APP_VERSION = "4.6.1"
+APP_VERSION = "4.7.0"
 
 
 @asynccontextmanager

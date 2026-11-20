@@ -47,11 +47,12 @@ RADIEN = [("xs", 2, "DIVI-Etikett"), ("sm", 4, "Badge"), ("md", 8, "Button, Feld
           ("lg", 12, "Karte"), ("xl", 16, "Sheet, Dialog"), ("pill", 999, "Chip")]
 MODULE = [
     ("Logbuch", "Logbuch", "Einsätze, Maßnahmen nach xABCDE, Medikamente mit DIVI-Etikett, "
-     "Ergebnis und Komplikationen. Privat; Bearbeitung in einem Zeitfenster.", "nur selbst"),
+     "Ergebnis, Komplikationen. Blutzucker in mg/dl oder mmol/l. Privat.", "nur selbst"),
     ("Auswertung", "Auswertung", "Kennzahlen, Verläufe, Nachweis als PDF und CSV. "
      "Grundlage für die Praxisanleitung.", "nur selbst"),
-    ("Feed", "Feed &amp; Beiträge", "Fallberichte, Wissen mit Quelle, Fragen. Reihenfolge "
-     "nachvollziehbar, auf Lernen ausgerichtet statt auf Verweildauer.", "Mitglieder"),
+    ("Feed", "Feed &amp; Beiträge", "Fallberichte, Wissen mit Quelle, Fragen. @Erwähnung "
+     "von Konten, denen man folgt, mit Mitteilung. Auf Lernen ausgerichtet statt auf "
+     "Verweildauer.", "Mitglieder"),
     ("Entdecken", "Fallvorstellung &amp; Themen", "Anonymisierte Fälle mit Frage an die "
      "Community, Themen wie #Atemwegsmanagement. Suche nach Personen und Inhalten.",
      "Mitglieder"),
@@ -137,13 +138,13 @@ def bauen() -> str:
     html = re.sub(r"\{\{ico:([a-zA-Z]+)\}\}", lambda m: svg_icon(ic[m.group(1)]), html)
 
     kopf = (f'<div class="kopf"><div class="logo">{svg(re.match("(.*)", "logo_horizontal_dark"))}'
-            '</div><div class="meta">Markenhandbuch · Version 2.0<br>'
+            '</div><div class="meta">Markenhandbuch · Version 2.1<br>'
             'Private Initiative · erweiterte Beta</div></div>')
     symbol = svg(re.match("(.*)", "logo_symbol_dark"))
     html = html.replace("{{kopf}}", kopf).replace("{{motiv}}", motiv())
     html = re.sub(
         r"\{\{fuss:(\d+)\}\}",
-        lambda m: (f'<div class="fuss">{symbol}<span><b>SCOPE X</b> Markenhandbuch 2.0</span>'
+        lambda m: (f'<div class="fuss">{symbol}<span><b>SCOPE X</b> Markenhandbuch 2.1</span>'
                    '<span class="mitte">Das Maßnahmen- und Kompetenzlogbuch für den '
                    f'Rettungsdienst</span><span class="nr">{m.group(1)}</span></div>'), html)
 

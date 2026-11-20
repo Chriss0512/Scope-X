@@ -965,6 +965,30 @@ MIGRATIONS: list[tuple[str, list[str]]] = [
         "WHERE divi_group = 'Muskelrelaxantien' "
         "AND name IN ('Rocuronium', 'Vecuronium')",
     ]),
+    # 4.7.0: Blutzucker in mg/dl oder mmol/l. Werte bleiben in mg/dl
+    # gespeichert; nur der Eingabetyp ändert sich, damit das Formular die
+    # Einheit anbietet. Betrifft jeden Zahlenparameter in mg/dl, auch
+    # selbst angelegte.
+    ("0014_blutzucker_einheiten", [
+        "UPDATE measure_parameter_definitions SET ptype = 'glucose' "
+        "WHERE ptype = 'number' AND unit = 'mg/dl'",
+    ]),
+    # 4.7.0: Erwähnungen. Wer in einem Beitrag oder Kommentar erwähnt
+    # wurde. Der Text selbst trägt nur "@Name"; welche Person gemeint ist,
+    # steht hier, damit eine Namensänderung oder ein gleicher Name nichts
+    # verwechselt. comment_id NULL heißt: im Beitrag selbst.
+    ("0015_erwaehnungen", [
+        """CREATE TABLE net_mentions (
+            id TEXT PRIMARY KEY,
+            post_id TEXT NOT NULL,
+            comment_id TEXT,
+            user_id TEXT NOT NULL,
+            author_id TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )""",
+        "CREATE INDEX ix_mentions_post ON net_mentions(post_id, comment_id)",
+        "CREATE INDEX ix_mentions_user ON net_mentions(user_id)",
+    ]),
 ]
 
 

@@ -73,7 +73,7 @@ Installation ist ein geschlossener Kreis.
 | **Logbuch** | Einsätze, Maßnahmen nach xABCDE, Medikamente mit DIVI-Etiketten, Ergebnis und Komplikationen (ZEK), NACA, Bearbeitungsfrist mit Sperre, Auswertung, Nachweise als PDF und CSV, Fortbildungsnachweis |
 | **Feed** | „Für dich“ mit nachvollziehbarem Algorithmus und „Warum sehe ich das?“, „Folge ich“, „Meine Themen“, Filter nach Kompetenz-Themen |
 | **Beiträge** | Text, Bilder, Videos, Fallbericht, Fallvorstellung (Meldebild → xABCDE → Maßnahmen → Frage), Algorithmus mit Pflichtquelle, Wissen mit Link, Kompetenz aus dem Logbuch, Repost |
-| **Reaktionen** | Gefällt mir, Kommentieren, Repost, Senden, Speichern; hilfreiche Antwort markieren; Kommentare ausschalten |
+| **Reaktionen** | Gefällt mir, Kommentieren, Repost, Senden, Speichern; hilfreiche Antwort markieren; Kommentare ausschalten; @Erwähnung von Konten, denen man folgt, mit Mitteilung |
 | **Profil** | Profilbild, Titelbild, Chronik, Kompetenzen mit Bestätigungen, Info, Region, Organisation, Wache, Qualifikationen, Abzeichen; öffentlich oder privat |
 | **Netzwerk** | Folgen, Folgeanfragen annehmen oder ignorieren, Vorschläge aus Wache, Organisation und Kreis, Blockieren, Direktnachrichten |
 | **Suche** | Personen mit Filtern nach Kreis, Organisation, Qualifikation; Themen; Beiträge – Suchfeld auf jeder Seite |

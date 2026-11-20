@@ -3,6 +3,46 @@
 Versionierung nach Semantic Versioning 2.0.0, Regeln in
 `VERSIONIERUNG.md`.
 
+## 4.7.0
+
+MINOR: zwei neue Funktionen und zwei Migrationen
+(`0014_blutzucker_einheiten`, `0015_erwaehnungen`). Bestehende Endpunkte
+bleiben kompatibel; neu ist `GET /api/netz/erwaehnbar`.
+
+### Blutzucker in mg/dl und mmol/l
+
+- Die Blutzuckermessung nimmt den Wert in **mg/dl oder mmol/l** an. Neben
+  dem Feld steht die Einheit, darunter der umgerechnete Wert; beim Wechsel
+  der Einheit wird die Zahl mit umgerechnet.
+- Gespeichert wird immer mg/dl (1 mmol/l = 18,016 mg/dl). Ältere Einträge
+  bleiben, wie sie sind.
+- Logbuch, CSV und PDF zeigen **beide Werte**, die bevorzugte Einheit
+  zuerst. Die Voreinstellung steht unter Einstellungen → „Blutzucker
+  eingeben in“.
+- Plausibilitätsprüfung 10 bis 1000 mg/dl (0,6 bis 55,5 mmol/l) fängt die
+  Verwechslung der Einheiten ab, mit Hinweis „Stimmt die Einheit?“.
+- Gilt für jeden Zahlenparameter in mg/dl, auch selbst angelegte.
+
+### Erwähnungen
+
+- In Beiträgen und Kommentaren öffnet **„@“** eine Auswahl der Konten,
+  denen du folgst. Die erwähnte Person bekommt eine Mitteilung, der Name
+  im Text wird zum Link aufs Profil.
+- Erwähnen lässt sich nur, wem du folgst (bestätigt), mit wem keine
+  Blockierung besteht und wer den Beitrag sehen darf. Der Server prüft das
+  beim Speichern, nicht nur die Auswahl.
+- Bei geplanten Beiträgen kommt die Mitteilung erst mit der
+  Veröffentlichung. Wer im Kommentar die Autorin erwähnt, löst keine
+  zweite Mitteilung neben „hat kommentiert“ aus.
+- Höchstens zehn Erwähnungen je Text. Löschen von Beitrag, Kommentar oder
+  Konto entfernt die Erwähnungen; die Datenauskunft listet sie.
+
+### Sonstiges
+
+- Einstellungen prüfen Darstellung und Durchführungsart jetzt gegen die
+  erlaubten Werte.
+- Markenhandbuch 2.1: Erwähnungen nicht mehr als geplant geführt.
+
 ## 4.6.1
 
 PATCH: neues Erscheinungsbild nach dem Markenhandbuch 2.0 und berichtigte

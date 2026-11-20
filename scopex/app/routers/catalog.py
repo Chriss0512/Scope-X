@@ -147,7 +147,7 @@ class ParameterIn(BaseModel):
 
 @router.post("/measures/{measure_id}/parameters")
 def add_parameter(measure_id: str, data: ParameterIn, user=Depends(require_admin)):
-    if data.type not in {"text", "number", "int", "select"}:
+    if data.type not in {"text", "number", "int", "select", "glucose"}:
         raise HTTPException(400, "Unbekannter Parametertyp.")
     with conn() as c:
         if not row(c, "SELECT id FROM measures WHERE id = :i", i=measure_id):
@@ -157,7 +157,7 @@ def add_parameter(measure_id: str, data: ParameterIn, user=Depends(require_admin
              "label, ptype, unit, options, sort_order, required) "
              "VALUES (:i, :m, :k, :l, :t, :u, :o, :s, 0)",
           i=pid, m=measure_id, k=data.key.strip(), l=data.label.strip(),
-          t=data.type, u=data.unit,
+          t=data.type, u="mg/dl" if data.type == "glucose" else data.unit,
           o="|".join(data.options) if data.options else None,
           s=data.sort_order)
         audit(c, user["id"], "measure_parameter_definitions", pid, "create")

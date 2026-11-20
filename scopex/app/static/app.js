@@ -1335,9 +1335,25 @@ async function viewEncounter(id) {
     }));
 }
 
+/* Blutzucker: gespeichert in mg/dl, angezeigt in beiden Einheiten, die
+   bevorzugte zuerst (Einstellungen). 1 mmol/l = 18,016 mg/dl. */
+const MGDL_JE_MMOL = 18.016;
+function bzEinheit() {
+  return (state.settings && state.settings.blutzucker_einheit) || "mg/dl";
+}
+function mmolText(mgdl) {
+  return (Number(mgdl) / MGDL_JE_MMOL).toFixed(1).replace(".", ",") + " mmol/l";
+}
+function parameterText(p) {
+  if (p.unit === "mg/dl" && p.value !== "" && !Number.isNaN(Number(p.value))) {
+    const mg = `${p.value} mg/dl`, mmol = mmolText(p.value);
+    return `${p.label}: ${bzEinheit() === "mmol/l" ? `${mmol} (${mg})` : `${mg} (${mmol})`}`;
+  }
+  return `${p.label}: ${p.value}${p.unit ? " " + p.unit : ""}`;
+}
+
 function attemptCard(a, editable) {
-  const params = (a.parameters || []).map((p) =>
-    `${esc(p.label)}: ${esc(p.value)}${p.unit ? " " + esc(p.unit) : ""}`).join(" · ");
+  const params = (a.parameters || []).map((p) => esc(parameterText(p))).join(" · ");
   const zek = zekSummary(a.complications);
   return `
     <div class="entry" data-cat="${esc(a.measure_category)}">
@@ -1797,6 +1813,36 @@ function zekSummary(list) {
   }).join(", ");
 }
 
+/* Zeigt unter dem Blutzuckerfeld den Wert in der anderen Einheit. Beim
+   Wechsel der Einheit wird die Zahl umgerechnet, damit nichts verloren
+   geht: 99 mg/dl werden zu 5,5 mmol/l und umgekehrt. */
+function bindBlutzucker(body) {
+  body.querySelectorAll("[data-bz-einheit]").forEach((sel) => {
+    const feld = sel.closest(".field");
+    const zahl = $("input[type=number]", feld);
+    const um = $("[data-bz-um]", feld);
+    const zeige = () => {
+      const v = Number(String(zahl.value).replace(",", "."));
+      if (!zahl.value || Number.isNaN(v) || v <= 0) { um.textContent = ""; return; }
+      um.textContent = sel.value === "mmol/l"
+        ? `entspricht ${Math.round(v * MGDL_JE_MMOL)} mg/dl`
+        : `entspricht ${mmolText(v)}`;
+    };
+    let vorher = sel.value;
+    sel.addEventListener("change", () => {
+      const v = Number(String(zahl.value).replace(",", "."));
+      if (zahl.value && !Number.isNaN(v)) {
+        zahl.value = vorher === "mg/dl" && sel.value === "mmol/l"
+          ? (v / MGDL_JE_MMOL).toFixed(1)
+          : vorher === "mmol/l" && sel.value === "mg/dl" ? String(Math.round(v * MGDL_JE_MMOL)) : zahl.value;
+      }
+      vorher = sel.value;
+      zeige();
+    });
+    zahl.addEventListener("input", zeige);
+  });
+}
+
 function attemptForm(enc, measure) {
   const params = (measure.parameters || []).map((p) => {
     const id = "p_" + p.key;
@@ -1806,6 +1852,20 @@ function attemptForm(enc, measure) {
           <option value="">ohne Angabe</option>
           ${(p.options || []).map((o) => `<option>${esc(o)}</option>`).join("")}
         </select></div>`;
+    }
+    if (p.type === "glucose") {
+      const e = bzEinheit();
+      return `<div class="field"><label for="${id}">${esc(p.label)}</label>
+        <div class="bz-zeile">
+          <input id="${id}" type="number" step="any" min="0" data-param="${esc(p.key)}"
+            inputmode="decimal" aria-describedby="${id}_um">
+          <label class="sr-only" for="${id}_e">Einheit</label>
+          <select id="${id}_e" data-param="${esc(p.key)}__einheit" data-bz-einheit>
+            <option ${e === "mg/dl" ? "selected" : ""}>mg/dl</option>
+            <option ${e === "mmol/l" ? "selected" : ""}>mmol/l</option>
+          </select>
+        </div>
+        <p class="tiny muted" id="${id}_um" data-bz-um aria-live="polite"></p></div>`;
     }
     const type = (p.type === "number" || p.type === "int") ? "number" : "text";
     const step = p.type === "int" ? "1" : "any";
@@ -1886,6 +1946,7 @@ function attemptForm(enc, measure) {
         delegation = on ? null : b.dataset.deleg;
       }));
     const zek = bindZek(body, true);
+    bindBlutzucker(body);
 
     let nextAction = "close";
     body.querySelectorAll("[data-next]").forEach((b) =>
@@ -2757,6 +2818,13 @@ async function viewEinstellungen() {
             <option value="light" ${settings.theme === "light" ? "selected" : ""}>Hell</option>
             <option value="dark" ${settings.theme === "dark" ? "selected" : ""}>Dunkel</option>
           </select></div>
+        <div class="field"><label for="sbz">Blutzucker eingeben in</label>
+          <select id="sbz">
+            <option value="mg/dl" ${settings.blutzucker_einheit !== "mmol/l" ? "selected" : ""}>mg/dl</option>
+            <option value="mmol/l" ${settings.blutzucker_einheit === "mmol/l" ? "selected" : ""}>mmol/l</option>
+          </select>
+          <p class="tiny muted">Voreinstellung im Formular und zuerst genannte Einheit.
+          Gespeichert wird immer in mg/dl, angezeigt werden beide Werte.</p></div>
         <div class="field"><label for="sd">Feld „Durchführungsart"</label>
           <select id="sd">
             <option value="auto" ${settings.show_delegation === "auto" ? "selected" : ""}>Automatisch nach Qualifikation</option>
@@ -2903,6 +2971,7 @@ async function viewEinstellungen() {
         edit_window_minutes: Number(windowInput.value),
         theme: $("#st").value,
         show_delegation: $("#sd").value,
+        blutzucker_einheit: $("#sbz").value,
       },
     });
     state.settings = updated;

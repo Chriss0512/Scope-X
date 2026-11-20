@@ -281,11 +281,99 @@ function kopfHtml(b, klein = false) {
     </header>`;
 }
 
-/* Hashtags werden zu Links. Erst escapen, dann ersetzen: im Ergebnis steht
-   nur Markup, das hier erzeugt wurde. */
-function textMitTags(text) {
-  return esc(text).replace(/#([0-9A-Za-zÄÖÜäöüß_-]{2,40})/g,
+/* Hashtags und Erwähnungen werden zu Links. Erst escapen, dann ersetzen:
+   im Ergebnis steht nur Markup, das hier erzeugt wurde. Verlinkt wird nur
+   "@Name" von Personen, die der Server als erwähnt zurückgibt. */
+function textMitTags(text, erwaehnt = []) {
+  let html = esc(text).replace(/#([0-9A-Za-zÄÖÜäöüß_-]{2,40})/g,
     (_, t) => `<a href="#/tag/${encodeURIComponent(t.toLowerCase())}" class="tag">#${t}</a>`);
+  [...(erwaehnt || [])].sort((a, b) => b.name.length - a.name.length).forEach((p) => {
+    const muster = "@" + esc(p.name);
+    html = html.split(muster).join(
+      `<a href="#/person/${esc(p.id)}" class="erwaehnung">${muster}</a>`);
+  });
+  return html;
+}
+
+/* Auswahl nach "@" in einem Text- oder Eingabefeld. Angeboten werden nur
+   Konten, denen man folgt; der Server prüft beim Speichern noch einmal.
+   Tastatur: Pfeiltasten wählen, Enter oder Tab übernimmt, Escape schließt. */
+function erwaehnungsFeld(feld, postId = null) {
+  const gewaehlt = new Map();
+  const liste = document.createElement("ul");
+  const lid = feld.id + "-erw";
+  liste.id = lid;
+  liste.className = "erw-liste";
+  liste.setAttribute("role", "listbox");
+  liste.setAttribute("aria-label", "Person erwähnen");
+  liste.hidden = true;
+  feld.insertAdjacentElement("afterend", liste);
+  feld.setAttribute("aria-autocomplete", "list");
+  feld.setAttribute("aria-controls", lid);
+  feld.setAttribute("aria-expanded", "false");
+  let treffer = [], aktiv = -1, anfang = -1, laeuft = 0;
+
+  const schliessen = () => {
+    liste.hidden = true; treffer = []; aktiv = -1;
+    feld.setAttribute("aria-expanded", "false");
+    feld.removeAttribute("aria-activedescendant");
+  };
+  const zeigen = () => {
+    liste.innerHTML = treffer.map((p, i) => `
+      <li role="option" id="${lid}-${i}" data-i="${i}" aria-selected="${i === aktiv}">
+        ${avatarHtml(p, "s")}<span><strong>${esc(p.name)}</strong>
+        <span class="tiny muted">${esc(p.headline || "")}</span></span></li>`).join("");
+    liste.hidden = !treffer.length;
+    feld.setAttribute("aria-expanded", String(!!treffer.length));
+    if (aktiv >= 0) feld.setAttribute("aria-activedescendant", `${lid}-${aktiv}`);
+    else feld.removeAttribute("aria-activedescendant");
+  };
+  const uebernehmen = (p) => {
+    const ende = feld.selectionStart;
+    const einsetzen = `@${p.name} `;
+    feld.value = feld.value.slice(0, anfang) + einsetzen + feld.value.slice(ende);
+    const pos = anfang + einsetzen.length;
+    feld.setSelectionRange(pos, pos);
+    gewaehlt.set(p.id, p.name);
+    schliessen();
+    feld.focus();
+  };
+  feld.addEventListener("input", async () => {
+    const vor = feld.value.slice(0, feld.selectionStart);
+    const m = vor.match(/(^|\s)@([^\s@]{0,30})$/);
+    if (!m) { schliessen(); return; }
+    anfang = vor.length - m[2].length - 1;
+    const nr = ++laeuft;
+    const pfad = `/api/netz/erwaehnbar?q=${encodeURIComponent(m[2])}${
+      postId ? `&post_id=${encodeURIComponent(postId)}` : ""}`;
+    const r = await api(pfad).catch(() => ({ personen: [] }));
+    if (nr !== laeuft) return;
+    treffer = r.personen; aktiv = treffer.length ? 0 : -1;
+    zeigen();
+  });
+  feld.addEventListener("keydown", (e) => {
+    if (liste.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      aktiv = (aktiv + (e.key === "ArrowDown" ? 1 : treffer.length - 1)) % treffer.length;
+      zeigen();
+    } else if ((e.key === "Enter" || e.key === "Tab") && aktiv >= 0) {
+      e.preventDefault(); uebernehmen(treffer[aktiv]);
+    } else if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); schliessen();
+    }
+  });
+  liste.addEventListener("mousedown", (e) => {
+    const li = e.target.closest("[data-i]");
+    if (li) { e.preventDefault(); uebernehmen(treffer[Number(li.dataset.i)]); }
+  });
+  feld.addEventListener("blur", () => setTimeout(schliessen, 150));
+  return {
+    // Nur wer noch mit "@Name" im Text steht, gilt als erwähnt.
+    ids: () => [...gewaehlt].filter(([, name]) => feld.value.includes("@" + name))
+      .map(([id]) => id),
+    leeren: () => gewaehlt.clear(),
+  };
 }
 
 function captionHtml(b, mitName = true) {
@@ -293,7 +381,7 @@ function captionHtml(b, mitName = true) {
   const lang = b.text.length > 220;
   return `<div class="np-caption${lang ? " gekuerzt" : ""}">${mitName
     ? `<strong>${esc(b.autor.name)}</strong> ` : ""}<span class="np-text">${
-    textMitTags(b.text)}</span>${lang ? ` <button type="button" class="link-btn muted"
+    textMitTags(b.text, b.erwaehnt)}</span>${lang ? ` <button type="button" class="link-btn muted"
     data-akt="mehr-text">mehr</button>` : ""}</div>`;
 }
 
@@ -339,7 +427,7 @@ function postHtml(b) {
           <span class="muted">hat geteilt · ${esc(relZeit(b.erstellt, true))}</span></a>
           <button type="button" class="icon-btn flat" data-akt="menue"
             aria-label="Weitere Aktionen zum Repost">${NETZ_ICON.mehr}</button></div>
-        ${b.text ? `<div class="np-caption rp-text"><span class="np-text">${textMitTags(b.text)}</span></div>` : ""}
+        ${b.text ? `<div class="np-caption rp-text"><span class="np-text">${textMitTags(b.text, b.erwaehnt)}</span></div>` : ""}
         ${o.nicht_verfuegbar
           ? `<div class="rp-gone small muted">Dieser Beitrag ist nicht mehr verfügbar.</div>`
           : `<div class="rp-orig">${kopfHtml(o, true)}
@@ -549,7 +637,7 @@ function kommentarListeHtml(liste, markieren = false) {
         aria-label="Profil von ${esc(k.autor.name)}">${avatarHtml(k.autor, "s")}</a>
       <div class="grow">
         <div class="small"><strong>${esc(k.autor.name)}</strong> <span class="np-text">${
-          textMitTags(k.text)}</span></div>
+          textMitTags(k.text, k.erwaehnt)}</span></div>
         ${k.hilfreich ? `<div class="tiny k-hilf">Hilfreiche Antwort</div>` : ""}
         <div class="tiny muted k-meta">${esc(relZeit(k.erstellt, true))}${k.darf_entfernen
           ? ` · <button type="button" class="link-btn muted" data-k-del="${esc(k.id)}">Entfernen</button>` : ""}${
@@ -568,7 +656,7 @@ async function kommentarSheet(postId, karte) {
     <form class="k-form" id="k-form">
       ${avatarHtml({ id: ichId(), name: (NETZ.profil || {}).name, avatar_id: (NETZ.profil || {}).avatar_id }, "s")}
       <label class="sr-only" for="k-text">Kommentar</label>
-      <input id="k-text" maxlength="1000" placeholder="Kommentieren …" autocomplete="off" required>
+      <span class="erw-anker"><input id="k-text" maxlength="1000" placeholder="Kommentar schreiben, @ für Erwähnung" autocomplete="off" required></span>
       <button class="link-btn strong" type="submit">Posten</button>
     </form>
     <p class="tiny muted" id="k-err" role="alert"></p>` : ""}`, (body) => {
@@ -595,12 +683,14 @@ async function kommentarSheet(postId, karte) {
       zeige((await api(`/api/netz/beitraege/${encodeURIComponent(postId)}/kommentare`)).kommentare);
     });
     const form = $("#k-form", body);
+    const erw = form ? erwaehnungsFeld($("#k-text", body), postId) : null;
     if (form) form.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
         const r = await api(`/api/netz/beitraege/${encodeURIComponent(postId)}/kommentare`,
-          { method: "POST", body: { text: $("#k-text", body).value } });
+          { method: "POST", body: { text: $("#k-text", body).value, erwaehnungen: erw.ids() } });
         $("#k-text", body).value = "";
+        erw.leeren();
         $("#k-err", body).textContent = "";
         zeige(r.kommentare);
       } catch (err) { $("#k-err", body).textContent = err.message; }
@@ -1204,6 +1294,8 @@ const NETZ_MITTEILUNG = {
   entfernt: "hat einen Beitrag von dir entfernt. Der Grund steht am Beitrag.",
   meldung: "hat einen Beitrag gemeldet.",
   hilfreich: "hat deine Antwort als hilfreich markiert.",
+  erwaehnung: "hat dich in einem Beitrag erwähnt.",
+  erwaehnung_kommentar: "hat dich in einem Kommentar erwähnt.",
   katalog: "hat einen Katalogeintrag vorgeschlagen.",
   qualifikation: "",
   bewerbung: "",
@@ -1645,7 +1737,7 @@ function composer(art, vorgabe = {}) {
         : fv ? "Weitere Angaben (optional)"
         : "Was nimmst du mit? (optional)"}</label>
         <textarea id="cp-text" maxlength="3000" rows="${art === "beitrag" ? 4 : 3}"
-          placeholder="#Hashtags helfen anderen, es zu finden"></textarea></div>
+          placeholder="#Hashtags helfen anderen, es zu finden. Mit @ erwähnst du Personen, denen du folgst."></textarea></div>
       <div class="field" id="cp-themen"></div>
       <label class="check"><input type="checkbox" id="cp-kaus"> Kommentare ausschalten</label>
       ${art === "fall" || fv ? `
@@ -1659,6 +1751,7 @@ function composer(art, vorgabe = {}) {
       <button class="btn-primary btn-lg" type="submit" id="cp-senden">Teilen</button>
       <p class="tiny muted" id="cp-err" role="alert"></p>
     </form>`, (body) => {
+    const erw = erwaehnungsFeld($("#cp-text", body));
     body.closest(".sheet").classList.add("tall");
     if (fv) themen.add("peer-hilfe");
     themenWahlHtml($("#cp-themen", body), themen).catch(() => {});
@@ -1802,7 +1895,7 @@ function composer(art, vorgabe = {}) {
       }
       const wert = (sel) => { const n = $(sel, body); return n ? n.value : ""; };
       const daten = { art, text: wert("#cp-text"), themen: [...themen],
-        kommentare_aus: !!($("#cp-kaus", body) || {}).checked };
+        kommentare_aus: !!($("#cp-kaus", body) || {}).checked, erwaehnungen: erw.ids() };
       if (art === "fall") {
         daten.titel = wert("#cp-titel");
         daten.details = { kategorie, besonderheit: wert("#cp-bes"), gut: wert("#cp-gut"), anders: wert("#cp-and") };
