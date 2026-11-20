@@ -57,6 +57,9 @@ const UEBER = `
   ein geschlossenes Fachnetzwerk für Lernen, Praxisanleitung und kollegiale Unterstützung.
   Diese Installation wird privat betrieben, ohne Werbung, ohne Tracking und ohne Weitergabe
   an Dritte.</p>
+  <p class="small"><span class="beta-badge">Erweiterte Beta</span> SCOPE X ist eine private
+  Initiative und befindet sich in der erweiterten Beta. Funktionen können sich noch ändern;
+  Rückmeldungen fließen direkt in die Entwicklung.</p>
 
   <h2>Warum</h2>
   <p class="small">Die entscheidenden Maßnahmen im Rettungsdienst sind selten. Wer weiß, wann er

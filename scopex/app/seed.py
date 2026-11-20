@@ -62,8 +62,11 @@ QUALIFICATIONS = [
 # ist im Katalog frei aenderbar und sollte gegen die jeweils aktuelle
 # DIVI-Veroeffentlichung geprueft werden.
 # Aufbau eines Etiketts: Hintergrundfarbe, Schriftfarbe und Muster.
-# "stripes" steht fuer die Schraegstreifen der Antagonisten, "split" fuer
-# zweifarbige Etiketten.
+# "stripes" steht fuer die Schraegstreifen der Antagonisten, "stripes-bar"
+# fuer die Relaxans-Antagonisten mit zusaetzlichem schwarzem Querstrich,
+# "split" fuer die nichtdepolarisierenden Relaxantien (obere Haelfte weiss),
+# "framed" fuer Heparin, "striped-frame" fuer Protamin (weisser Grund,
+# schwarz-weiss quergestreifter Rand). Siehe Markenhandbuch, Kapitel 07.
 #
 # Die Farbwerte sind Annaeherungen an die Pantone-Vorgaben der Norm und
 # nicht normativ. SCOPE X bildet das Etikett ab, damit die Auswahl in der
@@ -76,10 +79,14 @@ DIVI_LABELS = {
         {"bg": "#ff8200", "fg": "#17242c", "pattern": "solid"},
     "Benzodiazepin-Antagonisten":
         {"bg": "#ff8200", "fg": "#17242c", "pattern": "stripes"},
+    # Depolarisierend (Suxamethonium): warmrot, weisse Schrift.
     "Muskelrelaxantien":
         {"bg": "#f9423a", "fg": "#ffffff", "pattern": "solid"},
+    # Nichtdepolarisierend: obere Haelfte weiss, schwarze Schrift.
+    "Muskelrelaxantien, nichtdepolarisierend":
+        {"bg": "#f9423a", "fg": "#17242c", "pattern": "split"},
     "Muskelrelaxans-Antagonisten":
-        {"bg": "#f9423a", "fg": "#ffffff", "pattern": "stripes"},
+        {"bg": "#f9423a", "fg": "#17242c", "pattern": "stripes-bar"},
     "Opiate / Opioide":
         {"bg": "#71c5e8", "fg": "#17242c", "pattern": "solid"},
     "Opioid-Antagonisten":
@@ -111,7 +118,7 @@ DIVI_LABELS = {
     "Heparin":
         {"bg": "#ffffff", "fg": "#17242c", "pattern": "framed"},
     "Protamin":
-        {"bg": "#1c1c1c", "fg": "#ffffff", "pattern": "stripes"},
+        {"bg": "#ffffff", "fg": "#17242c", "pattern": "striped-frame"},
     "Verschiedene Medikamente":
         {"bg": "#ffffff", "fg": "#17242c", "pattern": "solid"},
 }
@@ -126,6 +133,12 @@ for _name, _style in DIVI_LABELS.items():
     _style["slug"] = re.sub(r"[^a-z0-9]+", "-", _base).strip("-")
 
 DIVI_GROUPS = list(DIVI_LABELS)
+
+# Weisse Schrift sieht die DIVI-Empfehlung nur fuer Suxamethonium und
+# Midazolam vor. Gilt je Wirkstoff, nicht je Gruppe: Midazolam steht in
+# der Gruppe Benzodiazepine, deren uebrige Wirkstoffe schwarze Schrift
+# tragen.
+DIVI_WEISSE_SCHRIFT = ["Midazolam", "Succinylcholin", "Suxamethonium"]
 
 # Rolle bei der Durchführung. Eigene Achse neben der Durchführungsart:
 # eigenverantwortlich oder delegiert beantwortet, unter welcher Legitimation
@@ -242,7 +255,8 @@ MEASURES: list[tuple] = [
     ]),
 
     ("d_bz", "D", "Blutzuckermessung", [
-        ("wert", "Wert", "number", "mg/dl", None),
+        # Typ glucose: Eingabe in mg/dl oder mmol/l, gespeichert in mg/dl.
+        ("wert", "Wert", "glucose", "mg/dl", None),
     ]),
 
     ("e_temperatur", "E", "Temperaturmanagement", [
@@ -278,7 +292,8 @@ DIVI_ASSIGNMENT = {
     "Hypnotika": ["Etomidat", "Propofol", "Thiopental", "Esketamin"],
     "Benzodiazepine": ["Midazolam", "Diazepam", "Lorazepam", "Clonazepam"],
     "Benzodiazepin-Antagonisten": ["Flumazenil"],
-    "Muskelrelaxantien": ["Rocuronium", "Vecuronium", "Succinylcholin"],
+    "Muskelrelaxantien": ["Succinylcholin"],
+    "Muskelrelaxantien, nichtdepolarisierend": ["Rocuronium", "Vecuronium"],
     "Opiate / Opioide": ["Fentanyl", "Sufentanil", "Morphin", "Piritramid"],
     "Opioid-Antagonisten": ["Naloxon"],
     "Lokalanästhetika": ["Lidocain"],

@@ -24,7 +24,15 @@ from ..seed import QUALIFICATIONS
 
 router = APIRouter(prefix="/api", tags=["profile"])
 
-EDITABLE_SETTINGS = {"edit_window_minutes", "theme", "show_delegation"}
+EDITABLE_SETTINGS = {"edit_window_minutes", "theme", "show_delegation",
+                     "blutzucker_einheit"}
+# Erlaubte Werte je Einstellung. Was der Client schickt, wird geprüft,
+# nicht nur angezeigt.
+SETTING_WERTE = {
+    "theme": {"auto", "light", "dark"},
+    "show_delegation": {"auto", "always", "never"},
+    "blutzucker_einheit": {"mg/dl", "mmol/l"},
+}
 IMPRINT_SETTINGS = {
     "imprint_name", "imprint_address", "imprint_email", "imprint_phone",
     "imprint_profession", "imprint_authority", "imprint_law",
@@ -102,6 +110,8 @@ def get_settings(user=Depends(current_user)):
             "edit_window_minutes": edit_window_minutes(c, user["id"]),
             "theme": get_setting(c, "theme", "auto", user["id"]),
             "show_delegation": get_setting(c, "show_delegation", "auto", user["id"]),
+            "blutzucker_einheit": get_setting(c, "blutzucker_einheit", "mg/dl",
+                                              user["id"]),
         }
 
 
@@ -109,6 +119,7 @@ class SettingsIn(BaseModel):
     edit_window_minutes: int | None = None
     theme: str | None = None
     show_delegation: str | None = None
+    blutzucker_einheit: str | None = None
 
 
 @router.put("/settings")
@@ -123,6 +134,9 @@ def update_settings(data: SettingsIn, user=Depends(current_user)):
         raise HTTPException(
             400, f"Die Bearbeitungsfrist muss zwischen 1 und "
                  f"{MAX_EDIT_WINDOW} Minuten liegen, also höchstens sieben Tage.")
+    for key, erlaubt in SETTING_WERTE.items():
+        if payload.get(key) is not None and payload[key] not in erlaubt:
+            raise HTTPException(400, "Unbekannter Wert für eine Einstellung.")
     with conn() as c:
         for key, value in payload.items():
             if key not in EDITABLE_SETTINGS or value is None:

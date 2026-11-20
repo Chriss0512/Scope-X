@@ -58,6 +58,9 @@ Danach muss die Struktur so aussehen:
 
 Beim ersten Start werden Datenbankschema und Stammdaten angelegt: 38
 Maßnahmen mit ihren Parameterdefinitionen, 60 Wirkstoffe und 55 ZEK-Einträge.
+Blutzucker lässt sich ab 4.7.0 in mg/dl oder mmol/l eingeben; gespeichert
+wird mg/dl, angezeigt werden beide Werte (1 mmol/l = 18,016 mg/dl). Welche
+Einheit das Formular vorschlägt, steht unter Einstellungen.
 
 ## 3. Nginx Proxy Manager
 
@@ -329,7 +332,7 @@ deines Arbeitgebers.
 
 Ein soziales Netz für beruflichen Support: Feed mit Algorithmus, Entdecken,
 Profile mit Chronik und Info, Folgen, Gefällt mir, Kommentare, Reposts,
-Direktnachrichten, Bilder und Videos, Fallberichte zu seltenen Situationen
+@Erwähnungen von Konten, denen man folgt (ab 4.7.0), Direktnachrichten, Bilder und Videos, Fallberichte zu seltenen Situationen
 und Komplikationen, Algorithmen mit Quelle. Jedes Mitglied schaltet es
 unter Einstellungen → Netzwerk selbst ein; ein Konto lässt sich auf privat
 stellen. Sichtbar ist alles nur für angemeldete Mitglieder dieser

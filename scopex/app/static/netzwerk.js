@@ -21,8 +21,8 @@ const NETZ_XABCDE = [
 const NETZ_QSTATUS = {
   gueltig: "gültig", bald: "läuft bald ab", abgelaufen: "abgelaufen", unbefristet: "",
 };
-const NETZ_ICON_MERKEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.8h12v16.6l-6-4.4-6 4.4z"/></svg>`;
-const NETZ_ICON_GEMERKT = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.8h12v16.6l-6-4.4-6 4.4z"/></svg>`;
+const NETZ_ICON_MERKEN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.8h12v16.6l-6-4.4-6 4.4z"/></svg>`;
+const NETZ_ICON_GEMERKT = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.8h12v16.6l-6-4.4-6 4.4z"/></svg>`;
 
 let netzThemen = null;
 async function themenKatalog(neu = false) {

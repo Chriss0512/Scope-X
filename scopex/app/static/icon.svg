@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="SCOPE X">
-  <rect width="100" height="100" rx="22" fill="#102533"/>
-  <g fill="none" stroke-width="8" stroke-linecap="round"
-     transform="rotate(-90 50 50)">
-    <circle cx="50" cy="50" r="33" stroke="#126878"
-            stroke-dasharray="60 147.3" stroke-dashoffset="0"/>
-    <circle cx="50" cy="50" r="33" stroke="#19A6B5"
-            stroke-dasharray="44 163.3" stroke-dashoffset="-84"/>
-    <circle cx="50" cy="50" r="33" stroke="#19A6B5" opacity="0.45"
-            stroke-dasharray="22 185.3" stroke-dashoffset="-150"/>
-  </g>
-  <path d="M39 39 L61 61 M61 39 L39 61" stroke="#B9D936"
-        stroke-width="9" stroke-linecap="square"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="SCOPE X"><title>SCOPE X</title><rect width="100" height="100" rx="22" fill="#102533"/><g transform="translate(12 12) scale(0.76)"><g fill="none" stroke-width="7"><path d="M17.01 41.77A34 34 0 0 1 41.77 17.01" stroke="#19A6B5"/><path d="M58.23 17.01A34 34 0 0 1 82.99 41.77" stroke="#7FD3DC"/><path d="M82.99 58.23A34 34 0 0 1 58.23 82.99" stroke="#19A6B5"/><path d="M41.77 82.99A34 34 0 0 1 17.01 58.23" stroke="#7FD3DC"/></g><path d="M50 3V22M50 78V97M3 50H22M78 50H97" stroke="#FFFFFF" stroke-width="5" fill="none"/><polygon points="27,30 39,30 49.4,50 39,70 27,70 37.4,50" fill="#FFFFFF"/><polygon points="73,30 61,30 50.6,50 61,70 73,70 62.6,50" fill="#B9D936"/></g></svg>

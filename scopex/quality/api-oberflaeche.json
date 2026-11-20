@@ -1,5 +1,5 @@
 {
-  "version": "4.6.0",
+  "version": "4.7.0",
   "paths": [
     "/api/account/delete",
     "/api/admin/bewerbungen",
@@ -92,6 +92,7 @@
     "/api/netz/empfehlungen",
     "/api/netz/empfehlungen/{rid}",
     "/api/netz/entdecken",
+    "/api/netz/erwaehnbar",
     "/api/netz/feed",
     "/api/netz/folgen/{uid}",
     "/api/netz/follower/{uid}",

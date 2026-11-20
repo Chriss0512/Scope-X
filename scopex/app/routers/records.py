@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import schutz
+from .. import einheiten, schutz
 from ..core import (
     annotate_lock,
     audit,
@@ -286,6 +286,35 @@ class AttemptIn(BaseModel):
     complications: list[ComplicationLink] = Field(default_factory=list)
 
 
+EINHEIT_SUFFIX = "__einheit"
+
+
+def _parameter_speichern(c, attempt_id: str, measure_id: str,
+                         parameter: dict | None) -> None:
+    """Schreibt die Parameter einer Maßnahme.
+
+    Blutzucker (Typ glucose) kommt mit seiner Einheit unter
+    ``<schlüssel>__einheit`` und wird in mg/dl umgerechnet gespeichert.
+    Die Einheit selbst ist kein Parameter und wird nicht abgelegt."""
+    parameter = parameter or {}
+    defs = {d["pkey"]: d for d in rows(
+        c, "SELECT * FROM measure_parameter_definitions WHERE measure_id = :m",
+        m=measure_id)}
+    for key, value in parameter.items():
+        if key.endswith(EINHEIT_SUFFIX) or value in (None, ""):
+            continue
+        d = defs.get(key)
+        einheit = d["unit"] if d else None
+        if d and d["ptype"] == "glucose":
+            value = einheiten.glukose_in_mgdl(
+                value, parameter.get(key + EINHEIT_SUFFIX) or "mg/dl")
+            einheit = "mg/dl"
+        q(c, "INSERT INTO measure_attempt_parameters (id, attempt_id, pkey, "
+             "label, value_text, unit) VALUES (:i, :a, :k, :l, :v, :u)",
+          i=new_id(), a=attempt_id, k=key, l=d["label"] if d else key,
+          v=str(value)[:200], u=einheit)
+
+
 @router.post("/encounters/{encounter_id}/attempts")
 def create_attempt(encounter_id: str, data: AttemptIn, user=Depends(require_writer)):
     if data.outcome not in OUTCOMES:
@@ -315,18 +344,7 @@ def create_attempt(encounter_id: str, data: AttemptIn, user=Depends(require_writ
           pq=(data.performer_qualification or "").strip() or None,
           nt=schutz.v((data.note or "").strip() or None), c=now_iso())
 
-        defs = {d["pkey"]: d for d in rows(
-            c, "SELECT * FROM measure_parameter_definitions WHERE measure_id = :m",
-            m=measure["id"])}
-        for key, value in (data.parameters or {}).items():
-            if value in (None, ""):
-                continue
-            d = defs.get(key)
-            q(c, "INSERT INTO measure_attempt_parameters (id, attempt_id, pkey, "
-                 "label, value_text, unit) VALUES (:i, :a, :k, :l, :v, :u)",
-              i=new_id(), a=aid, k=key,
-              l=d["label"] if d else key, v=str(value),
-              u=d["unit"] if d else None)
+        _parameter_speichern(c, aid, measure["id"], data.parameters)
 
         _link_complications(c, "attempt_complications", "attempt_id", aid,
                             data.complications)
@@ -380,19 +398,9 @@ def update_attempt(attempt_id: str, data: AttemptPatch, user=Depends(require_wri
           n=schutz.v(after["note"]), u=now_iso(), i=attempt_id)
 
         if payload.get("parameters") is not None:
-            defs = {d["pkey"]: d for d in rows(
-                c, "SELECT * FROM measure_parameter_definitions WHERE measure_id = :m",
-                m=att["measure_id"])}
             q(c, "DELETE FROM measure_attempt_parameters WHERE attempt_id = :a",
               a=attempt_id)
-            for key, value in payload["parameters"].items():
-                if value in (None, ""):
-                    continue
-                d = defs.get(key)
-                q(c, "INSERT INTO measure_attempt_parameters (id, attempt_id, "
-                     "pkey, label, value_text, unit) VALUES (:i, :a, :k, :l, :v, :u)",
-                  i=new_id(), a=attempt_id, k=key, l=d["label"] if d else key,
-                  v=str(value), u=d["unit"] if d else None)
+            _parameter_speichern(c, attempt_id, att["measure_id"], payload["parameters"])
             audit(c, user["id"], "measure_attempts", attempt_id, "update", "parameters")
 
         if data.complications is not None:

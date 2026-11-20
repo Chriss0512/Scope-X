@@ -11,3 +11,6 @@ __pycache__/
 # axe-core ist eine Prüfabhängigkeit und wird vom Lauf geholt, siehe
 # scopex/quality/vendor/README.md. Es gehört nicht in die Versionierung.
 scopex/quality/vendor/axe.min.js
+
+# Zwischenstand beim Bau des Markenhandbuchs
+brand/handbuch/_gebaut.html

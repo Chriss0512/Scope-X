@@ -92,7 +92,8 @@ def have(tool: str) -> bool:
 
 SUITES = [ROOT / "quality" / "suites" / n for n in
           ("test_core.py", "test_access.py", "test_documentation.py",
-           "test_netz.py", "test_zugang.py", "test_schutz.py")]
+           "test_netz.py", "test_zugang.py", "test_schutz.py",
+           "test_einheiten.py")]
 
 
 @check("functional", "Funktionale Testreihen")

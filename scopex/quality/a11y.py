@@ -104,6 +104,25 @@ def audit() -> list[str]:
                     if verdeckt > 0:
                         problems.append(f"{route} Seitenende {verdeckt}px "
                                         "unter der Navigationsleiste")
+
+                # Dunkelmodus: seit 4.7.0 haben die Signalfarben eigene
+                # Werte für dunklen Grund (Markenhandbuch, Kapitel 02).
+                # Geprüft wird der Kontrast auf den Seiten mit den meisten
+                # Status- und Kategoriefarben.
+                for route in ["#/", "#/einsaetze", "#/dashboard", "#/profil",
+                              "#/administration", "#/ueber"]:
+                    page.goto(f"http://127.0.0.1:8199/{route}",
+                              wait_until="networkidle")
+                    page.evaluate("document.documentElement.dataset.theme = 'dark'")
+                    page.wait_for_timeout(500)
+                    page.evaluate(axe_source)
+                    result = page.evaluate(
+                        "async () => await axe.run(document, {resultTypes:"
+                        "['violations'], runOnly: ['color-contrast']})")
+                    for v in result["violations"]:
+                        if v["impact"] in SEVERITIES:
+                            problems.append(f"dunkel {route} {v['id']} "
+                                            f"({len(v['nodes'])}x)")
                 browser.close()
         finally:
             server.should_exit = True

@@ -18,22 +18,22 @@ const NETZ = { profil: null, zaehler: { mitteilungen: 0, nachrichten: 0, anfrage
   stand: 0, poll: null, feedModus: "fuerdich" };
 
 const NETZ_ICON = {
-  herz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.8-4.6-7.8-10.2A4.4 4.4 0 0 1 12 7.3 4.4 4.4 0 0 1 19.8 10c0 5.6-7.8 10.2-7.8 10.2z"/></svg>`,
-  herzVoll: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.8-4.6-7.8-10.2A4.4 4.4 0 0 1 12 7.3 4.4 4.4 0 0 1 19.8 10c0 5.6-7.8 10.2-7.8 10.2z"/></svg>`,
-  kommentar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 11.6a8.2 8.2 0 0 1-11.7 7.4L3.8 20.2l1.3-4.4A8.2 8.2 0 1 1 20.2 11.6z"/></svg>`,
-  repost: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5V8a3 3 0 0 1 3-3h11m0 0-3-3m3 3-3 3M20 14.5V16a3 3 0 0 1-3 3H6m0 0 3 3m-3-3 3-3"/></svg>`,
-  senden: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3.5 10.2 13.3M21 3.5l-6.6 17-4.2-7.2L3 9.6z"/></svg>`,
+  herz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.8-4.6-7.8-10.2A4.4 4.4 0 0 1 12 7.3 4.4 4.4 0 0 1 19.8 10c0 5.6-7.8 10.2-7.8 10.2z"/></svg>`,
+  herzVoll: `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20.2s-7.8-4.6-7.8-10.2A4.4 4.4 0 0 1 12 7.3 4.4 4.4 0 0 1 19.8 10c0 5.6-7.8 10.2-7.8 10.2z"/></svg>`,
+  kommentar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 11.6a8.2 8.2 0 0 1-11.7 7.4L3.8 20.2l1.3-4.4A8.2 8.2 0 1 1 20.2 11.6z"/></svg>`,
+  repost: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5V8a3 3 0 0 1 3-3h11m0 0-3-3m3 3-3 3M20 14.5V16a3 3 0 0 1-3 3H6m0 0 3 3m-3-3 3-3"/></svg>`,
+  senden: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3.5 10.2 13.3M21 3.5l-6.6 17-4.2-7.2L3 9.6z"/></svg>`,
   mehr: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>`,
-  schloss: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5"/></svg>`,
-  raster: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg>`,
-  chronik: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M7 4v16"/><circle cx="7" cy="7" r="2"/><circle cx="7" cy="16" r="2"/><path d="M11 7h9M11 16h9M11 11.5h6"/></svg>`,
-  kompetenz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.5 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z"/></svg>`,
-  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.2"/></svg>`,
+  schloss: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.2 10.5V8a3.8 3.8 0 0 1 7.6 0v2.5"/></svg>`,
+  raster: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><path d="M9.2 3.5v17M14.8 3.5v17M3.5 9.2h17M3.5 14.8h17"/></svg>`,
+  chronik: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 4v16"/><circle cx="7" cy="7" r="2"/><circle cx="7" cy="16" r="2"/><path d="M11 7h9M11 16h9M11 11.5h6"/></svg>`,
+  kompetenz: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3.5 2.5 5.2 5.7.8-4.1 4 1 5.6-5.1-2.7-5.1 2.7 1-5.6-4.1-4 5.7-.8z"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.2"/></svg>`,
   video: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg>`,
   stapel: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h11a3 3 0 0 1 3 3v11h-2V6a1 1 0 0 0-1-1H7z"/><rect x="3" y="7" width="14" height="14" rx="2.5"/></svg>`,
   zurueck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>`,
-  zahnrad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4.9a7.5 7.5 0 0 0-2.6-1.5L14 2.4h-4l-.4 2.5A7.5 7.5 0 0 0 7 6.4l-2.4-.9-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-.9a7.5 7.5 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.5 7.5 0 0 0 2.6-1.5l2.4.9 2-3.4z"/></svg>`,
-  bild: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17.5 4.8-4.6 3.4 3 2.8-2.4 5 4.4"/></svg>`,
+  zahnrad: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.6-2-3.4-2.4.9a7.5 7.5 0 0 0-2.6-1.5L14 2.4h-4l-.4 2.5A7.5 7.5 0 0 0 7 6.4l-2.4-.9-2 3.4 2 1.6a7.6 7.6 0 0 0 0 3l-2 1.6 2 3.4 2.4-.9a7.5 7.5 0 0 0 2.6 1.5l.4 2.5h4l.4-2.5a7.5 7.5 0 0 0 2.6-1.5l2.4.9 2-3.4z"/></svg>`,
+  bild: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17.5 4.8-4.6 3.4 3 2.8-2.4 5 4.4"/></svg>`,
   x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
 };
 
@@ -281,11 +281,99 @@ function kopfHtml(b, klein = false) {
     </header>`;
 }
 
-/* Hashtags werden zu Links. Erst escapen, dann ersetzen: im Ergebnis steht
-   nur Markup, das hier erzeugt wurde. */
-function textMitTags(text) {
-  return esc(text).replace(/#([0-9A-Za-zÄÖÜäöüß_-]{2,40})/g,
+/* Hashtags und Erwähnungen werden zu Links. Erst escapen, dann ersetzen:
+   im Ergebnis steht nur Markup, das hier erzeugt wurde. Verlinkt wird nur
+   "@Name" von Personen, die der Server als erwähnt zurückgibt. */
+function textMitTags(text, erwaehnt = []) {
+  let html = esc(text).replace(/#([0-9A-Za-zÄÖÜäöüß_-]{2,40})/g,
     (_, t) => `<a href="#/tag/${encodeURIComponent(t.toLowerCase())}" class="tag">#${t}</a>`);
+  [...(erwaehnt || [])].sort((a, b) => b.name.length - a.name.length).forEach((p) => {
+    const muster = "@" + esc(p.name);
+    html = html.split(muster).join(
+      `<a href="#/person/${esc(p.id)}" class="erwaehnung">${muster}</a>`);
+  });
+  return html;
+}
+
+/* Auswahl nach "@" in einem Text- oder Eingabefeld. Angeboten werden nur
+   Konten, denen man folgt; der Server prüft beim Speichern noch einmal.
+   Tastatur: Pfeiltasten wählen, Enter oder Tab übernimmt, Escape schließt. */
+function erwaehnungsFeld(feld, postId = null) {
+  const gewaehlt = new Map();
+  const liste = document.createElement("ul");
+  const lid = feld.id + "-erw";
+  liste.id = lid;
+  liste.className = "erw-liste";
+  liste.setAttribute("role", "listbox");
+  liste.setAttribute("aria-label", "Person erwähnen");
+  liste.hidden = true;
+  feld.insertAdjacentElement("afterend", liste);
+  feld.setAttribute("aria-autocomplete", "list");
+  feld.setAttribute("aria-controls", lid);
+  feld.setAttribute("aria-expanded", "false");
+  let treffer = [], aktiv = -1, anfang = -1, laeuft = 0;
+
+  const schliessen = () => {
+    liste.hidden = true; treffer = []; aktiv = -1;
+    feld.setAttribute("aria-expanded", "false");
+    feld.removeAttribute("aria-activedescendant");
+  };
+  const zeigen = () => {
+    liste.innerHTML = treffer.map((p, i) => `
+      <li role="option" id="${lid}-${i}" data-i="${i}" aria-selected="${i === aktiv}">
+        ${avatarHtml(p, "s")}<span><strong>${esc(p.name)}</strong>
+        <span class="tiny muted">${esc(p.headline || "")}</span></span></li>`).join("");
+    liste.hidden = !treffer.length;
+    feld.setAttribute("aria-expanded", String(!!treffer.length));
+    if (aktiv >= 0) feld.setAttribute("aria-activedescendant", `${lid}-${aktiv}`);
+    else feld.removeAttribute("aria-activedescendant");
+  };
+  const uebernehmen = (p) => {
+    const ende = feld.selectionStart;
+    const einsetzen = `@${p.name} `;
+    feld.value = feld.value.slice(0, anfang) + einsetzen + feld.value.slice(ende);
+    const pos = anfang + einsetzen.length;
+    feld.setSelectionRange(pos, pos);
+    gewaehlt.set(p.id, p.name);
+    schliessen();
+    feld.focus();
+  };
+  feld.addEventListener("input", async () => {
+    const vor = feld.value.slice(0, feld.selectionStart);
+    const m = vor.match(/(^|\s)@([^\s@]{0,30})$/);
+    if (!m) { schliessen(); return; }
+    anfang = vor.length - m[2].length - 1;
+    const nr = ++laeuft;
+    const pfad = `/api/netz/erwaehnbar?q=${encodeURIComponent(m[2])}${
+      postId ? `&post_id=${encodeURIComponent(postId)}` : ""}`;
+    const r = await api(pfad).catch(() => ({ personen: [] }));
+    if (nr !== laeuft) return;
+    treffer = r.personen; aktiv = treffer.length ? 0 : -1;
+    zeigen();
+  });
+  feld.addEventListener("keydown", (e) => {
+    if (liste.hidden) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      aktiv = (aktiv + (e.key === "ArrowDown" ? 1 : treffer.length - 1)) % treffer.length;
+      zeigen();
+    } else if ((e.key === "Enter" || e.key === "Tab") && aktiv >= 0) {
+      e.preventDefault(); uebernehmen(treffer[aktiv]);
+    } else if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); schliessen();
+    }
+  });
+  liste.addEventListener("mousedown", (e) => {
+    const li = e.target.closest("[data-i]");
+    if (li) { e.preventDefault(); uebernehmen(treffer[Number(li.dataset.i)]); }
+  });
+  feld.addEventListener("blur", () => setTimeout(schliessen, 150));
+  return {
+    // Nur wer noch mit "@Name" im Text steht, gilt als erwähnt.
+    ids: () => [...gewaehlt].filter(([, name]) => feld.value.includes("@" + name))
+      .map(([id]) => id),
+    leeren: () => gewaehlt.clear(),
+  };
 }
 
 function captionHtml(b, mitName = true) {
@@ -293,7 +381,7 @@ function captionHtml(b, mitName = true) {
   const lang = b.text.length > 220;
   return `<div class="np-caption${lang ? " gekuerzt" : ""}">${mitName
     ? `<strong>${esc(b.autor.name)}</strong> ` : ""}<span class="np-text">${
-    textMitTags(b.text)}</span>${lang ? ` <button type="button" class="link-btn muted"
+    textMitTags(b.text, b.erwaehnt)}</span>${lang ? ` <button type="button" class="link-btn muted"
     data-akt="mehr-text">mehr</button>` : ""}</div>`;
 }
 
@@ -339,7 +427,7 @@ function postHtml(b) {
           <span class="muted">hat geteilt · ${esc(relZeit(b.erstellt, true))}</span></a>
           <button type="button" class="icon-btn flat" data-akt="menue"
             aria-label="Weitere Aktionen zum Repost">${NETZ_ICON.mehr}</button></div>
-        ${b.text ? `<div class="np-caption rp-text"><span class="np-text">${textMitTags(b.text)}</span></div>` : ""}
+        ${b.text ? `<div class="np-caption rp-text"><span class="np-text">${textMitTags(b.text, b.erwaehnt)}</span></div>` : ""}
         ${o.nicht_verfuegbar
           ? `<div class="rp-gone small muted">Dieser Beitrag ist nicht mehr verfügbar.</div>`
           : `<div class="rp-orig">${kopfHtml(o, true)}
@@ -549,7 +637,7 @@ function kommentarListeHtml(liste, markieren = false) {
         aria-label="Profil von ${esc(k.autor.name)}">${avatarHtml(k.autor, "s")}</a>
       <div class="grow">
         <div class="small"><strong>${esc(k.autor.name)}</strong> <span class="np-text">${
-          textMitTags(k.text)}</span></div>
+          textMitTags(k.text, k.erwaehnt)}</span></div>
         ${k.hilfreich ? `<div class="tiny k-hilf">Hilfreiche Antwort</div>` : ""}
         <div class="tiny muted k-meta">${esc(relZeit(k.erstellt, true))}${k.darf_entfernen
           ? ` · <button type="button" class="link-btn muted" data-k-del="${esc(k.id)}">Entfernen</button>` : ""}${
@@ -568,7 +656,7 @@ async function kommentarSheet(postId, karte) {
     <form class="k-form" id="k-form">
       ${avatarHtml({ id: ichId(), name: (NETZ.profil || {}).name, avatar_id: (NETZ.profil || {}).avatar_id }, "s")}
       <label class="sr-only" for="k-text">Kommentar</label>
-      <input id="k-text" maxlength="1000" placeholder="Kommentieren …" autocomplete="off" required>
+      <span class="erw-anker"><input id="k-text" maxlength="1000" placeholder="Kommentar schreiben, @ für Erwähnung" autocomplete="off" required></span>
       <button class="link-btn strong" type="submit">Posten</button>
     </form>
     <p class="tiny muted" id="k-err" role="alert"></p>` : ""}`, (body) => {
@@ -595,12 +683,14 @@ async function kommentarSheet(postId, karte) {
       zeige((await api(`/api/netz/beitraege/${encodeURIComponent(postId)}/kommentare`)).kommentare);
     });
     const form = $("#k-form", body);
+    const erw = form ? erwaehnungsFeld($("#k-text", body), postId) : null;
     if (form) form.addEventListener("submit", async (e) => {
       e.preventDefault();
       try {
         const r = await api(`/api/netz/beitraege/${encodeURIComponent(postId)}/kommentare`,
-          { method: "POST", body: { text: $("#k-text", body).value } });
+          { method: "POST", body: { text: $("#k-text", body).value, erwaehnungen: erw.ids() } });
         $("#k-text", body).value = "";
+        erw.leeren();
         $("#k-err", body).textContent = "";
         zeige(r.kommentare);
       } catch (err) { $("#k-err", body).textContent = err.message; }
@@ -1204,6 +1294,8 @@ const NETZ_MITTEILUNG = {
   entfernt: "hat einen Beitrag von dir entfernt. Der Grund steht am Beitrag.",
   meldung: "hat einen Beitrag gemeldet.",
   hilfreich: "hat deine Antwort als hilfreich markiert.",
+  erwaehnung: "hat dich in einem Beitrag erwähnt.",
+  erwaehnung_kommentar: "hat dich in einem Kommentar erwähnt.",
   katalog: "hat einen Katalogeintrag vorgeschlagen.",
   qualifikation: "",
   bewerbung: "",
@@ -1645,7 +1737,7 @@ function composer(art, vorgabe = {}) {
         : fv ? "Weitere Angaben (optional)"
         : "Was nimmst du mit? (optional)"}</label>
         <textarea id="cp-text" maxlength="3000" rows="${art === "beitrag" ? 4 : 3}"
-          placeholder="#Hashtags helfen anderen, es zu finden"></textarea></div>
+          placeholder="#Hashtags helfen anderen, es zu finden. Mit @ erwähnst du Personen, denen du folgst."></textarea></div>
       <div class="field" id="cp-themen"></div>
       <label class="check"><input type="checkbox" id="cp-kaus"> Kommentare ausschalten</label>
       ${art === "fall" || fv ? `
@@ -1659,6 +1751,7 @@ function composer(art, vorgabe = {}) {
       <button class="btn-primary btn-lg" type="submit" id="cp-senden">Teilen</button>
       <p class="tiny muted" id="cp-err" role="alert"></p>
     </form>`, (body) => {
+    const erw = erwaehnungsFeld($("#cp-text", body));
     body.closest(".sheet").classList.add("tall");
     if (fv) themen.add("peer-hilfe");
     themenWahlHtml($("#cp-themen", body), themen).catch(() => {});
@@ -1802,7 +1895,7 @@ function composer(art, vorgabe = {}) {
       }
       const wert = (sel) => { const n = $(sel, body); return n ? n.value : ""; };
       const daten = { art, text: wert("#cp-text"), themen: [...themen],
-        kommentare_aus: !!($("#cp-kaus", body) || {}).checked };
+        kommentare_aus: !!($("#cp-kaus", body) || {}).checked, erwaehnungen: erw.ids() };
       if (art === "fall") {
         daten.titel = wert("#cp-titel");
         daten.details = { kategorie, besonderheit: wert("#cp-bes"), gut: wert("#cp-gut"), anders: wert("#cp-and") };

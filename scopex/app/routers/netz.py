@@ -557,6 +557,34 @@ def follower_liste(uid: str, user=Depends(current_user)):
         return {"personen": _liste(c, user["id"], ids)}
 
 
+@router.get("/erwaehnbar")
+def erwaehnbar(q_: str = Query("", alias="q", max_length=60),
+               post_id: str | None = Query(None, max_length=64),
+               user=Depends(current_user)):
+    """Personen für die Auswahl nach "@": nur Konten, denen ich folge.
+
+    Mit post_id (Kommentar) nur Personen, die den Beitrag sehen dürfen.
+    Der Server prüft beim Speichern dieselben Regeln noch einmal."""
+    with conn() as c:
+        nk.aktiv_erforderlich(c, user)
+        autor = user["id"]
+        if post_id:
+            autor = nk.beitrag_oder_404(c, user, post_id)["author_id"]
+        begriff = q_.strip().lower()
+        aus = []
+        for uid in nk.gefolgt_ids(c, user["id"]):
+            if not nk.erwaehnbar(c, user["id"], uid):
+                continue
+            if uid != autor and not nk.voll_sichtbar(c, uid, autor):
+                continue
+            p = nk.profil(c, uid)
+            if begriff and begriff not in nk.anzeigename(p).lower():
+                continue
+            aus.append(p)
+        aus.sort(key=lambda p: nk.anzeigename(p).lower())
+        return {"personen": [nk.person_kurz(c, user["id"], p) for p in aus[:8]]}
+
+
 @router.get("/personen/{uid}/gefolgt")
 def gefolgt_liste(uid: str, user=Depends(current_user)):
     with conn() as c:
@@ -770,11 +798,18 @@ def _mitteilungstext(c, uid: str, m: dict) -> str:
 def mitteilungen(user=Depends(current_user)):
     with conn() as c:
         aus = []
+        # Mitteilungen mit Zeitpunkt in der Zukunft gehören zu geplanten
+        # Beiträgen und erscheinen erst mit deren Veröffentlichung.
         for m in rows(c, "SELECT * FROM net_notifications WHERE user_id = :u "
-                         "ORDER BY created_at DESC LIMIT 80", u=user["id"]):
+                         "AND created_at <= :t ORDER BY created_at DESC LIMIT 80",
+                      u=user["id"], t=now_iso()):
             akteur = nk.profil(c, m["actor_id"]) if m["actor_id"] else None
             if akteur and nk.blockiert(c, user["id"], m["actor_id"]):
                 continue
+            if m["kind"].startswith("erwaehnung"):
+                post = row(c, "SELECT * FROM net_posts WHERE id = :i", i=m["post_id"])
+                if not post or not nk.darf_beitrag_sehen(c, user, post):
+                    continue
             aus.append({
                 "id": m["id"], "art": m["kind"], "erstellt": m["created_at"],
                 "gelesen": bool(m["read_at"]), "post_id": m["post_id"],
@@ -789,7 +824,7 @@ def mitteilungen(user=Depends(current_user)):
 def mitteilungen_gelesen(user=Depends(current_user)):
     with conn() as c:
         q(c, "UPDATE net_notifications SET read_at = :t WHERE user_id = :u "
-             "AND read_at IS NULL", t=now_iso(), u=user["id"])
+             "AND read_at IS NULL AND created_at <= :t", t=now_iso(), u=user["id"])
     return {"ok": True}
 
 
@@ -803,7 +838,8 @@ def zaehler(user=Depends(current_user)):
     with conn() as c:
         ablauf_erinnern(c, user["id"])
         m = scalar(c, "SELECT COUNT(*) FROM net_notifications WHERE user_id = :u "
-                      "AND read_at IS NULL", u=user["id"]) or 0
+                      "AND read_at IS NULL AND created_at <= :t",
+                   u=user["id"], t=now_iso()) or 0
         n = scalar(c, "SELECT COUNT(DISTINCT n.conversation_id) FROM net_messages n "
                       "JOIN net_conversations k ON k.id = n.conversation_id "
                       "WHERE (k.user_a = :u OR k.user_b = :u) AND n.sender_id <> :u "
@@ -906,6 +942,16 @@ def auskunft(c, uid: str) -> dict:
              "rolle": b["role"], "am": b["created_at"]}
             for b in rows(c, "SELECT * FROM net_endorsements WHERE endorser_id = :u",
                           u=uid)],
+        "erwaehnungen": {
+            "von_mir": [{"person": name(m["user_id"]), "beitrag": m["post_id"],
+                         "kommentar": m["comment_id"], "am": m["created_at"]}
+                        for m in rows(c, "SELECT * FROM net_mentions WHERE "
+                                         "author_id = :u", u=uid)],
+            "von_anderen": [{"person": name(m["author_id"]), "beitrag": m["post_id"],
+                             "kommentar": m["comment_id"], "am": m["created_at"]}
+                            for m in rows(c, "SELECT * FROM net_mentions WHERE "
+                                             "user_id = :u", u=uid)],
+        },
         "nachrichten": [
             {"mit": name(g["user_b"] if g["user_a"] == uid else g["user_a"]),
              "verlauf": [{"von": "ich" if n["sender_id"] == uid else "gegenüber",
@@ -928,7 +974,7 @@ def loeschen(c, uid: str) -> None:
     for pid in [p["id"] for p in rows(c, "SELECT id FROM net_posts WHERE "
                                          "author_id = :u", u=uid)]:
         for tabelle in ("net_likes", "net_comments", "net_tags", "net_hidden",
-                        "net_notifications", "net_saved", "net_seen"):
+                        "net_notifications", "net_saved", "net_seen", "net_mentions"):
             q(c, f"DELETE FROM {tabelle} WHERE post_id = :p", p=pid)
     q(c, "DELETE FROM net_posts WHERE author_id = :u", u=uid)
     for tabelle in ("net_saved", "net_seen", "net_topic_follows",
@@ -944,6 +990,7 @@ def loeschen(c, uid: str) -> None:
         q(c, f"UPDATE {tabelle} SET created_by = NULL WHERE created_by = :u", u=uid)
     q(c, "UPDATE applications SET sponsor_id = NULL, sponsor_status = 'entfallen' "
          "WHERE sponsor_id = :u", u=uid)
+    q(c, "DELETE FROM net_mentions WHERE user_id = :u OR author_id = :u", u=uid)
     q(c, "DELETE FROM net_comments WHERE author_id = :u", u=uid)
     q(c, "DELETE FROM net_likes WHERE user_id = :u", u=uid)
     q(c, "DELETE FROM net_hidden WHERE user_id = :u", u=uid)
